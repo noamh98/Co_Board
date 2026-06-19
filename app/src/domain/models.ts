@@ -67,6 +67,8 @@ export interface Board {
   placements: CellPlacement[];
   /** לוח ליבה מקורי — לא נדרס בשכפול (PRD §4.1 edge case). */
   isCoreBoard?: boolean;
+  /** ארכוב במקום מחיקה — נשמר לשחזור (PRD §4.5 edge case, FR-022). */
+  archived?: boolean;
 }
 
 export type Role = 'child' | 'parent' | 'clinician' | 'staff';
@@ -88,4 +90,6 @@ export interface Profile {
   homeBoardId: string;
   /** מצב ילד נעול (Guided Access) — ברירת מחדל אמת לבטיחות (PRD §4.7). */
   locked: boolean;
+  /** ארכוב במקום מחיקה — מעבר/מחיקת פרופיל שומרים גיבוי (PRD §4.5 edge case). */
+  archived?: boolean;
 }

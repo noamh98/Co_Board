@@ -1,23 +1,44 @@
 import { openDB, type IDBPDatabase } from 'idb';
 
 // שכבת Data — מקור האמת המקומי (Offline-first, HANDOFF §3/§4).
-// כרגע: store לניקוד (cache + override ידני). יורחב ב-M1 (לוחות/פרופילים).
+// v1: store ניקוד בלבד. v2 (M1): נוספו boards/profiles/settings.
+// אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
+
 export const STORE_NIKUD = 'nikud';
+export const STORE_BOARDS = 'boards';
+export const STORE_PROFILES = 'profiles';
+export const STORE_SETTINGS = 'settings';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
 export function getDb(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
+      // idb מריץ upgrade פעם אחת לכל מעבר גרסה. createObjectStore נכשל אם ה-store
+      // כבר קיים, ולכן הבדיקה idempotent — בטוח גם בשדרוג v1→v2 וגם בהתקנה נקייה.
       upgrade(db) {
         if (!db.objectStoreNames.contains(STORE_NIKUD)) {
           db.createObjectStore(STORE_NIKUD, { keyPath: 'text' });
+        }
+        if (!db.objectStoreNames.contains(STORE_BOARDS)) {
+          db.createObjectStore(STORE_BOARDS, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(STORE_PROFILES)) {
+          db.createObjectStore(STORE_PROFILES, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
+          db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
         }
       },
     });
   }
   return dbPromise;
+}
+
+/** מאפס את ה-singleton (לבדיקות בלבד — מאפשר פתיחה מחדש מול IDBFactory נקי). */
+export function resetDbForTests(): void {
+  dbPromise = null;
 }

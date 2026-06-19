@@ -1,7 +1,7 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת היחיד לפרויקט. קרא אותי בתחילת כל סשן. אל תגזור את המערכת מחדש מהקוד אם מסמך זה מספיק.
-> **שלב נוכחי:** M0 (Scaffold & Foundations) — בוצע. הקוד חי תחת `app/` (PWA). הבא בתור: M1 (Data & Profiles).
+> **שלב נוכחי:** M1 (Data & Profiles) — בוצע. הקוד חי תחת `app/` (PWA). הבא בתור: M2 (Communication Core).
 
 ## 1. Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), עבור קלינאי תקשורת והורים. המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) ולא רק מחולל לוחות. מסחרי, אנדרואיד+Web תחילה ואז iPad.
@@ -18,13 +18,17 @@
 ## 3. Architecture (layers) — מיפוי לקוד
 ```
 Presentation (UI, RTL-first)      → app/src/presentation/ + App.tsx + index.css
-        │  React + TypeScript (PWA)
-Domain / Logic                    → app/src/domain/   (models · fitzgerald · layout/Motor-Planning)
+        │  React + TypeScript (PWA)   (BoardView · SentenceBar · AdultBar · PinGate)
+Domain / Logic                    → app/src/domain/   (models · fitzgerald · layout/Motor-Planning · access/RBAC)
         │
 Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/)
         │
-Data (Offline-first local DB)     → app/src/data/db.ts (IndexedDB via idb)
+Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · bootstrap)
 ```
+**שכבת Data (M1):** `db.ts` — IndexedDB (idb), DB_VERSION=2, stores: nikud/boards/profiles/settings, upgrade
+אדיטיבי (לא הורס v1). `boardRepo`/`profileRepo` — load/save/list, **מחיקה=ארכוב** (`archived`). `settingsRepo` —
+פרופיל פעיל + קוד מטפל. `bootstrap.ts` — `ensureSeeded` (seed מ-SAMPLE_*), `createProfile` (קלון לוח עצמאי),
+`loadActiveContext`/`switchActiveProfile`. **בקרת גישה:** `domain/access.ts` — `verifyPin`/`canEdit`/`canManageProfiles`.
 זרימה: UI → Domain → Services → Data(local) → (sync) Cloud.
 
 ## 4. Non-obvious rules / invariants
@@ -34,8 +38,10 @@ Data (Offline-first local DB)     → app/src/data/db.ts (IndexedDB via idb)
 | Offline-first: תקשורת/ניווט/TTS בסיסי/סמלים **חייבים** לעבוד ללא רשת | `vite.config.ts` (VitePWA) · `services/tts` (קול מקומי) · `services/nikud` (cache) · `data/db.ts` |
 | ניקוד: עדיפות ידני>cache>רשת>גלם; ללא תלות ברשת בשימוש חוזר; ידני לעולם לא נדרס | `app/src/services/nikud/nikudService.ts` + `nikudService.test.ts` |
 | TTS מעדיף קול מקומי (אופליין); נפילה חיננית אם אין קול עברי | `app/src/services/tts/ttsService.ts` (`pickVoice`/`speak`) |
-| נתוני ילדים רגישים: אנליטיקה כבויה כברירת מחדל/מקומית | (יוטמע ב-M5; אינווריאנט מנחה) |
-| מצב ילד נעול; מעבר לעריכה רק בקוד מטפל (RBAC) | `domain/models.ts` (`Profile.locked`, `ROLE_CAN_EDIT`) — אכיפת UI ב-M4 |
+| נתוני ילדים רגישים: מקומי/פרטי כברירת מחדל; אנליטיקה כבויה | פרופילים/לוחות ב-IndexedDB מקומי בלבד (`data/*Repo.ts`); ענן ב-M5 |
+| מחיקת פרופיל/לוח = ארכוב (לא הסרה) — שחזור אפשרי | `data/boardRepo.ts`/`profileRepo.ts` (`archive` → `archived:true`) + `repos.test.ts` |
+| מצב ילד נעול כברירת מחדל; מעבר לעריכה רק בקוד מטפל (PIN/RBAC) | `domain/access.ts` + `App.tsx` (mode=`locked`) + `presentation/PinGate.tsx` · הרחבת Guided-Access מלא ב-M4 |
+| מיגרציית DB לא הורסת נתונים קיימים (upgrade אדיטיבי) | `data/db.ts` (`upgrade` עם guard) + `migration.test.ts` |
 | הקראה כמעט-מיידית: משוב ויזואלי <100ms; תחילת TTS אופליין <300–500ms | `index.css` (`.cell` transition) · `ttsService` (`latencyMs`) |
 | RTL מלא בכל מסך | `index.html` (`dir=rtl`) · `App` (`dir=rtl`) · `index.css` |
 | שינוי AI/אוטומטי ללוח מכבד עקביות מיקום (אזהרה לפני הזזה) | אותו מנגנון `layout.ts` חל גם על שינוי אוטומטי |
@@ -67,9 +73,19 @@ Data (Offline-first local DB)     → app/src/data/db.ts (IndexedDB via idb)
 | `app/README.md` | איך להריץ את ה-PWA (install/dev/test/build) + מבנה |
 | `docs/adr-0001-stack.md` | החלטת ה-stack (PWA React/TS) — נימוק וחלופות |
 | `docs/m0-tts-nikud-spike.md` | ספייק TTS+ניקוד: ארכיטקטורה, אופליין, סיכונים פתוחים |
+| `docs/m1-data-profiles.md` | M1: שכבת Data, מאגרים, פרופילים, מיגרציה, מצב נעול/PIN |
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
 ## 8. Changelog
+- **2026-06-19 (M1 — Data & Profiles)** — שכבת Data הורחבה: `DB_VERSION 2` עם stores
+  `boards`/`profiles`/`settings` לצד `nikud`; **upgrade אדיטיבי** שאינו הורס נתוני v1 (נבדק
+  `migration.test.ts`). מאגרים: `boardRepo`/`profileRepo`/`settingsRepo` (load/save/list);
+  **מחיקה=ארכוב** (FR-022). ריבוי פרופילי ילד (FR-001): `bootstrap.ts` — `ensureSeeded` (seed מ-SAMPLE),
+  `createProfile` (קלון לוח-בית עצמאי, עקביות מיקום נשמרת), `loadActiveContext`/`switchActiveProfile`.
+  **מצב נעול/RBAC** (FR-019/FR-027): `domain/access.ts` (`verifyPin`/`canEdit`/`canManageProfiles`),
+  `App.tsx` נטען מה-DB (לא מהקבוע), נעול כברירת מחדל, מעבר למצב מבוגר בקוד מטפל (PIN, MVP) דרך
+  `PinGate`/`AdultBar`. baseline M0 תוקן לירוק (lint). בדיקות: 35 עוברות (unit מאגרים+מיגרציה+access,
+  integration מעבר-פרופיל+נעילה עם fake-indexeddb). lint/test/build ירוקים. פרטים: `docs/m1-data-profiles.md`.
 - **2026-06-19 (M0)** — הוכרע stack: **PWA React+TS+Vite** (במקום Flutter ל-MVP; ADR-0001). נבנה scaffold תחת `app/` במבנה 4-שכבתי. אינווריאנט **Motor Planning** מומש ונבדק (`domain/layout.ts`). ספייקים: **TTS עברי** (Web Speech API, העדפת קול מקומי/אופליין, חביון) ו**ניקוד** (Nakdan+cache IndexedDB+override ידני, נפילה אופליין) — שניהם עם טסטים. מעטפת RTL מלאה + פרוסה אנכית (לחיצת תא→שורת משפט→הקראה). CI (GitHub Actions: lint+test+build). **הערה:** אימות `npm install/test/build` לא רץ בסנדבוקס (תקרת 45ש' לפקודה) — מאומת ע"י CI בדחיפה. ראה `docs/verification.md`.
 - **2026-06-19** — הקמת repo; איחוד 4 מסמכי מחקר ל-PRD דו-לשוני (`PRD-he.md` + `PRD-en.md`, 12 סעיפים). הכרעות: פלטפורמה Android/Web→iPad; חביון הופרד למשוב/הקראה; Modified Fitzgerald כברירת מחדל. נוצרו `HANDOFF.md`, `README.md`, `EXECUTION-PROMPT.md`.

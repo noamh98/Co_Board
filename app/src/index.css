@@ -55,6 +55,84 @@ body {
 .app__badge--warn {
   color: #b45309;
 }
+.app__profile {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* סרגל בקרת מבוגר/נעילה — מתחת לכותרת, מעל שורת המשפט. */
+.app__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: 0 14px 8px;
+  min-height: 40px;
+}
+.app__adultbtn {
+  min-height: var(--target-min);
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius);
+  background: #f3f4f6;
+  color: var(--ink);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.app__loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.adultbar,
+.pin {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+.adultbar__label,
+.pin__label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.adultbar__select,
+.adultbar__input,
+.pin__input {
+  min-height: var(--target-min);
+  padding: 0 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+}
+.adultbar__btn,
+.pin__btn {
+  min-height: var(--target-min);
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pin__btn--ghost {
+  background: #f3f4f6;
+  color: var(--ink);
+  border: 1px solid #d1d5db;
+}
+.pin__error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
 
 .sentence {
   position: sticky;
