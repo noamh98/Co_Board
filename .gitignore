@@ -4,4 +4,7 @@ Thumbs.db
 *.tmp
 ~$*
 .~lock.*
+
+# Sandbox test artifacts (created during setup; cannot be deleted from this mount)
 _cptest/
+_deltest.txt
