@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="לוח תקשורת">
+  <rect width="512" height="512" rx="96" fill="#f7f5f0" />
+  <g transform="translate(64 88)">
+    <!-- speech bubble -->
+    <rect x="0" y="0" width="384" height="252" rx="40" fill="#ffffff" stroke="#3f6f8f" stroke-width="12" />
+    <!-- grid of AAC cells, soft Fitzgerald colors -->
+    <rect x="40"  y="44"  width="92" height="68" rx="14" fill="#f6d96b" />
+    <rect x="146" y="44"  width="92" height="68" rx="14" fill="#8fce8f" />
+    <rect x="252" y="44"  width="92" height="68" rx="14" fill="#f4b66a" />
+    <rect x="40"  y="128" width="92" height="68" rx="14" fill="#8fb8e0" />
+    <rect x="146" y="128" width="92" height="68" rx="14" fill="#e69aa6" />
+    <rect x="252" y="128" width="92" height="68" rx="14" fill="#e07a73" />
+    <!-- bubble tail -->
+    <path d="M150 252 L150 312 L214 252 Z" fill="#ffffff" stroke="#3f6f8f" stroke-width="12" stroke-linejoin="round" />
+  </g>
+</svg>

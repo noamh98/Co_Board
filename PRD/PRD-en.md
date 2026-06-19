@@ -593,4 +593,4 @@ Remote editing · advanced analytics & reports · Voice Banking · AI symbol gen
 
 ---
 
-*A professional merge of 4 research documents. Primary Hebrew version: `PRD-he.md`. Maintained in git; see `HANDOFF.md` for a project 
+*A professional merge of 4 research documents. Primary Hebrew version: `PRD-he.md`. Maintained in git; see `HANDOFF.md` for a project overview.*

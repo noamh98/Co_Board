@@ -8,3 +8,12 @@ Thumbs.db
 # Sandbox test artifacts (created during setup; cannot be deleted from this mount)
 _cptest/
 _deltest.txt
+
+# npm cache written by sandbox (locked — cannot delete from this mount)
+.npmcache/
+
+# Node / build artifacts (also covered by app/.gitignore)
+node_modules/
+dist/
+dev-dist/
+coverage/
