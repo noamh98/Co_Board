@@ -178,6 +178,34 @@ body {
   cursor: pointer;
 }
 
+/* סרגל ניווט קבוע — PRD §4.4 (מיקום גאומטרי קבוע בכל המסכים). */
+.navbar {
+  display: flex;
+  gap: var(--gap);
+  padding: 6px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid #e5e7eb;
+}
+.navbar__btn {
+  min-height: var(--target-min);
+  padding: 0 18px;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius);
+  background: #f3f4f6;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.navbar__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.navbar__btn:not(:disabled):hover {
+  background: #e5e7eb;
+}
+
 .board {
   flex: 1;
   display: grid;

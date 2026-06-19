@@ -11,7 +11,8 @@ import {
   switchActiveProfile,
   cloneBoard,
 } from './bootstrap';
-import { SAMPLE_CORE_BOARD, SAMPLE_PROFILE } from '../domain/sampleBoard';
+import { SAMPLE_CORE_BOARD } from '../domain/sampleBoard';
+import { HOME_BOARD, HOME_BOARD_ID, DEMO_PROFILE_V2 } from '../domain/boardLibrary';
 import type { Profile } from '../domain/models';
 
 function resetIndexedDb(): void {
@@ -60,29 +61,37 @@ describe('settingsRepo', () => {
 });
 
 describe('bootstrap — seed, יצירת פרופיל, מעבר', () => {
-  it('ensureSeeded זורע פרופיל+לוח דמו, פעיל ו-PIN (idempotent)', async () => {
+  it('ensureSeeded זורע פרופיל+לוחות ספרייה, פעיל ו-PIN (idempotent)', async () => {
     await ensureSeeded();
     await ensureSeeded(); // לא דורס ולא משכפל
 
     const profiles = await createProfileRepo().list();
     expect(profiles).toHaveLength(1);
-    expect(profiles[0].id).toBe(SAMPLE_PROFILE.id);
+    expect(profiles[0].id).toBe(DEMO_PROFILE_V2.id);
 
     const ctx = await loadActiveContext();
-    expect(ctx.activeProfile.id).toBe(SAMPLE_PROFILE.id);
-    expect(ctx.board.id).toBe(SAMPLE_CORE_BOARD.id);
+    expect(ctx.activeProfile.id).toBe(DEMO_PROFILE_V2.id);
+    expect(ctx.board.id).toBe(HOME_BOARD_ID);
     expect(await createSettingsRepo().getCaregiverPin()).toBeTruthy();
+  });
+
+  it('ensureSeeded זורע את כל לוחות הספרייה (אוכל/רגשות/משחק)', async () => {
+    await ensureSeeded();
+    const boards = await createBoardRepo().list();
+    // לפחות 4 לוחות: בית + 3 קטגוריות
+    expect(boards.length).toBeGreaterThanOrEqual(4);
+    expect(boards.find((b) => b.id === HOME_BOARD_ID)).toBeDefined();
   });
 
   it('createProfile יוצר פרופיל עם לוח-בית עצמאי (קלון, מזהה חדש)', async () => {
     await ensureSeeded();
     const p = await createProfile('דנה');
-    expect(p.homeBoardId).not.toBe(SAMPLE_CORE_BOARD.id);
+    expect(p.homeBoardId).not.toBe(HOME_BOARD_ID); // קלון, לא המקור
 
     const board = await createBoardRepo().get(p.homeBoardId);
     expect(board?.isCoreBoard).toBe(false);
     // עקביות מוטורית נשמרת בקלון: אותם מיקומים בדיוק.
-    expect(board?.placements).toEqual(SAMPLE_CORE_BOARD.placements);
+    expect(board?.placements).toEqual(HOME_BOARD.placements);
   });
 
   it('switchActiveProfile מחליף פרופיל פעיל ולוח בית', async () => {

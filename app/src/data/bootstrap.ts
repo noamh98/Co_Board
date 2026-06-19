@@ -1,4 +1,8 @@
-import { SAMPLE_CORE_BOARD, SAMPLE_PROFILE } from '../domain/sampleBoard';
+import {
+  HOME_BOARD,
+  LIBRARY_BOARDS,
+  DEMO_PROFILE_V2,
+} from '../domain/boardLibrary';
 import { DEFAULT_PIN } from '../domain/access';
 import type { Board, Profile } from '../domain/models';
 import { createBoardRepo } from './boardRepo';
@@ -31,12 +35,17 @@ export function cloneBoard(source: Board, name: string): Board {
   };
 }
 
-/** יוצר פרופיל ילד חדש עם לוח-בית עצמאי (קלון של לוח הליבה). נעול כברירת מחדל. */
+/** יוצר פרופיל ילד חדש עם לוח-בית עצמאי (קלון של לוח הבית). נעול כברירת מחדל. */
 export async function createProfile(name: string): Promise<Profile> {
   const boardRepo = createBoardRepo();
   const profileRepo = createProfileRepo();
 
-  const board = cloneBoard(SAMPLE_CORE_BOARD, `לוח בית — ${name}`);
+  // ספריית הלוחות כבר נזרעה; מוצא את לוח הבית ומשכפל.
+  const libraryBoards = await boardRepo.list();
+  const homeSource =
+    libraryBoards.find((b) => b.isCoreBoard) ?? LIBRARY_BOARDS[0];
+
+  const board = cloneBoard(homeSource, `לוח בית — ${name}`);
   await boardRepo.save(board);
 
   const profile: Profile = {
@@ -51,8 +60,9 @@ export async function createProfile(name: string): Promise<Profile> {
 }
 
 /**
- * Seed חד-פעמי: בהתקנה נקייה בלבד (אין פרופילים כלל) נזרע פרופיל הדמו ולוח הליבה.
- * idempotent — לא דורס נתונים קיימים. כן מוודא שקיים קוד מטפל (PIN) ברירת-מחדל.
+ * Seed חד-פעמי: בהתקנה נקייה (אין פרופילים כלל) נזרעים כל לוחות הספרייה + פרופיל דמו.
+ * idempotent — לא דורס נתונים קיימים. מוודא שקיים קוד מטפל (PIN) ברירת-מחדל.
+ * M2 upgrade: אם קיימים פרופילים, מזריע רק לוחות ספרייה חסרים (idempotent).
  */
 export async function ensureSeeded(): Promise<void> {
   const profileRepo = createProfileRepo();
@@ -61,12 +71,30 @@ export async function ensureSeeded(): Promise<void> {
 
   const existing = await profileRepo.list({ includeArchived: true });
   if (existing.length === 0) {
-    await boardRepo.save({ ...SAMPLE_CORE_BOARD });
-    await profileRepo.save({ ...SAMPLE_PROFILE });
-    await settingsRepo.setActiveProfileId(SAMPLE_PROFILE.id);
+    // התקנה נקייה: seed כל הספרייה + פרופיל דמו
+    for (const board of LIBRARY_BOARDS) {
+      await boardRepo.save(board);
+    }
+    await profileRepo.save({ ...DEMO_PROFILE_V2 });
+    await settingsRepo.setActiveProfileId(DEMO_PROFILE_V2.id);
+  } else {
+    // M2 upgrade: הוסף לוחות ספרייה חסרים (לא דורס קיימים)
+    await seedLibraryBoards(boardRepo);
   }
   if (!(await settingsRepo.getCaregiverPin())) {
     await settingsRepo.setCaregiverPin(DEFAULT_PIN);
+  }
+}
+
+/** מוסיף לוחות ספרייה חסרים (idempotent) — לא דורס לוחות קיימים. */
+async function seedLibraryBoards(
+  boardRepo: ReturnType<typeof createBoardRepo>,
+): Promise<void> {
+  for (const board of LIBRARY_BOARDS) {
+    const exists = await boardRepo.get(board.id);
+    if (!exists) {
+      await boardRepo.save(board);
+    }
   }
 }
 
@@ -74,9 +102,11 @@ export interface ActiveContext {
   profiles: Profile[];
   activeProfile: Profile;
   board: Board;
+  /** כל לוחות הספרייה הפעילים (לשימוש מחסנית הניווט). */
+  allBoards: Record<string, Board>;
 }
 
-/** טוען את הפרופילים הפעילים, הפרופיל הנבחר ולוח הבית שלו מה-DB (לא מהקבוע). */
+/** טוען פרופילים פעילים, פרופיל נבחר, לוח בית ומלאי לוחות מה-DB. */
 export async function loadActiveContext(): Promise<ActiveContext> {
   const profileRepo = createProfileRepo();
   const boardRepo = createBoardRepo();
@@ -85,11 +115,14 @@ export async function loadActiveContext(): Promise<ActiveContext> {
   const profiles = await profileRepo.list();
   const activeId = await settingsRepo.getActiveProfileId();
   const activeProfile = profiles.find((p) => p.id === activeId) ?? profiles[0];
-  // נפילה חיננית ללוח הליבה אם רשומת הלוח חסרה (לא אמור לקרות אחרי seed).
-  const board =
-    (await boardRepo.get(activeProfile.homeBoardId)) ?? SAMPLE_CORE_BOARD;
 
-  return { profiles, activeProfile, board };
+  const allBoardsList = await boardRepo.list();
+  const allBoards = Object.fromEntries(allBoardsList.map((b) => [b.id, b]));
+
+  // נפילה חיננית ללוח הבית אם רשומת הלוח חסרה.
+  const board = allBoards[activeProfile.homeBoardId] ?? HOME_BOARD;
+
+  return { profiles, activeProfile, board, allBoards };
 }
 
 /** מעבר פרופיל פעיל (נעול בקוד ב-UI). מחזיר את ההקשר הפעיל המעודכן. */

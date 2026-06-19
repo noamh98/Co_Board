@@ -1,7 +1,7 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת היחיד לפרויקט. קרא אותי בתחילת כל סשן. אל תגזור את המערכת מחדש מהקוד אם מסמך זה מספיק.
-> **שלב נוכחי:** M1 (Data & Profiles) — בוצע. הקוד חי תחת `app/` (PWA). הבא בתור: M2 (Communication Core).
+> **שלב נוכחי:** M2 (Communication Core) — בוצע. הבא בתור: M3 (Builder & Symbols).
 
 ## 1. Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), עבור קלינאי תקשורת והורים. המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) ולא רק מחולל לוחות. מסחרי, אנדרואיד+Web תחילה ואז iPad.
@@ -15,20 +15,22 @@
 - **Symbols:** ARASAAC (בסיס חינמי) → SymbolStix/PCS/Widgit (רישוי) — M3.
 - **Test/CI:** Vitest + Testing Library; ESLint (flat); GitHub Actions (lint+test+build כשער חוסם).
 
-## 3. Architecture (layers) — מיפוי לקוד
+## 3. Architecture (layers) — מיפוי לקוד (עודכן M2)
 ```
 Presentation (UI, RTL-first)      → app/src/presentation/ + App.tsx + index.css
-        │  React + TypeScript (PWA)   (BoardView · SentenceBar · AdultBar · PinGate)
-Domain / Logic                    → app/src/domain/   (models · fitzgerald · layout/Motor-Planning · access/RBAC)
-        │
+        │  React + TypeScript (PWA)   (BoardView · CellButton · SentenceBar · AdultBar · PinGate · NavBar)
+Domain / Logic                    → app/src/domain/   (models · fitzgerald · layout/Motor-Planning · access/RBAC
+        │                                              navigationStack · boardLibrary)
 Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/)
         │
 Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · bootstrap)
 ```
-**שכבת Data (M1):** `db.ts` — IndexedDB (idb), DB_VERSION=2, stores: nikud/boards/profiles/settings, upgrade
-אדיטיבי (לא הורס v1). `boardRepo`/`profileRepo` — load/save/list, **מחיקה=ארכוב** (`archived`). `settingsRepo` —
-פרופיל פעיל + קוד מטפל. `bootstrap.ts` — `ensureSeeded` (seed מ-SAMPLE_*), `createProfile` (קלון לוח עצמאי),
-`loadActiveContext`/`switchActiveProfile`. **בקרת גישה:** `domain/access.ts` — `verifyPin`/`canEdit`/`canManageProfiles`.
+**שכבת Data (M1+M2):** `db.ts` — IndexedDB (idb), DB_VERSION=2, stores: nikud/boards/profiles/settings.
+`boardRepo`/`profileRepo` — load/save/list, **מחיקה=ארכוב**. `settingsRepo` — פרופיל פעיל + PIN.
+`bootstrap.ts` — `ensureSeeded` (seed ספריית לוחות M2 + פרופיל דמו), `createProfile` (קלון לוח עצמאי),
+`loadActiveContext` (מחזיר גם `allBoards` מלא), `switchActiveProfile`. **ניווט:** `domain/navigationStack.ts` —
+מחסנית TS טהורה (push/pop/home; מניעת לולאה; בית תמיד בתחתית). **ספריית לוחות M2:** `domain/boardLibrary.ts` —
+HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/access.ts`.
 זרימה: UI → Domain → Services → Data(local) → (sync) Cloud.
 
 ## 4. Non-obvious rules / invariants
@@ -78,6 +80,16 @@ Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profile
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
 ## 8. Changelog
+- **2026-06-19 (M2 — Communication Core)** — **ניווט בין לוחות** (FR-013): `domain/navigationStack.ts` —
+  מחסנית TS טהורה (`createNavStack`/`navPush`/`navPop`/`navHome`/`navCurrent`/`navCanGoBack`); מניעת לולאה ישירה;
+  בית תמיד בתחתית; 8 בדיקות יחידה. **ספריית לוחות מוכנים** (FR-002): `domain/boardLibrary.ts` — 4 לוחות עבריים
+  (HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4), מילות ליבה במיקום קבוע, תאי ניווט (`navigate`) מלוח הבית לקטגוריות.
+  **`data/bootstrap.ts`**: `ensureSeeded` זורע ספריית לוחות מלאה + idempotent upgrade למשתמשי M1; `loadActiveContext`
+  מחזיר `allBoards` מלא; `createProfile` מקלון מלוח הבית הנוכחי. **`App.tsx`**: מחסנית ניווט כ-state, טיפול
+  ב-`navigate`/`back`/`home`/`deleteWord`/`clear` ב-`onCell` (back לא מוסיף לשורת המשפט — מניעת באג TouchChat);
+  NikudService מחובר לרקע (לא חוסם TTS); NavBar קבוע (בית+חזור, disabled בבית). **`NavBar.tsx`**: כפתורים קבועים
+  במיקום גאומטרי קבוע (PRD §4.4). **בדיקות**: 8 בדיקות ניווט חדשות ב-App.test.tsx. lint/test/build ירוקים.
+  פרטים: `docs/m2-communication-core.md` (TODO לאחר CI).
 - **2026-06-19 (M1 — Data & Profiles)** — שכבת Data הורחבה: `DB_VERSION 2` עם stores
   `boards`/`profiles`/`settings` לצד `nikud`; **upgrade אדיטיבי** שאינו הורס נתוני v1 (נבדק
   `migration.test.ts`). מאגרים: `boardRepo`/`profileRepo`/`settingsRepo` (load/save/list);

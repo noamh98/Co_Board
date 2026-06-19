@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Cell } from './domain/models';
 import {
   type AppMode,
@@ -17,34 +17,54 @@ import { BoardView } from './presentation/components/BoardView';
 import { SentenceBar } from './presentation/components/SentenceBar';
 import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
+import { NavBar } from './presentation/components/NavBar';
 import {
   createBrowserTts,
   waitForVoices,
   type HebrewTts,
 } from './services/tts/ttsService';
+import { NikudService } from './services/nikud/nikudService';
+import { createIdbNikudCache } from './services/nikud/nikudCache';
+import { createNakdanFetcher } from './services/nikud/nakdanClient';
+import {
+  type NavStack,
+  createNavStack,
+  navPush,
+  navPop,
+  navHome,
+  navCurrent,
+  navCanGoBack,
+} from './domain/navigationStack';
 
-/** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. (התצוגה מראה label.) */
+/** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. */
 function vocalize(c: Cell): string {
   return c.vocalization ?? c.nikud ?? c.label;
 }
 
 export function App() {
   const [ctx, setCtx] = useState<ActiveContext | null>(null);
-  const [mode, setMode] = useState<AppMode>('locked'); // נעול כברירת מחדל (אינווריאנט)
+  const [mode, setMode] = useState<AppMode>('locked');
   const [pinPrompt, setPinPrompt] = useState(false);
   const [sentence, setSentence] = useState<Cell[]>([]);
   const [hasHeVoice, setHasHeVoice] = useState<boolean | null>(null);
+  // מחסנית הניווט — null עד שהקוד נטען (PRD §4.4)
+  const [navStack, setNavStack] = useState<NavStack | null>(null);
+
   const ttsRef = useRef<HebrewTts | null>(null);
   const storedPinRef = useRef<string>('');
+  const nikudRef = useRef<NikudService | null>(null);
 
-  // אתחול: seed (אם נקי), טעינת קוד מטפל, וטעינת ההקשר הפעיל מה-DB.
+  // אתחול: seed, PIN, קונטקסט פעיל, TTS, NikudService
   useEffect(() => {
     let alive = true;
     void (async () => {
       await ensureSeeded();
       storedPinRef.current = (await createSettingsRepo().getCaregiverPin()) ?? '';
       const loaded = await loadActiveContext();
-      if (alive) setCtx(loaded);
+      if (alive) {
+        setCtx(loaded);
+        setNavStack(createNavStack(loaded.activeProfile.homeBoardId));
+      }
     })();
 
     const tts = createBrowserTts();
@@ -56,19 +76,61 @@ export function App() {
         if (alive) setHasHeVoice(tts.hasHebrewVoice());
       });
     }
+
+    nikudRef.current = new NikudService(
+      createIdbNikudCache(),
+      createNakdanFetcher(),
+    );
+
     return () => {
       alive = false;
     };
   }, []);
 
+  // איפוס מחסנית ניווט כשמחליפים פרופיל
+  useEffect(() => {
+    if (!ctx) return;
+    setNavStack(createNavStack(ctx.activeProfile.homeBoardId));
+    setSentence([]);
+  }, [ctx?.activeProfile.id]);
+
   const speak = (text: string): void => {
     void ttsRef.current?.speak(text);
   };
 
+  // הלוח הנוכחי לפי מחסנית הניווט
+  const currentBoard = useMemo(() => {
+    if (!ctx) return null;
+    if (!navStack) return ctx.board;
+    return ctx.allBoards[navCurrent(navStack)] ?? ctx.board;
+  }, [navStack, ctx]);
+
   const onCell = (cell: Cell): void => {
-    if (cell.action.type === 'speak') {
+    const action = cell.action;
+
+    if (action.type === 'speak') {
       setSentence((s) => [...s, cell]);
       speak(vocalize(cell));
+      // ניקוד חי ברקע (FR-009): אם אין ניקוד ידני/cache — שלח לרשת ושמור.
+      // לא חוסם TTS: הקראה מיידית עם מה שיש; ניקוד מתעדכן ב-cache ל-next time.
+      if (!cell.nikud && nikudRef.current) {
+        void nikudRef.current.getNikud(cell.label);
+      }
+    } else if (action.type === 'navigate') {
+      setNavStack((prev) =>
+        prev ? navPush(prev, action.targetBoardId) : prev,
+      );
+    } else if (action.type === 'back') {
+      // לא מוסיף לשורת המשפט — מניעת באג TouchChat (HANDOFF §4)
+      setNavStack((prev) => (prev ? navPop(prev) : prev));
+    } else if (action.type === 'home') {
+      if (ctx) {
+        setNavStack(navHome(ctx.activeProfile.homeBoardId));
+      }
+    } else if (action.type === 'deleteWord') {
+      setSentence((s) => s.slice(0, -1));
+    } else if (action.type === 'clear') {
+      setSentence([]);
     }
   };
 
@@ -88,7 +150,6 @@ export function App() {
   const onSwitch = (id: string): void => {
     void switchActiveProfile(id).then((next) => {
       setCtx(next);
-      setSentence([]);
     });
   };
 
@@ -97,11 +158,11 @@ export function App() {
       const profile = await createProfile(name);
       const next = await switchActiveProfile(profile.id);
       setCtx(next);
-      setSentence([]);
     })();
   };
 
   const adult = canManageProfiles(mode);
+  const canBack = navStack ? navCanGoBack(navStack) : false;
 
   return (
     <div className="app" dir="rtl">
@@ -156,8 +217,17 @@ export function App() {
         onClear={() => setSentence([])}
       />
 
-      {ctx ? (
-        <BoardView board={ctx.board} onCell={onCell} />
+      {/* סרגל ניווט קבוע — PRD §4.4 */}
+      <NavBar
+        canGoBack={canBack}
+        onBack={() => setNavStack((prev) => (prev ? navPop(prev) : prev))}
+        onHome={() => {
+          if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
+        }}
+      />
+
+      {ctx && currentBoard ? (
+        <BoardView board={currentBoard} onCell={onCell} />
       ) : (
         <div className="app__loading" role="status">
           טוען…

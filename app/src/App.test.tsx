@@ -83,3 +83,94 @@ describe('App — מצב נעול, קוד מטפל ומעבר פרופיל (M1)'
     );
   });
 });
+
+describe('App — ניווט בין לוחות M2 (FR-013)', () => {
+  it('כפתורי ניווט בית/חזור מוצגים תמיד', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    expect(screen.getByRole('button', { name: 'בית' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'חזור' })).toBeInTheDocument();
+  });
+
+  it('"חזור" מושבת בלוח הבית (אין היסטוריה)', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    const backBtn = screen.getByRole('button', { name: 'חזור' });
+    expect(backBtn).toBeDisabled();
+  });
+
+  it('ניווט ללוח קטגוריה: לחיצת "אוכל" מציגה לוח אוכל', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    // לחץ על תא הניווט לאוכל
+    fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
+    // לוח האוכל מציג תאים ייחודיים לו
+    await screen.findByRole('button', { name: 'מים' });
+    expect(screen.getByRole('button', { name: 'בננה' })).toBeInTheDocument();
+  });
+
+  it('ניווט ± חזרה: חזרה לבית לאחר כניסה ללוח אוכל', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
+    await screen.findByRole('button', { name: 'מים' });
+
+    // "חזור" פעיל כעת
+    const backBtn = screen.getByRole('button', { name: 'חזור' });
+    expect(backBtn).not.toBeDisabled();
+    fireEvent.click(backBtn);
+
+    // חזרה ללוח הבית
+    await screen.findByRole('button', { name: 'אני' });
+    expect(screen.queryByRole('button', { name: 'מים' })).toBeNull();
+  });
+
+  it('כפתור "בית" מחזיר ישירות ללוח הבית מכל עומק', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
+    await screen.findByRole('button', { name: 'מים' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'בית' }));
+    await screen.findByRole('button', { name: 'אני' });
+    expect(screen.queryByRole('button', { name: 'מים' })).toBeNull();
+  });
+
+  it('"חזור" לא מוסיף מילה לשורת המשפט (מניעת באג TouchChat)', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
+    await screen.findByRole('button', { name: 'מים' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'חזור' }));
+    await screen.findByRole('button', { name: 'אני' });
+
+    // שורת המשפט ריקה — "חזור" לא נוסף
+    expect(screen.getByTestId('sentence-text').textContent).toBe('');
+  });
+
+  it('תאי speak בלוח קטגוריה מתווספים לשורת המשפט', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'מים' }));
+    const text = screen.getByTestId('sentence-text').textContent ?? '';
+    expect(text).toContain('מים');
+  });
+
+  it('מחסנית ניווט: ניווט עמוק + חזרות מרובות חוזרות לבית', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'אני' });
+    fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
+    await screen.findByRole('button', { name: 'מים' });
+
+    // חזרה מרובה — לא אמורה לגרום לשגיאה
+    const backBtn = screen.getByRole('button', { name: 'חזור' });
+    fireEvent.click(backBtn);
+    await screen.findByRole('button', { name: 'אני' });
+    // חזרה נוספת מהבית — כפתור מושבת, ממשיך להיות בבית
+    expect(screen.getByRole('button', { name: 'חזור' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'חזור' })); // no-op
+    expect(screen.getByRole('button', { name: 'אני' })).toBeInTheDocument();
+  });
+});
