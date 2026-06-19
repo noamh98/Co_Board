@@ -1,0 +1,7 @@
+# OS / temp
+.DS_Store
+Thumbs.db
+*.tmp
+~$*
+.~lock.*
+_cptest/
