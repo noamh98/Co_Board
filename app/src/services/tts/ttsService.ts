@@ -97,11 +97,15 @@ export class HebrewTts {
 
       const t0 = this.now();
       let settled = false;
-      let watchdog: ReturnType<typeof setTimeout> | undefined;
+      // Watchdog: אם onstart לא נורה (קול חסר/תקלת מנוע) — לא להשאיר Promise תלוי.
+      const watchdog = setTimeout(
+        () => settle({ spoken: false, reason: 'timeout', fellBack: voice === null }),
+        3000,
+      );
       const settle = (r: SpeakResult): void => {
         if (settled) return;
         settled = true;
-        if (watchdog !== undefined) clearTimeout(watchdog);
+        clearTimeout(watchdog);
         resolve(r);
       };
 
@@ -121,12 +125,6 @@ export class HebrewTts {
       } catch (e) {
         settle({ spoken: false, reason: String(e) });
       }
-
-      // Watchdog: אם onstart לא נורה (קול חסר/תקלת מנוע) — לא להשאיר Promise תלוי.
-      watchdog = setTimeout(
-        () => settle({ spoken: false, reason: 'timeout', fellBack: voice === null }),
-        3000,
-      );
     });
   }
 
