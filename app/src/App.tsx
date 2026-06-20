@@ -31,6 +31,7 @@ import { LoginPanel } from './presentation/auth/LoginPanel';
 import { UsageDashboard } from './presentation/analytics/UsageDashboard';
 import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
+import { pruneCache } from './data/symbolCache';
 import {
   createBrowserTts,
   waitForVoices,
@@ -98,6 +99,7 @@ export function App() {
   useEffect(() => {
     const DAY_MS = 24 * 60 * 60 * 1000;
     void clearEvents(Date.now() - 90 * DAY_MS);
+    void pruneCache(30);
 
     let alive = true;
     void (async () => {

@@ -7,6 +7,7 @@ import { createSymbolRepo } from '../../data/symbolRepo';
 import { cropImage, removeBackground, compressToWebP } from '../../services/image/imageService';
 import type { NikudService } from '../../services/nikud/nikudService';
 import { HiddenToggle } from './HiddenToggle';
+import { SymbolPicker } from './SymbolPicker';
 
 export interface CellEditorProps {
   cell: Cell | null;
@@ -50,6 +51,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
   const [recordingSymbolId, setRecordingSymbolId] = useState<string | undefined>(cell?.symbolId);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [hidden, setHidden] = useState<boolean>(cell?.hidden ?? false);
+  const [symbolPickerOpen, setSymbolPickerOpen] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -343,19 +345,43 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
             תמונה
           </label>
           {imagePreview && (
-            <img
-              src={imagePreview}
-              alt="תצוגה מקדימה"
-              style={{
-                width: 80,
-                height: 80,
-                objectFit: 'contain',
-                borderRadius: 10,
-                border: '1px solid #e5e7eb',
-                marginBottom: 8,
-                display: 'block',
-              }}
-            />
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
+              <img
+                src={imagePreview}
+                alt="תצוגה מקדימה"
+                style={{
+                  width: 80,
+                  height: 80,
+                  objectFit: 'contain',
+                  borderRadius: 10,
+                  border: '1px solid #e5e7eb',
+                  display: 'block',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => { setImageUri(undefined); setImagePreview(undefined); }}
+                aria-label="מחק תמונה"
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  left: -6,
+                  width: 22,
+                  height: 22,
+                  border: 'none',
+                  borderRadius: '50%',
+                  background: '#ef4444',
+                  color: '#fff',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <label
@@ -401,8 +427,39 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                 style={{ display: 'none' }}
               />
             </label>
+            <button
+              type="button"
+              onClick={() => setSymbolPickerOpen(true)}
+              style={{
+                minHeight: 40,
+                padding: '0 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: 10,
+                background: '#eff6ff',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#1d4ed8',
+                fontWeight: 600,
+              }}
+            >
+              סמלים ARASAAC
+            </button>
           </div>
         </div>
+
+        {symbolPickerOpen && (
+          <SymbolPicker
+            onSelect={(uri, arasaacId) => {
+              setImageUri(uri);
+              setImagePreview(uri);
+              setRecordingSymbolId(String(arasaacId));
+              setSymbolPickerOpen(false);
+            }}
+            onClose={() => setSymbolPickerOpen(false)}
+          />
+        )}
 
         {/* Voice recording */}
         <div className="cell-editor__field">

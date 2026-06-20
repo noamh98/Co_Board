@@ -104,6 +104,19 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
+## 8. Changelog (עדכון M8 — 2026-06-21)
+- **2026-06-21 (M8 — ARASAAC Symbol Search & Offline Cache)** — חיפוש סמלים עברי + cache offline.
+  **ARASAAC Client:** `services/symbols/arasaacClient.ts` — `searchSymbols(query, lang='he')` → GET `/pictograms/he/search/{q}`, מקסימום 20 תוצאות; `getImageUrl(id)` → `static.arasaac.org`. ללא API key, ללא Authorization.
+  **Symbol Cache:** `data/symbolCache.ts` — `getFromCache`/`saveToCache`/`pruneCache` על IndexedDB STORE_SYMBOL_CACHE. `pruneCache(maxAgeDays)` עם early-exit כשאין מה למחוק (לא יוצר transaction מיותר).
+  **DB:** `data/db.ts` DB_VERSION=6 — נוסף `STORE_SYMBOL_CACHE` (`symbolCache`, keyPath: `arasaacId`); אדיטיבי, לא שובר v5.
+  **Symbol Search Service:** `services/symbols/symbolSearchService.ts` — `searchAndCache(query)`, `fetchAndCacheBlob(arasaacId)` (cache-first → fetch → saveToCache → objectURL); `SymbolOfflineError` (לא קורס, זורק שגיאה מוכרת).
+  **SymbolPicker UI:** `presentation/builder/SymbolPicker.tsx` — modal RTL, חיפוש עברי debounce 400ms, גריד 4×5, spinner, "אין תוצאות", "שגיאה — בדוק חיבור"; לחיצה → fetchAndCacheBlob → onSelect.
+  **CellEditor:** נוסף כפתור "סמלים ARASAAC" פותח SymbolPicker; בחירת סמל → imageUri+symbolId; כפתור × למחיקת תמונה.
+  **App.tsx:** `void pruneCache(30)` ב-init useEffect (ניקוי סמלים ישנים).
+  **Invariants (נאמתו):** Offline safety=SymbolOfflineError; No API key=ללא Authorization; Cache-first=getFromCache לפני fetch; DB=v6 אדיטיבי; prune=App init.
+  **CI:** lint 0 errors, 171 tests (+15), build ירוק. `docs/m8-symbols.md`.
+  **הבא (M9):** ממתין לאישור.
+
 ## 8. Changelog (עדכון M7 — 2026-06-20)
 - **2026-06-20 (M7 — Usage Analytics & Logging)** — מעקב שימוש אנונימי opt-in (PRD §4).
   **Domain:** `domain/usageEvent.ts` — `UsageEvent` interface (id/profileId/boardId/cellId/label/timestamp/sessionId). ללא PII (uid/email).
