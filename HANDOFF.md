@@ -104,6 +104,19 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
+## 8. Changelog (עדכון M7 — 2026-06-20)
+- **2026-06-20 (M7 — Usage Analytics & Logging)** — מעקב שימוש אנונימי opt-in (PRD §4).
+  **Domain:** `domain/usageEvent.ts` — `UsageEvent` interface (id/profileId/boardId/cellId/label/timestamp/sessionId). ללא PII (uid/email).
+  **Data:** `db.ts` DB_VERSION=5 — store `usage` (keyPath: id, indexes: by-profile/by-timestamp); אדיטיבי, לא שובר v4.
+  `data/usageRepo.ts` — `logEvent`/`getEvents`/`clearEvents`/`clearProfileEvents` (4 פונקציות, 5 בדיקות).
+  `data/settingsRepo.ts` — נוסף `getAnalyticsEnabled`/`setAnalyticsEnabled` (ללא שינוי DB_VERSION — כמו accessSettings).
+  **Services:** `services/analytics/analyticsService.ts` — `trackCellPress` (fire-and-forget void, no-op כש-disabled), `getTopCells` (top-n לפי count desc, since=שבוע ברירת מחדל), `clearAllData` (GDPR — מוחק כל events של profileId). 6 בדיקות.
+  **Presentation:** `presentation/analytics/UsageDashboard.tsx` — top-10, opt-in toggle, "נקה נתונים"+אישור עברי, RTL, מוצג מ-AdultBar. 4 בדיקות.
+  **App.tsx:** `sessionIdRef` (crypto.randomUUID per launch, לא נשמר), auto-cleanup 90 יום ב-init, `onCell→trackCellPress` (fire-and-forget), `analyticsOpen` state, `AdultBar.onOpenAnalytics`.
+  **Invariants (נאמתו):** Privacy=no-op כש-disabled; No PII=אין uid/email ב-UsageEvent; Perf=void trackCellPress; GDPR=clearAllData מוחק הכל לפרופיל; DB=v5 אדיטיבי; Auto-cleanup=90 יום.
+  **CI:** lint 0 errors, 156 tests (+16), build ירוק. `docs/m7-analytics.md`.
+  **הבא (M8):** ממתין לאישור.
+
 ## 8. Changelog (עדכון M6 — 2026-06-20)
 - **2026-06-20 (M6 — Firebase Auth + Firestore Rules + Login UI)** — **FR-022/Auth** (PRD §4.8).
   **Firestore Rules:** `docs/firestore.rules` — `users/{uid}/{document=**}` read/write רק לבעל uid; פריסה ידנית ב-Firebase Console.

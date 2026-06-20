@@ -10,6 +10,7 @@ import {
 const KEY_ACTIVE_PROFILE = 'activeProfileId';
 const KEY_CAREGIVER_PIN = 'caregiverPin';
 const KEY_ACCESS_SETTINGS = 'accessSettings';
+const KEY_ANALYTICS_ENABLED = 'analyticsEnabled';
 
 interface SettingEntry {
   key: string;
@@ -24,6 +25,9 @@ export interface SettingsRepo {
   /** הגדרות גישה מוטורית (FR-020). מחזיר ברירת מחדל אם לא נשמרו. */
   getAccessSettings(): Promise<AccessSettings>;
   saveAccessSettings(settings: AccessSettings): Promise<void>;
+  /** אנליטיקה opt-in — כבויה כברירת מחדל (M7). */
+  getAnalyticsEnabled(): Promise<boolean>;
+  setAnalyticsEnabled(enabled: boolean): Promise<void>;
 }
 
 async function readValue(key: string): Promise<string | undefined> {
@@ -57,5 +61,11 @@ export function createSettingsRepo(): SettingsRepo {
     getAccessSettings,
     saveAccessSettings: (settings) =>
       writeValue(KEY_ACCESS_SETTINGS, JSON.stringify(settings)),
+    getAnalyticsEnabled: async () => {
+      const raw = await readValue(KEY_ANALYTICS_ENABLED);
+      return raw === 'true';
+    },
+    setAnalyticsEnabled: (enabled) =>
+      writeValue(KEY_ANALYTICS_ENABLED, String(enabled)),
   };
 }

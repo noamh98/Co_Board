@@ -28,6 +28,9 @@ import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
 import { PrivacyToggle } from './presentation/settings/PrivacyToggle';
 import { LoginPanel } from './presentation/auth/LoginPanel';
+import { UsageDashboard } from './presentation/analytics/UsageDashboard';
+import { analyticsService } from './services/analytics/analyticsService';
+import { clearEvents } from './data/usageRepo';
 import {
   createBrowserTts,
   waitForVoices,
@@ -72,6 +75,7 @@ export function App() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatusType>('disabled');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -80,6 +84,8 @@ export function App() {
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
   const syncEngineRef = useRef<SyncEngine | null>(null);
+  /** sessionId חי כל הפעלה — לא נשמר, לא מקושר ל-uid */
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
   // ref מסנכרן עם syncEnabled state כדי שקרוב syncEngine תמיד יראה ערך נוכחי
   const syncEnabledRef = useRef(false);
 
@@ -90,6 +96,9 @@ export function App() {
 
   // אתחול: seed, PIN, קונטקסט פעיל, TTS, NikudService, auth listener
   useEffect(() => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    void clearEvents(Date.now() - 90 * DAY_MS);
+
     let alive = true;
     void (async () => {
       await ensureSeeded();
@@ -198,6 +207,14 @@ export function App() {
     if (action.type === 'speak') {
       setSentence((s) => [...s, cell]);
       speak(vocalize(cell));
+      if (ctx && currentBoard) {
+        analyticsService.trackCellPress(
+          ctx.activeProfile.id,
+          currentBoard.id,
+          cell,
+          sessionIdRef.current,
+        );
+      }
       if (!cell.nikud && nikudRef.current) {
         void nikudRef.current.getNikud(cell.label);
       }
@@ -296,6 +313,7 @@ export function App() {
               onEditBoard={() => setBuilderMode(true)}
               onOpenSettings={() => setSettingsOpen(true)}
               onOpenBackup={() => setBackupOpen(true)}
+              onOpenAnalytics={() => setAnalyticsOpen(true)}
               onSignOut={authUser ? onSignOut : undefined}
             />
           )
@@ -384,6 +402,13 @@ export function App() {
       )}
 
       {backupOpen && <BackupPanel onClose={() => setBackupOpen(false)} />}
+
+      {analyticsOpen && ctx && (
+        <UsageDashboard
+          profileId={ctx.activeProfile.id}
+          onClose={() => setAnalyticsOpen(false)}
+        />
+      )}
     </div>
   );
 }

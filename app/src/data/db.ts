@@ -3,10 +3,11 @@ import { openDB, type IDBPDatabase } from 'idb';
 // שכבת Data — מקור האמת המקומי (Offline-first, HANDOFF §3/§4).
 // v1: store ניקוד בלבד. v2 (M1): נוספו boards/profiles/settings. v3: נוסף symbols.
 // v4 (M5): נוספו outbox (שינויים ממתינים ל-sync) ו-versions (היסטוריה לשחזור).
+// v5 (M7): נוסף usage (אנליטיקה אנונימית, opt-in בלבד).
 // אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 export const STORE_NIKUD = 'nikud';
 export const STORE_BOARDS = 'boards';
@@ -15,6 +16,7 @@ export const STORE_SETTINGS = 'settings';
 export const STORE_SYMBOLS = 'symbols';
 export const STORE_OUTBOX = 'outbox';
 export const STORE_VERSIONS = 'versions';
+export const STORE_USAGE = 'usage';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -45,6 +47,11 @@ export function getDb(): Promise<IDBPDatabase> {
         if (!db.objectStoreNames.contains(STORE_VERSIONS)) {
           // keyPath: 'key' — פורמט: '{entityType}_{entityId}_{version}'
           db.createObjectStore(STORE_VERSIONS, { keyPath: 'key' });
+        }
+        if (!db.objectStoreNames.contains(STORE_USAGE)) {
+          const usageStore = db.createObjectStore(STORE_USAGE, { keyPath: 'id' });
+          usageStore.createIndex('by-profile', 'profileId', { unique: false });
+          usageStore.createIndex('by-timestamp', 'timestamp', { unique: false });
         }
       },
     });
