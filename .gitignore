@@ -17,3 +17,5 @@ node_modules/
 dist/
 dev-dist/
 coverage/
+
+app/vite.config.ts.timestamp-*.mjs

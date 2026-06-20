@@ -13,12 +13,17 @@ import {
   switchActiveProfile,
 } from './data/bootstrap';
 import { createSettingsRepo } from './data/settingsRepo';
+import {
+  type AccessSettings,
+  DEFAULT_ACCESS_SETTINGS,
+} from './domain/accessSettings';
 import { BoardView } from './presentation/components/BoardView';
 import { BuilderView } from './presentation/builder/BuilderView';
 import { SentenceBar } from './presentation/components/SentenceBar';
 import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
 import { NavBar } from './presentation/components/NavBar';
+import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import {
   createBrowserTts,
   waitForVoices,
@@ -51,6 +56,10 @@ export function App() {
   // מחסנית הניווט — null עד שהקוד נטען (PRD §4.4)
   const [navStack, setNavStack] = useState<NavStack | null>(null);
   const [builderMode, setBuilderMode] = useState(false);
+  const [accessSettings, setAccessSettings] = useState<AccessSettings>(
+    DEFAULT_ACCESS_SETTINGS,
+  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const ttsRef = useRef<HebrewTts | null>(null);
   const storedPinRef = useRef<string>('');
@@ -61,9 +70,12 @@ export function App() {
     let alive = true;
     void (async () => {
       await ensureSeeded();
-      storedPinRef.current = (await createSettingsRepo().getCaregiverPin()) ?? '';
+      const settingsRepo = createSettingsRepo();
+      storedPinRef.current = (await settingsRepo.getCaregiverPin()) ?? '';
+      const access = await settingsRepo.getAccessSettings();
       const loaded = await loadActiveContext();
       if (alive) {
+        setAccessSettings(access);
         setCtx(loaded);
         setNavStack(createNavStack(loaded.activeProfile.homeBoardId));
       }
@@ -95,6 +107,29 @@ export function App() {
     setNavStack(createNavStack(ctx.activeProfile.homeBoardId));
     setSentence([]);
   }, [ctx?.activeProfile.id]);
+
+  // מצב נעול מלא (Guided Access, FR-019): מניעת יציאה לא רצויה.
+  // ב-PWA לא ניתן לנעול את ה-OS; חוסמים ניווט-אחורה (היסטוריה) ויציאה בטעות.
+  useEffect(() => {
+    if (mode !== 'locked') return;
+    window.history.pushState(null, '', window.location.href);
+    const onPop = () => window.history.pushState(null, '', window.location.href);
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [mode]);
+
+  const onChangeAccess = (next: AccessSettings): void => {
+    setAccessSettings(next);
+    void createSettingsRepo().saveAccessSettings(next);
+  };
 
   const speak = (text: string): void => {
     void ttsRef.current?.speak(text);
@@ -198,6 +233,7 @@ export function App() {
               onCreate={onCreate}
               onLock={lock}
               onEditBoard={() => setBuilderMode(true)}
+              onOpenSettings={() => setSettingsOpen(true)}
             />
           )
         ) : pinPrompt ? (
@@ -247,11 +283,19 @@ export function App() {
           nikudService={nikudRef.current}
         />
       ) : ctx && currentBoard ? (
-        <BoardView board={currentBoard} onCell={onCell} />
+        <BoardView board={currentBoard} onCell={onCell} accessSettings={accessSettings} />
       ) : (
         <div className="app__loading" role="status">
           טוען…
         </div>
+      )}
+
+      {settingsOpen && (
+        <AccessSettingsPanel
+          settings={accessSettings}
+          onChange={onChangeAccess}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
     </div>
   );

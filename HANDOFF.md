@@ -1,7 +1,7 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת היחיד לפרויקט. קרא אותי בתחילת כל סשן. אל תגזור את המערכת מחדש מהקוד אם מסמך זה מספיק.
-> **שלב נוכחי:** M3 (Builder & Symbols) — בוצע. הבא בתור: M4 (Adaptivity).
+> **שלב נוכחי:** M4 (Adaptivity & Access) — בוצע. הבא בתור: M5 (Sync & Cloud).
 
 ## 1. Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), עבור קלינאי תקשורת והורים. המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) ולא רק מחולל לוחות. מסחרי, אנדרואיד+Web תחילה ואז iPad.
@@ -21,8 +21,9 @@ Presentation (UI, RTL-first)      → app/src/presentation/ + App.tsx + index.cs
         │  React + TypeScript (PWA)   (BoardView · CellButton · SentenceBar · AdultBar · PinGate · NavBar)
         │                             builder/ (BuilderView · CellEditor) — M3
 Domain / Logic                    → app/src/domain/   (models · fitzgerald · layout/Motor-Planning · access/RBAC
-        │                                              navigationStack · boardLibrary · boardEditor/UndoStack)
-Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/ · image/)
+        │                                              navigationStack · boardLibrary · boardEditor/UndoStack
+        │                                              adaptivity · accessSettings) — M4
+Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/ · image/ · access/dwellService) — M4
         │
 Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · symbolRepo · bootstrap)
 ```
@@ -36,7 +37,12 @@ HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/a
 **Builder M3:** `domain/boardEditor.ts` — addCell/removeCell/moveCell/resizeBoard (immutable) + UndoStack<T> (max 50).
 `services/image/imageService.ts` — cropImage/removeBackground(fallback)/compressToWebP (Canvas API, offline).
 `presentation/builder/BuilderView.tsx` — עריכת גריד, drag-drop RTL, multi-select, undo/redo, preview.
-`presentation/builder/CellEditor.tsx` — modal לעריכת תא (label/nikud/fitzgerald/action/image/voice).
+`presentation/builder/CellEditor.tsx` — modal לעריכת תא (label/nikud/fitzgerald/action/image/voice + HiddenToggle M4).
+**Adaptivity M4:** `domain/adaptivity.ts` — `toggleCellVisibility`/`hiddenFilter`/`applyCellSize`.
+`domain/accessSettings.ts` — `AccessSettings` + `DEFAULT_ACCESS_SETTINGS`. `services/access/dwellService.ts` —
+hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `settingsRepo` —
+`getAccessSettings`/`saveAccessSettings` (JSON ב-key `accessSettings`, ללא שינוי DB_VERSION).
+`presentation/builder/GridSizePicker.tsx`+`HiddenToggle.tsx`, `presentation/settings/AccessSettingsPanel.tsx`.
 זרימה: UI → Domain → Services → Data(local) → (sync) Cloud.
 
 ## 4. Non-obvious rules / invariants (עודכן M3)
@@ -48,7 +54,11 @@ HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/a
 | TTS מעדיף קול מקומי (אופליין); נפילה חיננית אם אין קול עברי | `app/src/services/tts/ttsService.ts` (`pickVoice`/`speak`) |
 | נתוני ילדים רגישים: מקומי/פרטי כברירת מחדל; אנליטיקה כבויה | פרופילים/לוחות ב-IndexedDB מקומי בלבד (`data/*Repo.ts`); ענן ב-M5 |
 | מחיקת פרופיל/לוח = ארכוב (לא הסרה) — שחזור אפשרי | `data/boardRepo.ts`/`profileRepo.ts` (`archive` → `archived:true`) + `repos.test.ts` |
-| מצב ילד נעול כברירת מחדל; מעבר לעריכה רק בקוד מטפל (PIN/RBAC) | `domain/access.ts` + `App.tsx` (mode=`locked`) + `presentation/PinGate.tsx` · הרחבת Guided-Access מלא ב-M4 |
+| מצב ילד נעול כברירת מחדל; מעבר לעריכה רק בקוד מטפל (PIN/RBAC) | `domain/access.ts` + `App.tsx` (mode=`locked`) + `presentation/PinGate.tsx` |
+| Guided Access מלא (FR-019): במצב נעול חוסם ניווט-אחורה (popstate) + beforeunload (PWA לא נועל OS) | `App.tsx` (effect על `mode==='locked'`) |
+| הסתרת תא (FR-014) = `hidden` flag, **לא מחיקה**; מוצג בעריכה (opacity 0.4), מסונן במצב ילד | `domain/adaptivity.ts` (`toggleCellVisibility`/`hiddenFilter`) · `BoardView.tsx` · `BuilderView.tsx` |
+| גריד דינמי (FR-015) משתמש ב-`applyCellSize`→`resizeBoard`; ViolationError אם ליבה נופלת — UI חוסם | `domain/adaptivity.ts` · `presentation/builder/GridSizePicker.tsx` |
+| הגדרות גישה (FR-020) נשמרות offline; dwell=0 ⇒ onClick רגיל עובד; ברירת מחדל = הכל כבוי | `domain/accessSettings.ts` · `services/access/dwellService.ts` · `data/settingsRepo.ts` |
 | מיגרציית DB לא הורסת נתונים קיימים (upgrade אדיטיבי) | `data/db.ts` (`upgrade` עם guard) + `migration.test.ts` |
 | הקראה כמעט-מיידית: משוב ויזואלי <100ms; תחילת TTS אופליין <300–500ms | `index.css` (`.cell` transition) · `ttsService` (`latencyMs`) |
 | RTL מלא בכל מסך | `index.html` (`dir=rtl`) · `App` (`dir=rtl`) · `index.css` |
@@ -86,10 +96,26 @@ HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/a
 | `docs/adr-0001-stack.md` | החלטת ה-stack (PWA React/TS) — נימוק וחלופות |
 | `docs/m0-tts-nikud-spike.md` | ספייק TTS+ניקוד: ארכיטקטורה, אופליין, סיכונים פתוחים |
 | `docs/m1-data-profiles.md` | M1: שכבת Data, מאגרים, פרופילים, מיגרציה, מצב נעול/PIN |
+| `docs/m4-adaptivity-access.md` | M4: הסתרה הדרגתית, גריד דינמי, Guided Access, הגדרות גישה מוטוריות |
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
-## 8. Changelog (עדכון M3 — 2026-06-20)
+## 8. Changelog (עדכון M4 — 2026-06-20)
+- **2026-06-20 (M4 — Adaptivity & Access)** — **FR-014, FR-015, FR-019, FR-020** (PRD §4.7).
+  **Domain:** `domain/adaptivity.ts` — `toggleCellVisibility`/`hiddenFilter`/`applyCellSize` (טהור, immutable;
+  hidden=הסתרה לא מחיקה, ליבה ניתנת להסתרה; `applyCellSize` עוטף `resizeBoard` עם ViolationError). 8 בדיקות.
+  `domain/accessSettings.ts` — טיפוסי `AccessSettings` + `DEFAULT_ACCESS_SETTINGS` (הכל כבוי).
+  **Data:** `settingsRepo` — `getAccessSettings`/`saveAccessSettings` (JSON ב-key `accessSettings`,
+  **ללא שינוי DB_VERSION** — upgrade אדיטיבי; merge עם ברירת מחדל). 3 בדיקות.
+  **Services:** `services/access/dwellService.ts` — `useDwellActivation` (dwell, cleanup ב-unmount, 0=כבוי),
+  `useActivateOnRelease`, `useDoubleTapPrevention` (חלון 800ms). 7 בדיקות (fake timers).
+  **Presentation:** `GridSizePicker` (2–8, אזהרה+חסימה אם ליבה נופלת), `HiddenToggle` (ב-CellEditor),
+  `AccessSettingsPanel` (slider+checkboxes, controlled), `CellButton` מרכיב 3 hooks (settings prop אופציונלי),
+  `BoardView` מעביר accessSettings, `BuilderView` opacity 0.4 לתאים hidden + `handleResize`,
+  `AdultBar` כפתור "הגדרות", `App.tsx` Guided Access (FR-019: חסימת popstate+beforeunload במצב נעול) +
+  טעינה/שמירה של accessSettings. **CI:** lint 0 errors, 99 tests עוברות (+18), build ירוק.
+  פרטים: `docs/m4-adaptivity-access.md`.
+
 - **2026-06-20 (M3 — Builder & Symbols)** — **FR-003–007, FR-011, FR-017, FR-018**.
   **Domain:** `domain/boardEditor.ts` — `addCell`/`removeCell`/`moveCell`/`resizeBoard` (immutable, ViolationError על הזזת ליבה ללא allowCoreMove);
   `UndoStack<T>` (max 50, pointer-based, push-after-undo מוחק redo). 19 בדיקות ב-`boardEditor.test.ts`.

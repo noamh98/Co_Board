@@ -6,6 +6,7 @@ import { ViolationError } from '../../domain/boardEditor';
 import { createSymbolRepo } from '../../data/symbolRepo';
 import { cropImage, removeBackground, compressToWebP } from '../../services/image/imageService';
 import type { NikudService } from '../../services/nikud/nikudService';
+import { HiddenToggle } from './HiddenToggle';
 
 export interface CellEditorProps {
   cell: Cell | null;
@@ -48,6 +49,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSymbolId, setRecordingSymbolId] = useState<string | undefined>(cell?.symbolId);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [hidden, setHidden] = useState<boolean>(cell?.hidden ?? false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -140,7 +142,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
       ...(imageUri ? { imageUri } : {}),
       ...(recordingSymbolId ? { symbolId: recordingSymbolId } : cell?.symbolId ? { symbolId: cell.symbolId } : {}),
       ...(cell?.isCore !== undefined ? { isCore: cell.isCore } : {}),
-      ...(cell?.hidden !== undefined ? { hidden: cell.hidden } : {}),
+      ...(hidden ? { hidden: true } : {}),
       action: buildAction(),
     };
 
@@ -456,6 +458,14 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               )}
             </div>
           )}
+        </div>
+
+        {/* Visibility (FR-014) */}
+        <div className="cell-editor__field">
+          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 6 }}>
+            חשיפה הדרגתית
+          </label>
+          <HiddenToggle hidden={hidden} onToggle={setHidden} />
         </div>
 
         {/* Actions */}

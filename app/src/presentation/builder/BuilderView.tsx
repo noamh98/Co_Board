@@ -3,10 +3,13 @@ import type { Board, Cell, CellPlacement } from '../../domain/models';
 import type { Fitzgerald } from '../../domain/models';
 import { FITZGERALD, fitzgeraldStyle } from '../../domain/fitzgerald';
 import { moveCell, removeCell, UndoStack, ViolationError } from '../../domain/boardEditor';
+import { applyCellSize } from '../../domain/adaptivity';
+import type { GridSize } from '../../domain/models';
 import { createBoardRepo } from '../../data/boardRepo';
 import type { NikudService } from '../../services/nikud/nikudService';
 import { BoardView } from '../components/BoardView';
 import { CellEditor } from './CellEditor';
+import { GridSizePicker } from './GridSizePicker';
 
 export interface BuilderViewProps {
   board: Board;
@@ -126,6 +129,17 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService 
     setSelectedCells(new Set());
   };
 
+  const handleResize = (newGrid: GridSize) => {
+    try {
+      // GridSizePicker חוסם כבר אם ליבה נופלת; שכבת הגנה כפולה כאן.
+      void applyBoard(applyCellSize(currentBoard, newGrid));
+    } catch (err) {
+      if (err instanceof ViolationError) {
+        alert(`לא ניתן לשנות גודל: מילות ליבה ייצאו מהלוח (${err.violations.map((v) => v.label).join(', ')})`);
+      }
+    }
+  };
+
   const handleEditorSave = (newBoard: Board) => {
     void applyBoard(newBoard);
     setEditingCell(null);
@@ -212,6 +226,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService 
         >
           תצוגה מקדימה
         </button>
+        <GridSizePicker board={currentBoard} onResize={handleResize} />
       </div>
 
       {/* Bulk action bar */}
@@ -322,7 +337,8 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService 
                       flexDirection: 'column',
                       gap: 4,
                       userSelect: 'none',
-                      opacity: draggedCellId === p.cellId ? 0.5 : 1,
+                      // hidden מוצג בעריכה עם שקיפות (FR-014); במצב ילד מוסתר לגמרי.
+                      opacity: draggedCellId === p.cellId ? 0.5 : cell.hidden ? 0.4 : 1,
                       cursor: 'default',
                     }}
                     onClick={() => setEditingCell({ cell, placement: p })}

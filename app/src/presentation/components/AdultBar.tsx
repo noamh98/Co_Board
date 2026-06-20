@@ -10,6 +10,7 @@ export function AdultBar({
   onCreate,
   onLock,
   onEditBoard,
+  onOpenSettings,
 }: {
   profiles: Profile[];
   activeProfileId: string;
@@ -17,6 +18,7 @@ export function AdultBar({
   onCreate: (name: string) => void;
   onLock: () => void;
   onEditBoard?: () => void;
+  onOpenSettings?: () => void;
 }) {
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
@@ -76,6 +78,12 @@ export function AdultBar({
       {onEditBoard && (
         <button type="button" className="adultbar__btn" onClick={onEditBoard}>
           ערוך לוח
+        </button>
+      )}
+
+      {onOpenSettings && (
+        <button type="button" className="adultbar__btn" onClick={onOpenSettings}>
+          הגדרות
         </button>
       )}
 

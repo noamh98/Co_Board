@@ -1,12 +1,15 @@
 import type { Board, Cell } from '../../domain/models';
+import type { AccessSettings } from '../../domain/accessSettings';
 import { CellButton } from './CellButton';
 
 export function BoardView({
   board,
   onCell,
+  accessSettings,
 }: {
   board: Board;
   onCell: (c: Cell) => void;
+  accessSettings?: AccessSettings;
 }) {
   return (
     <div
@@ -28,7 +31,11 @@ export function BoardView({
             // RTL: col=0 הוא הימני ביותר (הקונטיינר dir=rtl).
             style={{ gridColumn: p.col + 1, gridRow: p.row + 1 }}
           >
-            <CellButton cell={cell} onActivate={() => onCell(cell)} />
+            <CellButton
+              cell={cell}
+              onActivate={() => onCell(cell)}
+              settings={accessSettings}
+            />
           </div>
         );
       })}
