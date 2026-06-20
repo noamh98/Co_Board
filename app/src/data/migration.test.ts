@@ -8,6 +8,8 @@ import {
   STORE_PROFILES,
   STORE_SETTINGS,
   STORE_SYMBOLS,
+  STORE_OUTBOX,
+  STORE_VERSIONS,
   getDb,
   resetDbForTests,
 } from './db';
@@ -82,5 +84,36 @@ describe('מיגרציית DB v2→v3 — אינווריאנט: לא הורסת 
     // הרשומה הישנה עדיין קיימת — לוח לא אבד.
     const board = await db.get(STORE_BOARDS, 'board-1');
     expect(board).toMatchObject({ name: 'לוח ראשי', archived: false });
+  });
+});
+
+describe('מיגרציית DB v3→v4 — אינווריאנט: לא הורסת נתונים', () => {
+  it('נתוני v3 שורדים שדרוג ל-v4, ונוספים stores outbox ו-versions', async () => {
+    const v3 = await openDB(DB_NAME, 3, {
+      upgrade(db) {
+        db.createObjectStore(STORE_NIKUD, { keyPath: 'text' });
+        db.createObjectStore(STORE_BOARDS, { keyPath: 'id' });
+        db.createObjectStore(STORE_PROFILES, { keyPath: 'id' });
+        db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+        db.createObjectStore(STORE_SYMBOLS, { keyPath: 'id' });
+      },
+    });
+    await v3.put(STORE_BOARDS, { id: 'board-v3', name: 'לוח v3', archived: false });
+    v3.close();
+    resetDbForTests();
+
+    const db = await getDb();
+    const names = Array.from(db.objectStoreNames);
+
+    expect(names).toContain(STORE_NIKUD);
+    expect(names).toContain(STORE_BOARDS);
+    expect(names).toContain(STORE_PROFILES);
+    expect(names).toContain(STORE_SETTINGS);
+    expect(names).toContain(STORE_SYMBOLS);
+    expect(names).toContain(STORE_OUTBOX);
+    expect(names).toContain(STORE_VERSIONS);
+
+    const board = await db.get(STORE_BOARDS, 'board-v3');
+    expect(board).toMatchObject({ name: 'לוח v3', archived: false });
   });
 });

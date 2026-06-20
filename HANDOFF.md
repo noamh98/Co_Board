@@ -1,7 +1,7 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת היחיד לפרויקט. קרא אותי בתחילת כל סשן. אל תגזור את המערכת מחדש מהקוד אם מסמך זה מספיק.
-> **שלב נוכחי:** M4 (Adaptivity & Access) — בוצע. הבא בתור: M5 (Sync & Cloud).
+> **שלב נוכחי:** M5 (Sync & Cloud) — בוצע. הבא בתור: M6 (Firebase Auth + Firestore Rules + Login UI).
 
 ## 1. Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), עבור קלינאי תקשורת והורים. המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) ולא רק מחולל לוחות. מסחרי, אנדרואיד+Web תחילה ואז iPad.
@@ -27,7 +27,7 @@ Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/ · ima
         │
 Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · symbolRepo · bootstrap)
 ```
-**שכבת Data (M1+M2+M3):** `db.ts` — IndexedDB (idb), DB_VERSION=3, stores: nikud/boards/profiles/settings/symbols.
+**שכבת Data (M1+M2+M3+M5):** `db.ts` — IndexedDB (idb), DB_VERSION=4, stores: nikud/boards/profiles/settings/symbols/outbox/versions.
 `boardRepo`/`profileRepo` — load/save/list, **מחיקה=ארכוב**. `settingsRepo` — פרופיל פעיל + PIN.
 `symbolRepo` (M3) — save/get/list/remove סמלים ותקליטות קוליות.
 `bootstrap.ts` — `ensureSeeded` (seed ספריית לוחות M2 + פרופיל דמו), `createProfile` (קלון לוח עצמאי),
@@ -55,6 +55,10 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | נתוני ילדים רגישים: מקומי/פרטי כברירת מחדל; אנליטיקה כבויה | פרופילים/לוחות ב-IndexedDB מקומי בלבד (`data/*Repo.ts`); ענן ב-M5 |
 | מחיקת פרופיל/לוח = ארכוב (לא הסרה) — שחזור אפשרי | `data/boardRepo.ts`/`profileRepo.ts` (`archive` → `archived:true`) + `repos.test.ts` |
 | מצב ילד נעול כברירת מחדל; מעבר לעריכה רק בקוד מטפל (PIN/RBAC) | `domain/access.ts` + `App.tsx` (mode=`locked`) + `presentation/PinGate.tsx` |
+| Sync offline-first: syncEngine לא חוסם UI; offline = no-op שקט (לא alert) | `services/sync/syncEngine.ts` (`runSync` returns early, no throw) |
+| ברירת מחדל סנכרון = כבוי; הורה מפעיל מ-PrivacyToggle | `App.tsx` (`syncEnabled=false`) · `presentation/settings/PrivacyToggle.tsx` |
+| merge conflict שומר גרסה מפסידה ב-versions store (לא אובדן נתונים) | `services/sync/syncEngine.ts` (`backupRepo.saveVersion(loser)`) |
+| FirebaseProvider מוגדר ב-.env.local (gitignored); לא מחוייב hardcoded | `app/.env.local` · `services/sync/firebaseProvider.ts` (`import.meta.env.VITE_*`) |
 | Guided Access מלא (FR-019): במצב נעול חוסם ניווט-אחורה (popstate) + beforeunload (PWA לא נועל OS) | `App.tsx` (effect על `mode==='locked'`) |
 | הסתרת תא (FR-014) = `hidden` flag, **לא מחיקה**; מוצג בעריכה (opacity 0.4), מסונן במצב ילד | `domain/adaptivity.ts` (`toggleCellVisibility`/`hiddenFilter`) · `BoardView.tsx` · `BuilderView.tsx` |
 | גריד דינמי (FR-015) משתמש ב-`applyCellSize`→`resizeBoard`; ViolationError אם ליבה נופלת — UI חוסם | `domain/adaptivity.ts` · `presentation/builder/GridSizePicker.tsx` |
@@ -99,6 +103,16 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/m4-adaptivity-access.md` | M4: הסתרה הדרגתית, גריד דינמי, Guided Access, הגדרות גישה מוטוריות |
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
+
+## 8. Changelog (עדכון M5 — 2026-06-20)
+- **2026-06-20 (M5 — Sync & Cloud)** — **FR-022, FR-023** (PRD §4.8).
+  **Architecture:** `docs/adr-0002-sync.md` — `SyncProvider` interface backend-אגנוסטי; Firebase כספק ברירת מחדל; `LocalStubProvider` לבדיקות offline. `firebase` SDK הותקן.
+  **Domain:** `domain/sync.ts` — `Versioned<T>`, `mergeLastWriteWins` (אחרון מנצח, tie-break דטרמיניסטי), `isRemoteNewer`, `toVersioned`, `bumpVersion`. 10 בדיקות.
+  **Data:** `db.ts` DB_VERSION=4 — stores `outbox` + `versions` (אדיטיבי, לא שובר v3). `data/syncQueue.ts` — enqueue/peek/ack/ackAll/count/clear. `data/backupRepo.ts` — exportBackup/importBackup (JSON round-trip), saveVersion/listVersions/restoreVersion. 11 בדיקות.
+  **Services:** `services/sync/syncProvider.ts` — `SyncProvider` interface + `LocalStubProvider` (in-memory). `services/sync/firebaseProvider.ts` — `FirebaseProvider` (Firestore push/pull, Auth). `services/sync/syncEngine.ts` — `createSyncEngine` (pull→merge→push, debounce 3s, offline=no-op שקט, status listener). `services/sync/crypto.ts` — `encryptData`/`decryptData` (AES-GCM, Web Crypto, fallback בטוח). 8 בדיקות.
+  **Presentation:** `SyncStatus.tsx` — מחוון סטטוס (idle/syncing/error/offline/disabled). `BackupPanel.tsx` — ייצוא/ייבוא JSON + שחזור גרסה. `PrivacyToggle.tsx` — ברירת מחדל מקומי, הורה שולט. `AdultBar` — כפתור "גיבוי וסנכרון". `App.tsx` — syncEngine ברקע (לא חוסם), backupOpen state.
+  **CI:** lint 0 errors, 129 tests (+30), build ירוק. `docs/adr-0002-sync.md` + `docs/m5-sync-cloud.md`.
+  **הבא (M6):** Firebase Auth UI (login screen), Firestore Security Rules, החלפת LocalStubProvider ב-FirebaseProvider בייצור, FirebaseProvider.signIn → App.tsx.
 
 ## 8. Changelog (עדכון M4 — 2026-06-20)
 - **2026-06-20 (M4 — Adaptivity & Access)** — **FR-014, FR-015, FR-019, FR-020** (PRD §4.7).

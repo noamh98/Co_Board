@@ -24,6 +24,9 @@ import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
 import { NavBar } from './presentation/components/NavBar';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
+import { BackupPanel } from './presentation/settings/BackupPanel';
+import { SyncStatus } from './presentation/components/SyncStatus';
+import { PrivacyToggle } from './presentation/settings/PrivacyToggle';
 import {
   createBrowserTts,
   waitForVoices,
@@ -41,6 +44,12 @@ import {
   navCurrent,
   navCanGoBack,
 } from './domain/navigationStack';
+import {
+  createSyncEngine,
+  type SyncEngine,
+  type SyncStatus as SyncStatusType,
+} from './services/sync/syncEngine';
+import { LocalStubProvider } from './services/sync/syncProvider';
 
 /** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. */
 function vocalize(c: Cell): string {
@@ -60,10 +69,14 @@ export function App() {
     DEFAULT_ACCESS_SETTINGS,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [syncEnabled, setSyncEnabled] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatusType>('disabled');
 
   const ttsRef = useRef<HebrewTts | null>(null);
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
+  const syncEngineRef = useRef<SyncEngine | null>(null);
 
   // אתחול: seed, PIN, קונטקסט פעיל, TTS, NikudService
   useEffect(() => {
@@ -96,9 +109,18 @@ export function App() {
       createNakdanFetcher(),
     );
 
+    // sync engine — stub offline provider; אינווריאנט: לא חוסם אתחול/UI
+    const provider = new LocalStubProvider();
+    const engine = createSyncEngine(provider, () => syncEnabled);
+    syncEngineRef.current = engine;
+    const unsub = engine.onStatusChange((s) => setSyncStatus(s));
+
     return () => {
       alive = false;
+      unsub();
+      engine.dispose();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // איפוס מחסנית ניווט כשמחליפים פרופיל
@@ -210,6 +232,7 @@ export function App() {
             {ctx.activeProfile.name}
           </span>
         )}
+        {adult && <SyncStatus status={syncStatus} />}
         <span
           className={
             hasHeVoice === false ? 'app__badge app__badge--warn' : 'app__badge'
@@ -234,6 +257,7 @@ export function App() {
               onLock={lock}
               onEditBoard={() => setBuilderMode(true)}
               onOpenSettings={() => setSettingsOpen(true)}
+              onOpenBackup={() => setBackupOpen(true)}
             />
           )
         ) : pinPrompt ? (
@@ -297,6 +321,18 @@ export function App() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
+
+      {settingsOpen && (
+        <PrivacyToggle
+          syncEnabled={syncEnabled}
+          onChange={(enabled) => {
+            setSyncEnabled(enabled);
+            if (enabled) void syncEngineRef.current?.runSync();
+          }}
+        />
+      )}
+
+      {backupOpen && <BackupPanel onClose={() => setBackupOpen(false)} />}
     </div>
   );
 }
