@@ -12,6 +12,7 @@ export function AdultBar({
   onEditBoard,
   onOpenSettings,
   onOpenBackup,
+  onSignOut,
 }: {
   profiles: Profile[];
   activeProfileId: string;
@@ -21,6 +22,7 @@ export function AdultBar({
   onEditBoard?: () => void;
   onOpenSettings?: () => void;
   onOpenBackup?: () => void;
+  onSignOut?: () => void;
 }) {
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
@@ -92,6 +94,12 @@ export function AdultBar({
       {onOpenBackup && (
         <button type="button" className="adultbar__btn" onClick={onOpenBackup}>
           גיבוי וסנכרון
+        </button>
+      )}
+
+      {onSignOut && (
+        <button type="button" className="adultbar__btn" onClick={onSignOut}>
+          התנתק
         </button>
       )}
 

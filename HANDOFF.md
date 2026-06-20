@@ -104,6 +104,18 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
+## 8. Changelog (עדכון M6 — 2026-06-20)
+- **2026-06-20 (M6 — Firebase Auth + Firestore Rules + Login UI)** — **FR-022/Auth** (PRD §4.8).
+  **Firestore Rules:** `docs/firestore.rules` — `users/{uid}/{document=**}` read/write רק לבעל uid; פריסה ידנית ב-Firebase Console.
+  **SyncProvider interface:** נוסף `signUp(email, password): Promise<string>` + LocalStubProvider + FirebaseProvider (uses `createUserWithEmailAndPassword`).
+  **Auth Service:** `services/sync/authService.ts` — signIn/signUp/signOut/getCurrentUser/onAuthChange (module-level state, _resetForTests). 6 בדיקות.
+  **Login UI:** `presentation/auth/LoginPanel.tsx` — email+password, translateError→עברית, RTL, 5 בדיקות.
+  **App.tsx:** `authUser: AuthUser | null` state; `syncEnabledRef` לסנכרון ref/state; useEffect על `[syncEnabled, authUser?.uid]` מחליף provider (FirebaseProvider רק כש-syncEnabled&&authUser, אחרת LocalStubProvider — Privacy invariant); AdultBar מקבל `onSignOut`; header badge uid.
+  **Security invariants (נאמתו):** uid-check לפני כל Firestore call; FirebaseProvider לא נוצר כש-syncEnabled=false; translateError→עברית; offline→status='offline'; signOut→LocalStubProvider.
+  **CI:** lint 0 errors, 140 tests (+11), build ירוק. `docs/m6-auth.md`.
+  **תיקון baseline:** `syncQueue.ts` peek מיין לפי `updatedAt` (לא `enqueuedAt`) — הטסט היה צודק.
+  **הבא (M7):** Analytics/Logging — **ממתין לאישור**.
+
 ## 8. Changelog (עדכון M5 — 2026-06-20)
 - **2026-06-20 (M5 — Sync & Cloud)** — **FR-022, FR-023** (PRD §4.8).
   **Architecture:** `docs/adr-0002-sync.md` — `SyncProvider` interface backend-אגנוסטי; Firebase כספק ברירת מחדל; `LocalStubProvider` לבדיקות offline. `firebase` SDK הותקן.

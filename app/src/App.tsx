@@ -27,6 +27,7 @@ import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
 import { PrivacyToggle } from './presentation/settings/PrivacyToggle';
+import { LoginPanel } from './presentation/auth/LoginPanel';
 import {
   createBrowserTts,
   waitForVoices,
@@ -50,6 +51,8 @@ import {
   type SyncStatus as SyncStatusType,
 } from './services/sync/syncEngine';
 import { LocalStubProvider } from './services/sync/syncProvider';
+import { FirebaseProvider } from './services/sync/firebaseProvider';
+import { authService, type AuthUser } from './services/sync/authService';
 
 /** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. */
 function vocalize(c: Cell): string {
@@ -62,7 +65,6 @@ export function App() {
   const [pinPrompt, setPinPrompt] = useState(false);
   const [sentence, setSentence] = useState<Cell[]>([]);
   const [hasHeVoice, setHasHeVoice] = useState<boolean | null>(null);
-  // מחסנית הניווט — null עד שהקוד נטען (PRD §4.4)
   const [navStack, setNavStack] = useState<NavStack | null>(null);
   const [builderMode, setBuilderMode] = useState(false);
   const [accessSettings, setAccessSettings] = useState<AccessSettings>(
@@ -72,13 +74,21 @@ export function App() {
   const [backupOpen, setBackupOpen] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatusType>('disabled');
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
   const ttsRef = useRef<HebrewTts | null>(null);
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
   const syncEngineRef = useRef<SyncEngine | null>(null);
+  // ref מסנכרן עם syncEnabled state כדי שקרוב syncEngine תמיד יראה ערך נוכחי
+  const syncEnabledRef = useRef(false);
 
-  // אתחול: seed, PIN, קונטקסט פעיל, TTS, NikudService
+  // עדכן ref כשה-state משתנה
+  useEffect(() => {
+    syncEnabledRef.current = syncEnabled;
+  }, [syncEnabled]);
+
+  // אתחול: seed, PIN, קונטקסט פעיל, TTS, NikudService, auth listener
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -109,19 +119,39 @@ export function App() {
       createNakdanFetcher(),
     );
 
-    // sync engine — stub offline provider; אינווריאנט: לא חוסם אתחול/UI
-    const provider = new LocalStubProvider();
-    const engine = createSyncEngine(provider, () => syncEnabled);
-    syncEngineRef.current = engine;
-    const unsub = engine.onStatusChange((s) => setSyncStatus(s));
+    const unsubAuth = authService.onAuthChange((u) => {
+      if (alive) setAuthUser(u);
+    });
 
     return () => {
       alive = false;
+      unsubAuth();
+    };
+  }, []);
+
+  // צור/החלף מנוע סנכרון כשה-provider משתנה (auth + syncEnabled)
+  // אינווריאנט: FirebaseProvider נוצר רק כש-syncEnabled=true && authUser קיים
+  useEffect(() => {
+    syncEngineRef.current?.dispose();
+
+    const provider =
+      syncEnabled && authUser ? new FirebaseProvider() : new LocalStubProvider();
+
+    const engine = createSyncEngine(provider, () => syncEnabledRef.current);
+    syncEngineRef.current = engine;
+    const unsub = engine.onStatusChange(setSyncStatus);
+
+    if (syncEnabled && authUser) {
+      void engine.runSync();
+    } else {
+      setSyncStatus('disabled');
+    }
+
+    return () => {
       unsub();
-      engine.dispose();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [syncEnabled, authUser?.uid]);
 
   // איפוס מחסנית ניווט כשמחליפים פרופיל
   useEffect(() => {
@@ -130,8 +160,7 @@ export function App() {
     setSentence([]);
   }, [ctx?.activeProfile.id]);
 
-  // מצב נעול מלא (Guided Access, FR-019): מניעת יציאה לא רצויה.
-  // ב-PWA לא ניתן לנעול את ה-OS; חוסמים ניווט-אחורה (היסטוריה) ויציאה בטעות.
+  // מצב נעול מלא (Guided Access, FR-019)
   useEffect(() => {
     if (mode !== 'locked') return;
     window.history.pushState(null, '', window.location.href);
@@ -157,7 +186,6 @@ export function App() {
     void ttsRef.current?.speak(text);
   };
 
-  // הלוח הנוכחי לפי מחסנית הניווט
   const currentBoard = useMemo(() => {
     if (!ctx) return null;
     if (!navStack) return ctx.board;
@@ -170,8 +198,6 @@ export function App() {
     if (action.type === 'speak') {
       setSentence((s) => [...s, cell]);
       speak(vocalize(cell));
-      // ניקוד חי ברקע (FR-009): אם אין ניקוד ידני/cache — שלח לרשת ושמור.
-      // לא חוסם TTS: הקראה מיידית עם מה שיש; ניקוד מתעדכן ב-cache ל-next time.
       if (!cell.nikud && nikudRef.current) {
         void nikudRef.current.getNikud(cell.label);
       }
@@ -180,7 +206,6 @@ export function App() {
         prev ? navPush(prev, action.targetBoardId) : prev,
       );
     } else if (action.type === 'back') {
-      // לא מוסיף לשורת המשפט — מניעת באג TouchChat (HANDOFF §4)
       setNavStack((prev) => (prev ? navPop(prev) : prev));
     } else if (action.type === 'home') {
       if (ctx) {
@@ -220,8 +245,16 @@ export function App() {
     })();
   };
 
+  const onSignOut = (): void => {
+    const provider = syncEnabled ? new FirebaseProvider() : new LocalStubProvider();
+    void authService.signOut(provider);
+  };
+
   const adult = canManageProfiles(mode);
   const canBack = navStack ? navCanGoBack(navStack) : false;
+
+  // מחוון uid קצר לתצוגה ב-header
+  const uidBadge = authUser ? authUser.email.split('@')[0] : null;
 
   return (
     <div className="app" dir="rtl">
@@ -233,6 +266,11 @@ export function App() {
           </span>
         )}
         {adult && <SyncStatus status={syncStatus} />}
+        {adult && uidBadge && (
+          <span className="app__badge app__badge--user" aria-label="משתמש מחובר">
+            {uidBadge}
+          </span>
+        )}
         <span
           className={
             hasHeVoice === false ? 'app__badge app__badge--warn' : 'app__badge'
@@ -258,6 +296,7 @@ export function App() {
               onEditBoard={() => setBuilderMode(true)}
               onOpenSettings={() => setSettingsOpen(true)}
               onOpenBackup={() => setBackupOpen(true)}
+              onSignOut={authUser ? onSignOut : undefined}
             />
           )
         ) : pinPrompt ? (
@@ -280,7 +319,6 @@ export function App() {
         onClear={() => setSentence([])}
       />
 
-      {/* סרגל ניווט קבוע — PRD §4.4 */}
       <NavBar
         canGoBack={canBack}
         onBack={() => setNavStack((prev) => (prev ? navPop(prev) : prev))}
@@ -327,7 +365,20 @@ export function App() {
           syncEnabled={syncEnabled}
           onChange={(enabled) => {
             setSyncEnabled(enabled);
-            if (enabled) void syncEngineRef.current?.runSync();
+          }}
+        />
+      )}
+
+      {/* LoginPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
+      {settingsOpen && syncEnabled && !authUser && (
+        <LoginPanel
+          onSignIn={async (email, password) => {
+            const provider = new FirebaseProvider();
+            await authService.signIn(provider, email, password);
+          }}
+          onSignUp={async (email, password) => {
+            const provider = new FirebaseProvider();
+            await authService.signUp(provider, email, password);
           }}
         />
       )}

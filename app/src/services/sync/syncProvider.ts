@@ -20,6 +20,8 @@ export interface SyncProvider {
   getDeviceId(): string;
   /** כניסה עם email/password. מחזיר uid. */
   signIn(email: string, password: string): Promise<string>;
+  /** הרשמה עם email/password. מחזיר uid. */
+  signUp(email: string, password: string): Promise<string>;
   /** יציאה. */
   signOut(): Promise<void>;
   /** uid של המשתמש המחובר, או null. */
@@ -64,6 +66,10 @@ export class LocalStubProvider implements SyncProvider {
   }
 
   async signIn(_email: string, _password: string): Promise<string> {
+    return 'stub-uid';
+  }
+
+  async signUp(_email: string, _password: string): Promise<string> {
     return 'stub-uid';
   }
 

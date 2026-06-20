@@ -16,6 +16,7 @@ import {
 import {
   getAuth,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as fbSignOut,
   type Auth,
 } from 'firebase/auth';
@@ -106,6 +107,13 @@ export class FirebaseProvider implements SyncProvider {
   async signIn(email: string, password: string): Promise<string> {
     const { auth } = getFirebaseInstances();
     const cred = await signInWithEmailAndPassword(auth, email, password);
+    this._deviceId = await getDeviceId();
+    return cred.user.uid;
+  }
+
+  async signUp(email: string, password: string): Promise<string> {
+    const { auth } = getFirebaseInstances();
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
     this._deviceId = await getDeviceId();
     return cred.user.uid;
   }

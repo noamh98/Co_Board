@@ -24,7 +24,7 @@ function createSyncQueue() {
     const db = await getDb();
     const all = await db.getAll(STORE_OUTBOX);
     return all
-      .sort((a, b) => (a.enqueuedAt as number) - (b.enqueuedAt as number))
+      .sort((a, b) => (a.updatedAt as number) - (b.updatedAt as number))
       .slice(0, limit) as OutboxItem[];
   }
 
