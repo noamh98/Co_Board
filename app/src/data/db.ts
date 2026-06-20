@@ -1,16 +1,17 @@
 import { openDB, type IDBPDatabase } from 'idb';
 
 // שכבת Data — מקור האמת המקומי (Offline-first, HANDOFF §3/§4).
-// v1: store ניקוד בלבד. v2 (M1): נוספו boards/profiles/settings.
+// v1: store ניקוד בלבד. v2 (M1): נוספו boards/profiles/settings. v3: נוסף symbols.
 // אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export const STORE_NIKUD = 'nikud';
 export const STORE_BOARDS = 'boards';
 export const STORE_PROFILES = 'profiles';
 export const STORE_SETTINGS = 'settings';
+export const STORE_SYMBOLS = 'symbols';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -31,6 +32,9 @@ export function getDb(): Promise<IDBPDatabase> {
         }
         if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
           db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+        }
+        if (!db.objectStoreNames.contains(STORE_SYMBOLS)) {
+          db.createObjectStore(STORE_SYMBOLS, { keyPath: 'id' });
         }
       },
     });

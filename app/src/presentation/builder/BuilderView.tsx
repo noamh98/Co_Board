@@ -1,0 +1,422 @@
+import { useEffect, useRef, useState } from 'react';
+import type { Board, Cell, CellPlacement } from '../../domain/models';
+import type { Fitzgerald } from '../../domain/models';
+import { FITZGERALD, fitzgeraldStyle } from '../../domain/fitzgerald';
+import { moveCell, removeCell, UndoStack, ViolationError } from '../../domain/boardEditor';
+import { createBoardRepo } from '../../data/boardRepo';
+import type { NikudService } from '../../services/nikud/nikudService';
+import { BoardView } from '../components/BoardView';
+import { CellEditor } from './CellEditor';
+
+export interface BuilderViewProps {
+  board: Board;
+  onBoardChange: (b: Board) => void;
+  onExitBuilder: () => void;
+  nikudService: NikudService | null;
+}
+
+export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService }: BuilderViewProps) {
+  const undoStackRef = useRef(new UndoStack<Board>(board));
+  const [currentBoard, setCurrentBoard] = useState<Board>(board);
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const [editingCell, setEditingCell] = useState<{ cell: Cell | null; placement: CellPlacement | null } | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [draggedCellId, setDraggedCellId] = useState<string | null>(null);
+
+  const repo = useRef(createBoardRepo());
+
+  const applyBoard = async (newBoard: Board) => {
+    undoStackRef.current.push(newBoard);
+    setCurrentBoard(newBoard);
+    onBoardChange(newBoard);
+    await repo.current.save(newBoard);
+  };
+
+  const handleUndo = async () => {
+    const prev = undoStackRef.current.undo();
+    if (prev) {
+      setCurrentBoard(prev);
+      onBoardChange(prev);
+      await repo.current.save(prev);
+    }
+  };
+
+  const handleRedo = async () => {
+    const next = undoStackRef.current.redo();
+    if (next) {
+      setCurrentBoard(next);
+      onBoardChange(next);
+      await repo.current.save(next);
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        void handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+        e.preventDefault();
+        void handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  });
+
+  const toggleSelect = (cellId: string) => {
+    setSelectedCells((prev) => {
+      const next = new Set(prev);
+      if (next.has(cellId)) next.delete(cellId);
+      else next.add(cellId);
+      return next;
+    });
+  };
+
+  const handleDrop = (targetPlacement: CellPlacement) => {
+    if (!draggedCellId) return;
+    try {
+      const newBoard = moveCell(currentBoard, draggedCellId, targetPlacement);
+      void applyBoard(newBoard);
+    } catch (err) {
+      if (err instanceof ViolationError) {
+        const ok = window.confirm(`${err.message}\nהאם להמשיך?`);
+        if (ok) {
+          try {
+            const newBoard = moveCell(currentBoard, draggedCellId, targetPlacement, { allowCoreMove: true });
+            void applyBoard(newBoard);
+          } catch (e2) {
+            if (e2 instanceof Error) alert(e2.message);
+          }
+        }
+      }
+    }
+    setDraggedCellId(null);
+  };
+
+  const handleBulkFitzgerald = (fitz: Fitzgerald) => {
+    let newBoard = currentBoard;
+    selectedCells.forEach((cellId) => {
+      const cell = newBoard.cells[cellId];
+      if (cell) {
+        newBoard = { ...newBoard, cells: { ...newBoard.cells, [cellId]: { ...cell, fitzgerald: fitz } } };
+      }
+    });
+    void applyBoard(newBoard);
+    setSelectedCells(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    let newBoard = currentBoard;
+    const skipped: string[] = [];
+    selectedCells.forEach((cellId) => {
+      try {
+        newBoard = removeCell(newBoard, cellId);
+      } catch (err) {
+        if (err instanceof ViolationError) {
+          skipped.push(currentBoard.cells[cellId]?.label ?? cellId);
+        }
+      }
+    });
+    if (skipped.length > 0) {
+      alert(`התאים הבאים הם תאי ליבה ולא נמחקו: ${skipped.join(', ')}`);
+    }
+    void applyBoard(newBoard);
+    setSelectedCells(new Set());
+  };
+
+  const handleEditorSave = (newBoard: Board) => {
+    void applyBoard(newBoard);
+    setEditingCell(null);
+  };
+
+  // Build a lookup: "row-col" -> placement
+  const placementMap = new Map<string, CellPlacement>();
+  currentBoard.placements.forEach((p) => placementMap.set(`${p.row}-${p.col}`, p));
+
+  const { rows, cols } = currentBoard.grid;
+
+  if (previewMode) {
+    return (
+      <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 10,
+          }}
+        >
+          <button
+            type="button"
+            className="adultbar__btn"
+            onClick={() => setPreviewMode(false)}
+          >
+            חזור לעריכה
+          </button>
+        </div>
+        <BoardView board={currentBoard} onCell={() => undefined} />
+      </div>
+    );
+  }
+
+  return (
+    <div dir="rtl" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Top bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 14px',
+          background: '#fff',
+          borderBottom: '1px solid #e5e7eb',
+          flexWrap: 'wrap',
+        }}
+      >
+        <button
+          type="button"
+          className="adultbar__btn"
+          style={{ background: '#6b7280' }}
+          onClick={onExitBuilder}
+        >
+          חזור לתצוגת ילד
+        </button>
+        <span style={{ fontWeight: 600, fontSize: '1rem', flex: 1, textAlign: 'center' }}>
+          {currentBoard.name}
+        </span>
+        <button
+          type="button"
+          className="adultbar__btn"
+          disabled={!undoStackRef.current.canUndo()}
+          onClick={() => void handleUndo()}
+          style={{ background: '#f3f4f6', color: '#1f2937', border: '1px solid #d1d5db' }}
+        >
+          בטל
+        </button>
+        <button
+          type="button"
+          className="adultbar__btn"
+          disabled={!undoStackRef.current.canRedo()}
+          onClick={() => void handleRedo()}
+          style={{ background: '#f3f4f6', color: '#1f2937', border: '1px solid #d1d5db' }}
+        >
+          בצע שנית
+        </button>
+        <button
+          type="button"
+          className="adultbar__btn"
+          onClick={() => setPreviewMode(true)}
+          style={{ background: '#f3f4f6', color: '#1f2937', border: '1px solid #d1d5db' }}
+        >
+          תצוגה מקדימה
+        </button>
+      </div>
+
+      {/* Bulk action bar */}
+      {selectedCells.size >= 2 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 14px',
+            background: '#f0f9ff',
+            borderBottom: '1px solid #bae6fd',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontSize: '0.9rem', color: '#0369a1' }}>
+            {selectedCells.size} תאים נבחרו
+          </span>
+          {(Object.keys(FITZGERALD) as Fitzgerald[]).map((key) => {
+            const { bg, text, label } = FITZGERALD[key];
+            return (
+              <button
+                key={key}
+                type="button"
+                title={label}
+                onClick={() => handleBulkFitzgerald(key)}
+                style={{
+                  background: bg,
+                  color: text,
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  borderRadius: 6,
+                  padding: '2px 8px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  minHeight: 30,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            className="adultbar__btn"
+            style={{ background: '#b91c1c' }}
+            onClick={handleBulkDelete}
+          >
+            מחק
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedCells(new Set())}
+            style={{
+              minHeight: 36,
+              padding: '0 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: 10,
+              background: '#f3f4f6',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+            }}
+          >
+            בטל בחירה
+          </button>
+        </div>
+      )}
+
+      {/* Grid */}
+      <div
+        className="board"
+        dir="rtl"
+        style={{
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gridTemplateRows: `repeat(${rows}, 1fr)`,
+          flex: 1,
+        }}
+      >
+        {Array.from({ length: rows }, (_, row) =>
+          Array.from({ length: cols }, (_, col) => {
+            const key = `${row}-${col}`;
+            const p = placementMap.get(key);
+            const cell = p ? currentBoard.cells[p.cellId] : undefined;
+            const style = cell?.fitzgerald ? fitzgeraldStyle(cell.fitzgerald) : { bg: '#f3f4f6', text: '#1f2937' };
+            const isSelected = p ? selectedCells.has(p.cellId) : false;
+
+            return (
+              <div
+                key={key}
+                role="gridcell"
+                style={{ gridColumn: col + 1, gridRow: row + 1, position: 'relative' }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop({ cellId: p?.cellId ?? '', row, col })}
+              >
+                {cell && p ? (
+                  <div
+                    className="cell"
+                    draggable
+                    onDragStart={() => setDraggedCellId(p.cellId)}
+                    onDragEnd={() => setDraggedCellId(null)}
+                    style={{
+                      background: style.bg,
+                      color: style.text,
+                      border: isSelected
+                        ? '3px solid #3f6f8f'
+                        : draggedCellId === p.cellId
+                          ? '2px dashed #6b7280'
+                          : '2px solid rgba(0,0,0,0.12)',
+                      flexDirection: 'column',
+                      gap: 4,
+                      userSelect: 'none',
+                      opacity: draggedCellId === p.cellId ? 0.5 : 1,
+                      cursor: 'default',
+                    }}
+                    onClick={() => setEditingCell({ cell, placement: p })}
+                  >
+                    {/* Checkbox */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 4,
+                        zIndex: 2,
+                      }}
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(p.cellId); }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(p.cellId)}
+                        style={{ width: 18, height: 18, cursor: 'pointer' }}
+                        aria-label={`בחר תא ${cell.label}`}
+                      />
+                    </div>
+                    {/* Core indicator */}
+                    {cell.isCore && (
+                      <span
+                        title="תא ליבה"
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          fontSize: '0.75rem',
+                        }}
+                        aria-label="תא ליבה"
+                      >
+                        🔒
+                      </span>
+                    )}
+                    {cell.imageUri && (
+                      <img
+                        src={cell.imageUri}
+                        alt=""
+                        style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6 }}
+                      />
+                    )}
+                    <span style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.2 }}>
+                      {cell.label}
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingCell({
+                        cell: null,
+                        placement: { cellId: '', row, col },
+                      })
+                    }
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      minHeight: 'var(--cell-min)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px dashed #d1d5db',
+                      borderRadius: 'var(--radius)',
+                      background: 'transparent',
+                      color: '#9ca3af',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.stopPropagation(); handleDrop({ cellId: '', row, col }); }}
+                  >
+                    + הוסף
+                  </button>
+                )}
+              </div>
+            );
+          }),
+        )}
+      </div>
+
+      {/* CellEditor modal */}
+      {editingCell !== null && (
+        <CellEditor
+          cell={editingCell.cell}
+          placement={editingCell.placement}
+          board={currentBoard}
+          nikudService={nikudService}
+          onSave={handleEditorSave}
+          onCancel={() => setEditingCell(null)}
+        />
+      )}
+    </div>
+  );
+}

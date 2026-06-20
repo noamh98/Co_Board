@@ -1,7 +1,7 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת היחיד לפרויקט. קרא אותי בתחילת כל סשן. אל תגזור את המערכת מחדש מהקוד אם מסמך זה מספיק.
-> **שלב נוכחי:** M2 (Communication Core) — בוצע. הבא בתור: M3 (Builder & Symbols).
+> **שלב נוכחי:** M3 (Builder & Symbols) — בוצע. הבא בתור: M4 (Adaptivity).
 
 ## 1. Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), עבור קלינאי תקשורת והורים. המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) ולא רק מחולל לוחות. מסחרי, אנדרואיד+Web תחילה ואז iPad.
@@ -15,25 +15,31 @@
 - **Symbols:** ARASAAC (בסיס חינמי) → SymbolStix/PCS/Widgit (רישוי) — M3.
 - **Test/CI:** Vitest + Testing Library; ESLint (flat); GitHub Actions (lint+test+build כשער חוסם).
 
-## 3. Architecture (layers) — מיפוי לקוד (עודכן M2)
+## 3. Architecture (layers) — מיפוי לקוד (עודכן M3)
 ```
 Presentation (UI, RTL-first)      → app/src/presentation/ + App.tsx + index.css
         │  React + TypeScript (PWA)   (BoardView · CellButton · SentenceBar · AdultBar · PinGate · NavBar)
+        │                             builder/ (BuilderView · CellEditor) — M3
 Domain / Logic                    → app/src/domain/   (models · fitzgerald · layout/Motor-Planning · access/RBAC
-        │                                              navigationStack · boardLibrary)
-Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/)
+        │                                              navigationStack · boardLibrary · boardEditor/UndoStack)
+Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/ · image/)
         │
-Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · bootstrap)
+Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · symbolRepo · bootstrap)
 ```
-**שכבת Data (M1+M2):** `db.ts` — IndexedDB (idb), DB_VERSION=2, stores: nikud/boards/profiles/settings.
+**שכבת Data (M1+M2+M3):** `db.ts` — IndexedDB (idb), DB_VERSION=3, stores: nikud/boards/profiles/settings/symbols.
 `boardRepo`/`profileRepo` — load/save/list, **מחיקה=ארכוב**. `settingsRepo` — פרופיל פעיל + PIN.
+`symbolRepo` (M3) — save/get/list/remove סמלים ותקליטות קוליות.
 `bootstrap.ts` — `ensureSeeded` (seed ספריית לוחות M2 + פרופיל דמו), `createProfile` (קלון לוח עצמאי),
 `loadActiveContext` (מחזיר גם `allBoards` מלא), `switchActiveProfile`. **ניווט:** `domain/navigationStack.ts` —
 מחסנית TS טהורה (push/pop/home; מניעת לולאה; בית תמיד בתחתית). **ספריית לוחות M2:** `domain/boardLibrary.ts` —
 HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/access.ts`.
+**Builder M3:** `domain/boardEditor.ts` — addCell/removeCell/moveCell/resizeBoard (immutable) + UndoStack<T> (max 50).
+`services/image/imageService.ts` — cropImage/removeBackground(fallback)/compressToWebP (Canvas API, offline).
+`presentation/builder/BuilderView.tsx` — עריכת גריד, drag-drop RTL, multi-select, undo/redo, preview.
+`presentation/builder/CellEditor.tsx` — modal לעריכת תא (label/nikud/fitzgerald/action/image/voice).
 זרימה: UI → Domain → Services → Data(local) → (sync) Cloud.
 
-## 4. Non-obvious rules / invariants
+## 4. Non-obvious rules / invariants (עודכן M3)
 | כלל | היכן בקוד |
 |------|----------|
 | מילות ליבה (`isCore`) **לא זזות** ממיקומן (Motor Planning); אזהרה+אישור לפני כל הזזה | `app/src/domain/layout.ts` (`detectPositionViolations`/`applyLayout`) + טסטים `layout.test.ts` |
@@ -47,6 +53,10 @@ HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/a
 | הקראה כמעט-מיידית: משוב ויזואלי <100ms; תחילת TTS אופליין <300–500ms | `index.css` (`.cell` transition) · `ttsService` (`latencyMs`) |
 | RTL מלא בכל מסך | `index.html` (`dir=rtl`) · `App` (`dir=rtl`) · `index.css` |
 | שינוי AI/אוטומטי ללוח מכבד עקביות מיקום (אזהרה לפני הזזה) | אותו מנגנון `layout.ts` חל גם על שינוי אוטומטי |
+| Builder: moveCell/removeCell זורקים ViolationError ללא allowCoreMove; BuilderView מציג window.confirm | `domain/boardEditor.ts` + `presentation/builder/BuilderView.tsx` |
+| UndoStack מגביל ל-50 מצבים; push אחרי undo מוחק redo history | `domain/boardEditor.ts` (UndoStack class) |
+| removeBackground — fallback אופליין: מחזיר blob מקורי ללא שגיאה | `services/image/imageService.ts` |
+| symbolRepo.mimeType אודיו-recording מאוחסן כ-'image/webp' (TODO: לתקן ל-'audio/webm' ב-M4) | `data/symbolRepo.ts` |
 
 ## 5. Data flow (happy path — שימוש יומיומי)
 1. פתיחה במצב נעול (Guided Access) → טעינת פרופיל ילד מה-DB המקומי.
@@ -79,7 +89,20 @@ HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/a
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
-## 8. Changelog
+## 8. Changelog (עדכון M3 — 2026-06-20)
+- **2026-06-20 (M3 — Builder & Symbols)** — **FR-003–007, FR-011, FR-017, FR-018**.
+  **Domain:** `domain/boardEditor.ts` — `addCell`/`removeCell`/`moveCell`/`resizeBoard` (immutable, ViolationError על הזזת ליבה ללא allowCoreMove);
+  `UndoStack<T>` (max 50, pointer-based, push-after-undo מוחק redo). 19 בדיקות ב-`boardEditor.test.ts`.
+  **Data:** `db.ts` DB_VERSION=3 + store `symbols` (keyPath: id); `symbolRepo.ts` — save/get/list/remove;
+  `migration.test.ts` — בדיקת v1→v2→v3 אדיטיבית (2 tests). **Services:** `services/image/imageService.ts` —
+  `cropImage` (Canvas API, offline), `removeBackground` (fallback — מחזיר blob מקורי), `compressToWebP` (WebP quality 0.85, fallback לoriginal);
+  9 בדיקות עם mock canvas. **Presentation:** `presentation/builder/CellEditor.tsx` — modal עריכת תא
+  (label/ניקוד auto+override/fitzgerald/action/תמונה+camera/הקלטת קול MediaRecorder→symbolRepo);
+  `presentation/builder/BuilderView.tsx` — גריד עריכה drag-drop RTL-aware, multi-select+bulk Fitzgerald/מחיקה,
+  Undo/Redo (Ctrl+Z/Y), תצוגה מקדימה (preview mode). `AdultBar.tsx` — כפתור "ערוך לוח" (onEditBoard prop).
+  `App.tsx` — `builderMode` state, BuilderView מחליף BoardView במצב עריכה.
+  **CI:** lint 0 errors, 81 tests עוברות, build ירוק. פרטים: `docs/m3-builder-symbols.md`.
+
 - **2026-06-19 (M2 — Communication Core)** — **ניווט בין לוחות** (FR-013): `domain/navigationStack.ts` —
   מחסנית TS טהורה (`createNavStack`/`navPush`/`navPop`/`navHome`/`navCurrent`/`navCanGoBack`); מניעת לולאה ישירה;
   בית תמיד בתחתית; 8 בדיקות יחידה. **ספריית לוחות מוכנים** (FR-002): `domain/boardLibrary.ts` — 4 לוחות עבריים

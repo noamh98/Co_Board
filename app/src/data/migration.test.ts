@@ -7,6 +7,7 @@ import {
   STORE_BOARDS,
   STORE_PROFILES,
   STORE_SETTINGS,
+  STORE_SYMBOLS,
   getDb,
   resetDbForTests,
 } from './db';
@@ -47,5 +48,39 @@ describe('מיגרציית DB v1→v2 — אינווריאנט: לא הורסת 
     // הרשומה הישנה עדיין קיימת — תיקון ידני לא אבד.
     const entry = await db.get(STORE_NIKUD, 'אמא');
     expect(entry).toMatchObject({ nikud: 'אִמָּא', source: 'manual' });
+  });
+});
+
+describe('מיגרציית DB v2→v3 — אינווריאנט: לא הורסת נתונים', () => {
+  it('נתוני v2 שורדים שדרוג ל-v3, ונוסף store symbols', async () => {
+    // הקמת DB בגרסה 2 — כל ה-stores של v2, עם רשומת לוח.
+    const v2 = await openDB(DB_NAME, 2, {
+      upgrade(db) {
+        db.createObjectStore(STORE_NIKUD, { keyPath: 'text' });
+        db.createObjectStore(STORE_BOARDS, { keyPath: 'id' });
+        db.createObjectStore(STORE_PROFILES, { keyPath: 'id' });
+        db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+      },
+    });
+    await v2.put(STORE_BOARDS, { id: 'board-1', name: 'לוח ראשי', archived: false });
+    v2.close();
+    resetDbForTests();
+
+    // שדרוג ל-v3 דרך getDb → upgrade אדיטיבי.
+    const db = await getDb();
+    const names = Array.from(db.objectStoreNames);
+
+    // כל ה-stores הישנים עדיין קיימים.
+    expect(names).toContain(STORE_NIKUD);
+    expect(names).toContain(STORE_BOARDS);
+    expect(names).toContain(STORE_PROFILES);
+    expect(names).toContain(STORE_SETTINGS);
+
+    // store חדש נוסף.
+    expect(names).toContain(STORE_SYMBOLS);
+
+    // הרשומה הישנה עדיין קיימת — לוח לא אבד.
+    const board = await db.get(STORE_BOARDS, 'board-1');
+    expect(board).toMatchObject({ name: 'לוח ראשי', archived: false });
   });
 });

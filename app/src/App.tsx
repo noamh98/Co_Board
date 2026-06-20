@@ -14,6 +14,7 @@ import {
 } from './data/bootstrap';
 import { createSettingsRepo } from './data/settingsRepo';
 import { BoardView } from './presentation/components/BoardView';
+import { BuilderView } from './presentation/builder/BuilderView';
 import { SentenceBar } from './presentation/components/SentenceBar';
 import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
@@ -49,6 +50,7 @@ export function App() {
   const [hasHeVoice, setHasHeVoice] = useState<boolean | null>(null);
   // מחסנית הניווט — null עד שהקוד נטען (PRD §4.4)
   const [navStack, setNavStack] = useState<NavStack | null>(null);
+  const [builderMode, setBuilderMode] = useState(false);
 
   const ttsRef = useRef<HebrewTts | null>(null);
   const storedPinRef = useRef<string>('');
@@ -195,6 +197,7 @@ export function App() {
               onSwitch={onSwitch}
               onCreate={onCreate}
               onLock={lock}
+              onEditBoard={() => setBuilderMode(true)}
             />
           )
         ) : pinPrompt ? (
@@ -226,7 +229,24 @@ export function App() {
         }}
       />
 
-      {ctx && currentBoard ? (
+      {builderMode && ctx && currentBoard ? (
+        <BuilderView
+          board={currentBoard}
+          onBoardChange={(b) => {
+            setCtx((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    board: prev.board.id === b.id ? b : prev.board,
+                    allBoards: { ...prev.allBoards, [b.id]: b },
+                  }
+                : prev,
+            );
+          }}
+          onExitBuilder={() => setBuilderMode(false)}
+          nikudService={nikudRef.current}
+        />
+      ) : ctx && currentBoard ? (
         <BoardView board={currentBoard} onCell={onCell} />
       ) : (
         <div className="app__loading" role="status">
