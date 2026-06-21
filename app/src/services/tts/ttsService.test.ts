@@ -118,6 +118,22 @@ describe('HebrewTts — voiceURI (FR-010)', () => {
   });
 });
 
+describe('HebrewTts — rate/pitch (M15 הרחבה)', () => {
+  it('speak עם rate=1.5 → utterance.rate=1.5', async () => {
+    const synth = mockSynth([voice('Carmit', 'he-IL', true)]);
+    const tts = new HebrewTts(synth, makeUtterance, () => 0);
+    await tts.speak('שלום', { rate: 1.5 });
+    expect(synth.spoken[0].rate).toBe(1.5);
+  });
+
+  it('speak עם pitch=0.8 → utterance.pitch=0.8', async () => {
+    const synth = mockSynth([voice('Carmit', 'he-IL', true)]);
+    const tts = new HebrewTts(synth, makeUtterance, () => 0);
+    await tts.speak('שלום', { pitch: 0.8 });
+    expect(synth.spoken[0].pitch).toBe(0.8);
+  });
+});
+
 describe('speakCell', () => {
   const RECORDING_ENTRY = {
     id: 'sym1',

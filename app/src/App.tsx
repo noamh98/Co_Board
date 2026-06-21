@@ -42,6 +42,7 @@ import {
   waitForVoices,
   speakCell,
   type HebrewTts,
+  type SpeakOptions,
 } from './services/tts/ttsService';
 import { createSymbolRepo, type SymbolRepo } from './data/symbolRepo';
 import { NikudService } from './services/nikud/nikudService';
@@ -99,6 +100,8 @@ export function App() {
   const [modelingActive, setModelingActive] = useState(false);
   const [modelingSession, setModelingSession] = useState<ModelingSession | null>(null);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
+  const [ttsRate, setTtsRate] = useState(1.0);
+  const [ttsPitch, setTtsPitch] = useState(1.0);
 
   const ttsRef = useRef<HebrewTts | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -128,10 +131,14 @@ export function App() {
       storedPinRef.current = (await settingsRepo.getCaregiverPin()) ?? '';
       const access = await settingsRepo.getAccessSettings();
       const voiceURI = await settingsRepo.getSelectedVoiceURI();
+      const rate = await settingsRepo.getTtsRate();
+      const pitch = await settingsRepo.getTtsPitch();
       const loaded = await loadActiveContext();
       if (alive) {
         setAccessSettings(access);
         setSelectedVoiceURI(voiceURI);
+        setTtsRate(rate);
+        setTtsPitch(pitch);
         setCtx(loaded);
         setNavStack(createNavStack(loaded.activeProfile.homeBoardId));
       }
@@ -220,8 +227,24 @@ export function App() {
     void createSettingsRepo().setSelectedVoiceURI(uri);
   };
 
+  const onTtsRateChange = (n: number): void => {
+    setTtsRate(n);
+    void createSettingsRepo().setTtsRate(n);
+  };
+
+  const onTtsPitchChange = (n: number): void => {
+    setTtsPitch(n);
+    void createSettingsRepo().setTtsPitch(n);
+  };
+
+  const speakOpts = (): SpeakOptions => ({
+    voiceURI: selectedVoiceURI,
+    rate: ttsRate,
+    pitch: ttsPitch,
+  });
+
   const speak = (text: string): void => {
-    void ttsRef.current?.speak(text);
+    void ttsRef.current?.speak(text, speakOpts());
   };
 
   const currentBoard = useMemo(() => {
@@ -252,7 +275,7 @@ export function App() {
 
     if (action.type === 'speak') {
       setSentence((s) => [...s, cell]);
-      void speakCell(cell, symbolRepoRef.current, ttsRef.current, { voiceURI: selectedVoiceURI });
+      void speakCell(cell, symbolRepoRef.current, ttsRef.current, speakOpts());
       if (ctx && currentBoard) {
         analyticsService.trackCellPress(
           ctx.activeProfile.id,
@@ -473,6 +496,10 @@ export function App() {
           onClose={() => setSettingsOpen(false)}
           voiceURI={selectedVoiceURI}
           onVoiceURIChange={onVoiceURIChange}
+          ttsRate={ttsRate}
+          onTtsRateChange={onTtsRateChange}
+          ttsPitch={ttsPitch}
+          onTtsPitchChange={onTtsPitchChange}
         />
       )}
 

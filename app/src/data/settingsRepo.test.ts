@@ -26,6 +26,30 @@ describe('settingsRepo — selectedVoiceURI (FR-010)', () => {
   });
 });
 
+describe('settingsRepo — ttsRate / ttsPitch (M15 הרחבה)', () => {
+  it('getTtsRate מחזיר 1.0 לפני שמירה', async () => {
+    const s = createSettingsRepo();
+    expect(await s.getTtsRate()).toBe(1.0);
+  });
+
+  it('setTtsRate + getTtsRate round-trip', async () => {
+    const s = createSettingsRepo();
+    await s.setTtsRate(1.5);
+    expect(await s.getTtsRate()).toBe(1.5);
+  });
+
+  it('getTtsPitch מחזיר 1.0 לפני שמירה', async () => {
+    const s = createSettingsRepo();
+    expect(await s.getTtsPitch()).toBe(1.0);
+  });
+
+  it('setTtsPitch + getTtsPitch round-trip', async () => {
+    const s = createSettingsRepo();
+    await s.setTtsPitch(0.8);
+    expect(await s.getTtsPitch()).toBe(0.8);
+  });
+});
+
 describe('settingsRepo — accessSettings (FR-020)', () => {
   it('ברירת מחדל כשלא נשמר דבר', async () => {
     const s = createSettingsRepo();

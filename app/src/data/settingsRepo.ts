@@ -12,6 +12,11 @@ const KEY_CAREGIVER_PIN = 'caregiverPin';
 const KEY_ACCESS_SETTINGS = 'accessSettings';
 const KEY_ANALYTICS_ENABLED = 'analyticsEnabled';
 const KEY_SELECTED_VOICE_URI = 'selectedVoiceURI';
+const KEY_TTS_RATE = 'ttsRate';
+const KEY_TTS_PITCH = 'ttsPitch';
+
+const DEFAULT_TTS_RATE = 1.0;
+const DEFAULT_TTS_PITCH = 1.0;
 
 interface SettingEntry {
   key: string;
@@ -32,6 +37,19 @@ export interface SettingsRepo {
   /** קול TTS שנבחר ע"י המטפל (FR-010). null = ברירת מחדל. */
   getSelectedVoiceURI(): Promise<string | null>;
   setSelectedVoiceURI(uri: string | null): Promise<void>;
+  /** קצב הקראה (FR-010 הרחבה). ברירת מחדל 1.0. */
+  getTtsRate(): Promise<number>;
+  setTtsRate(n: number): Promise<void>;
+  /** גובה צליל (FR-010 הרחבה). ברירת מחדל 1.0. */
+  getTtsPitch(): Promise<number>;
+  setTtsPitch(n: number): Promise<void>;
+}
+
+async function readNumber(key: string, fallback: number): Promise<number> {
+  const raw = await readValue(key);
+  if (raw === undefined) return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 async function readValue(key: string): Promise<string | undefined> {
@@ -80,5 +98,9 @@ export function createSettingsRepo(): SettingsRepo {
         await writeValue(KEY_SELECTED_VOICE_URI, uri);
       }
     },
+    getTtsRate: () => readNumber(KEY_TTS_RATE, DEFAULT_TTS_RATE),
+    setTtsRate: (n) => writeValue(KEY_TTS_RATE, String(n)),
+    getTtsPitch: () => readNumber(KEY_TTS_PITCH, DEFAULT_TTS_PITCH),
+    setTtsPitch: (n) => writeValue(KEY_TTS_PITCH, String(n)),
   };
 }

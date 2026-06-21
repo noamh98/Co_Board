@@ -10,12 +10,20 @@ export function AccessSettingsPanel({
   onClose,
   voiceURI,
   onVoiceURIChange,
+  ttsRate,
+  onTtsRateChange,
+  ttsPitch,
+  onTtsPitchChange,
 }: {
   settings: AccessSettings;
   onChange: (next: AccessSettings) => void;
   onClose: () => void;
   voiceURI: string | null;
   onVoiceURIChange: (uri: string | null) => void;
+  ttsRate: number;
+  onTtsRateChange: (n: number) => void;
+  ttsPitch: number;
+  onTtsPitchChange: (n: number) => void;
 }) {
   const set = (patch: Partial<AccessSettings>) => onChange({ ...settings, ...patch });
 
@@ -128,6 +136,40 @@ export function AccessSettingsPanel({
               ))}
             </select>
           )}
+        </div>
+
+        {/* קצב הקראה — FR-010 הרחבה */}
+        <div>
+          <label htmlFor="rate-slider" style={{ display: 'block', marginBottom: 6 }}>
+            קצב הקראה: {ttsRate.toFixed(1)}×
+          </label>
+          <input
+            id="rate-slider"
+            type="range"
+            min={0.5}
+            max={2.0}
+            step={0.1}
+            value={ttsRate}
+            onChange={(e) => onTtsRateChange(Number(e.target.value))}
+            style={{ width: '100%' }}
+          />
+        </div>
+
+        {/* גובה צליל — FR-010 הרחבה */}
+        <div>
+          <label htmlFor="pitch-slider" style={{ display: 'block', marginBottom: 6 }}>
+            גובה צליל: {ttsPitch.toFixed(1)}×
+          </label>
+          <input
+            id="pitch-slider"
+            type="range"
+            min={0.5}
+            max={2.0}
+            step={0.1}
+            value={ttsPitch}
+            onChange={(e) => onTtsPitchChange(Number(e.target.value))}
+            style={{ width: '100%' }}
+          />
         </div>
 
         <button type="button" className="adultbar__btn" onClick={onClose}>
