@@ -3,6 +3,7 @@ import {
   LIBRARY_BOARDS,
   DEMO_PROFILE_V2,
 } from '../domain/boardLibrary';
+import { getTemplate } from '../domain/boardTemplates';
 import { DEFAULT_PIN } from '../domain/access';
 import type { Board, Profile } from '../domain/models';
 import { createBoardRepo } from './boardRepo';
@@ -129,4 +130,32 @@ export async function loadActiveContext(): Promise<ActiveContext> {
 export async function switchActiveProfile(id: string): Promise<ActiveContext> {
   await createSettingsRepo().setActiveProfileId(id);
   return loadActiveContext();
+}
+
+/**
+ * יוצר פרופיל חדש מתבנית לוח. אם templateId אינו ידוע — נפילה ל-blank4x4.
+ * מחזיר profileId של הפרופיל שנוצר.
+ */
+export async function createProfileFromTemplate(
+  name: string,
+  templateId: string,
+): Promise<string> {
+  const template =
+    getTemplate(templateId) ?? getTemplate('blank4x4')!;
+
+  const boardRepo = createBoardRepo();
+  const profileRepo = createProfileRepo();
+
+  const board = cloneBoard(template.board, `לוח בית — ${name}`);
+  await boardRepo.save(board);
+
+  const profile: Profile = {
+    id: newId('profile'),
+    name,
+    defaultVoice: 'child',
+    homeBoardId: board.id,
+    locked: true,
+  };
+  await profileRepo.save(profile);
+  return profile.id;
 }

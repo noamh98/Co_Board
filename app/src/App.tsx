@@ -32,6 +32,7 @@ import { UsageDashboard } from './presentation/analytics/UsageDashboard';
 import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
+import { QuickStartWizard } from './presentation/wizard/QuickStartWizard';
 import {
   createBrowserTts,
   waitForVoices,
@@ -77,6 +78,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatusType>('disabled');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -264,6 +266,13 @@ export function App() {
     })();
   };
 
+  const onWizardComplete = (profileId: string): void => {
+    setWizardOpen(false);
+    void switchActiveProfile(profileId).then((next) => {
+      setCtx(next);
+    });
+  };
+
   const onSignOut = (): void => {
     const provider = syncEnabled ? new FirebaseProvider() : new LocalStubProvider();
     void authService.signOut(provider);
@@ -311,6 +320,7 @@ export function App() {
               activeProfileId={ctx.activeProfile.id}
               onSwitch={onSwitch}
               onCreate={onCreate}
+              onOpenWizard={() => setWizardOpen(true)}
               onLock={lock}
               onEditBoard={() => setBuilderMode(true)}
               onOpenSettings={() => setSettingsOpen(true)}
@@ -409,6 +419,13 @@ export function App() {
         <UsageDashboard
           profileId={ctx.activeProfile.id}
           onClose={() => setAnalyticsOpen(false)}
+        />
+      )}
+
+      {wizardOpen && (
+        <QuickStartWizard
+          onComplete={onWizardComplete}
+          onClose={() => setWizardOpen(false)}
         />
       )}
     </div>

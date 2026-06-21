@@ -72,11 +72,16 @@ describe('App — מצב נעול, קוד מטפל ומעבר פרופיל (M1)'
     const select = (await screen.findByLabelText(
       'פרופיל',
     )) as HTMLSelectElement;
+    // פרופיל חדש פותח wizard — מילוי שלב 1, 2, 3
     fireEvent.click(screen.getByRole('button', { name: 'פרופיל חדש' }));
-    fireEvent.change(screen.getByLabelText('שם פרופיל חדש'), {
+    fireEvent.change(screen.getByLabelText('שם הפרופיל'), {
       target: { value: 'דנה' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'הוסף' }));
+    fireEvent.click(screen.getByRole('button', { name: 'הבא' }));
+    // שלב 2 — תבנית ברירת מחדל (core4x4), לחץ הבא
+    fireEvent.click(screen.getByRole('button', { name: 'הבא' }));
+    // שלב 3 — אישור
+    fireEvent.click(screen.getByRole('button', { name: 'צור פרופיל' }));
 
     await waitFor(() =>
       expect(select.selectedOptions[0]?.textContent).toBe('דנה'),

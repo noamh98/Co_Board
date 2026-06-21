@@ -8,6 +8,7 @@ export function AdultBar({
   activeProfileId,
   onSwitch,
   onCreate,
+  onOpenWizard,
   onLock,
   onEditBoard,
   onOpenSettings,
@@ -18,7 +19,10 @@ export function AdultBar({
   profiles: Profile[];
   activeProfileId: string;
   onSwitch: (id: string) => void;
-  onCreate: (name: string) => void;
+  /** ייצור פרופיל ישיר (שם בלבד) — פעיל כשאין onOpenWizard */
+  onCreate?: (name: string) => void;
+  /** פתיחת אשף יצירת פרופיל — מעדיף על פני onCreate כשקיים */
+  onOpenWizard?: () => void;
   onLock: () => void;
   onEditBoard?: () => void;
   onOpenSettings?: () => void;
@@ -32,7 +36,7 @@ export function AdultBar({
   const submitNew = (): void => {
     const name = newName.trim();
     if (!name) return;
-    onCreate(name);
+    onCreate?.(name);
     setNewName('');
     setAdding(false);
   };
@@ -55,7 +59,15 @@ export function AdultBar({
         ))}
       </select>
 
-      {adding ? (
+      {onOpenWizard ? (
+        <button
+          type="button"
+          className="adultbar__btn"
+          onClick={onOpenWizard}
+        >
+          פרופיל חדש
+        </button>
+      ) : adding ? (
         <>
           <input
             className="adultbar__input"

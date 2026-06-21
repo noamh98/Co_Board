@@ -104,6 +104,18 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
+## 8. Changelog (עדכון M9 — 2026-06-21)
+- **2026-06-21 (M9 — Board Templates & Quick-Start Wizard)** — אשף יצירת פרופיל עם תבנית לוח ראשונית.
+  **Domain:** `domain/boardTemplates.ts` — `BoardTemplate` interface; 4 תבניות: `core4x4` (HOME_BOARD, Fitzgerald מלא), `pecs6x3` (3×6, 18 תאים, isCore מסומן), `feelings3x3` (3×3, 9 רגשות), `blank4x4` (ריק, 0 תאים); `listTemplates()` / `getTemplate(id)`. 3 בדיקות.
+  **Data:** `data/bootstrap.ts` — נוסף `createProfileFromTemplate(name, templateId): Promise<string>`; תבנית לא ידועה → נפילה ל-`blank4x4` (לא קורס); לוח = קלון (`cloneBoard`) → id חדש, לא נוגע בתבנית המקור. 4 בדיקות (`data/bootstrap.test.ts`).
+  **Wizard UI:** `presentation/wizard/QuickStartWizard.tsx` — 3 שלבים: (1) שם פרופיל + validation, (2) 4 כרטיסיות תבנית (aria-pressed), (3) אישור + "צור פרופיל"; RTL מלא, progress indicator, כפתור X לסגירה. 4 בדיקות (`QuickStartWizard.test.tsx`).
+  **AdultBar:** נוסף `onOpenWizard?: () => void`; כשמסופק — "פרופיל חדש" פותח wizard (לא טופס inline).
+  **App.tsx:** `wizardOpen` state; `onWizardComplete(profileId)` → `switchActiveProfile` → `setCtx`; `QuickStartWizard` modal.
+  **CSS:** `.wizard*` — overlay, כרטיסיות תבנית, progress steps, RTL.
+  **Invariants (נאמתו):** תבנית לא ידועה=blank fallback; clone=id חדש; locked=true; RTL=dir="rtl" על overlay; App.test.tsx עודכן לזרימת wizard.
+  **CI:** lint 0 errors, 182 tests (+11), build ירוק. `docs/m9-templates.md`.
+  **הבא (M10):** ממתין לאישור.
+
 ## 8. Changelog (עדכון M8 — 2026-06-21)
 - **2026-06-21 (M8 — ARASAAC Symbol Search & Offline Cache)** — חיפוש סמלים עברי + cache offline.
   **ARASAAC Client:** `services/symbols/arasaacClient.ts` — `searchSymbols(query, lang='he')` → GET `/pictograms/he/search/{q}`, מקסימום 20 תוצאות; `getImageUrl(id)` → `static.arasaac.org`. ללא API key, ללא Authorization.
