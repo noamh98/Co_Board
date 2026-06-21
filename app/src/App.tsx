@@ -526,7 +526,19 @@ export function App() {
         />
       )}
 
-      {backupOpen && <BackupPanel onClose={() => setBackupOpen(false)} />}
+      {backupOpen && (
+        <BackupPanel
+          onClose={() => setBackupOpen(false)}
+          currentBoard={currentBoard}
+          onBoardImported={(board) => {
+            setCtx((prev) =>
+              prev
+                ? { ...prev, allBoards: { ...prev.allBoards, [board.id]: board } }
+                : prev,
+            );
+          }}
+        />
+      )}
 
       {analyticsOpen && ctx && (
         <UsageDashboard
