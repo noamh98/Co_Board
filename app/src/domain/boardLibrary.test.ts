@@ -62,4 +62,53 @@ describe('boardLibrary', () => {
   it('listTemplates מחזירה לפחות 7 תבניות', () => {
     expect(listTemplates().length).toBeGreaterThanOrEqual(7);
   });
+
+  // M20 — סמלים לכל מילה (FR-002, PRD §4.2)
+  const KNOWN_NO_SYMBOL = new Set(['iPad']);
+
+  it('כל תא-מילה (action=speak) בעל סמל מקומי, פרט לחריגים מתועדים', () => {
+    const noSymbol: string[] = [];
+    for (const board of listBoardLibrary()) {
+      for (const cell of Object.values(board.cells)) {
+        if (cell.action.type !== 'speak') continue; // תאי ניווט/מערכת אינם מילים
+        if (KNOWN_NO_SYMBOL.has(cell.label)) continue;
+        if (!cell.imageUri || !cell.symbolId) noSymbol.push(cell.label);
+      }
+    }
+    expect(noSymbol).toEqual([]);
+  });
+
+  it('imageUri מצביע לנתיב symbols מקומי (offline-first), לא ל-URL מרוחק', () => {
+    for (const board of listBoardLibrary()) {
+      for (const cell of Object.values(board.cells)) {
+        if (!cell.imageUri) continue;
+        expect(cell.imageUri).toContain('symbols/');
+        expect(cell.imageUri).not.toMatch(/^https?:\/\//);
+      }
+    }
+  });
+
+  // M21 — ניקוד לכל מילה (FR-009, PRD §4.3)
+  const NIKUD_MARK = /[ְ-ׇ]/; // טווח סימני ניקוד עברי
+  const LATIN = /[A-Za-z]/; // מילים לועזיות (iPad) פטורות מניקוד
+
+  it('כל תא-מילה בעל ניקוד לא-ריק המכיל סימן ניקוד אחד לפחות', () => {
+    const noNikud: string[] = [];
+    for (const board of listBoardLibrary()) {
+      for (const cell of Object.values(board.cells)) {
+        if (cell.action.type !== 'speak') continue;
+        if (LATIN.test(cell.label)) continue;
+        if (!cell.nikud || !NIKUD_MARK.test(cell.nikud)) noNikud.push(cell.label);
+      }
+    }
+    expect(noNikud).toEqual([]);
+  });
+
+  it('הומוגרף "ספר" מנוקד כ-סֵפֶר (book) ולא סָפַר (counted)', () => {
+    for (const board of listBoardLibrary()) {
+      for (const cell of Object.values(board.cells)) {
+        if (cell.label === 'ספר') expect(cell.nikud).toBe('סֵפֶר');
+      }
+    }
+  });
 });

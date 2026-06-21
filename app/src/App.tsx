@@ -40,11 +40,15 @@ import type { PhraseEntry } from './domain/phraseBank';
 import { savePhrase, listPhrases, deletePhrase } from './data/phraseRepo';
 import {
   createBrowserTts,
+  createHybridTts,
   waitForVoices,
   speakCell,
-  type HebrewTts,
+  type TtsLike,
   type SpeakOptions,
 } from './services/tts/ttsService';
+import { GoogleTtsProvider } from './services/tts/googleTtsProvider';
+import { getTtsApiKey } from './data/settingsRepo';
+import { pruneAudioCache } from './data/audioCache';
 import { createSymbolRepo, type SymbolRepo } from './data/symbolRepo';
 import { NikudService } from './services/nikud/nikudService';
 import { createIdbNikudCache } from './services/nikud/nikudCache';
@@ -105,7 +109,7 @@ export function App() {
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
 
-  const ttsRef = useRef<HebrewTts | null>(null);
+  const ttsRef = useRef<TtsLike | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
@@ -125,6 +129,7 @@ export function App() {
     const DAY_MS = 24 * 60 * 60 * 1000;
     void clearEvents(Date.now() - 90 * DAY_MS);
     void pruneCache(30);
+    void pruneAudioCache(500);
 
     let alive = true;
     void (async () => {
@@ -147,7 +152,11 @@ export function App() {
     })();
 
     const tts = createBrowserTts();
-    ttsRef.current = tts;
+    void (async () => {
+      const apiKey = await getTtsApiKey();
+      const provider = apiKey ? new GoogleTtsProvider(apiKey) : null;
+      ttsRef.current = tts ? createHybridTts(tts, provider) : null;
+    })();
     if (!tts) {
       setHasHeVoice(false);
     } else {
@@ -200,6 +209,7 @@ export function App() {
     if (!ctx) return;
     setNavStack(createNavStack(ctx.activeProfile.homeBoardId));
     setSentence([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx?.activeProfile.id]);
 
   // מצב נעול מלא (Guided Access, FR-019)

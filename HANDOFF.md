@@ -1,7 +1,7 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת היחיד לפרויקט. קרא אותי בתחילת כל סשן. אל תגזור את המערכת מחדש מהקוד אם מסמך זה מספיק.
-> **שלב נוכחי:** M5 (Sync & Cloud) — בוצע. הבא בתור: M6 (Firebase Auth + Firestore Rules + Login UI).
+> **שלב נוכחי:** M20.5+M22 בוצעו — סמלי ניווט (אוכל/רגשות/משחק) + TTS היברידי (Google Neural2 + cache IndexedDB). 244 tests, precache 163. הבא בתור: UI להגדרת מפתח API (Google TTS), אימות ויזואלי סמלים.
 
 ## 1. Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), עבור קלינאי תקשורת והורים. המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) ולא רק מחולל לוחות. מסחרי, אנדרואיד+Web תחילה ואז iPad.
@@ -105,6 +105,35 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/m4-adaptivity-access.md` | M4: הסתרה הדרגתית, גריד דינמי, Guided Access, הגדרות גישה מוטוריות |
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
+
+## 8. Changelog (עדכון M20.5+M22 — 2026-06-21, סמלי ניווט + TTS היברידי)
+
+- **2026-06-21 (M20.5 — סמלי ניווט, FR-002)** — תאי ניווט (HOME→FOOD/EMOTIONS/PLAY) מקבלים כעת סמל ARASAAC.
+  `navCell()` ב-`boardLibrary.ts` עודכן לצרף `symbolId:'arasaac:{id}'` + `imageUri` דרך `symbolIdFor()`, בדיוק כמו `word()`.
+  `SYMBOL_OVERRIDES` ב-`symbolMap.ts`: `'אוכל'→4610`, `'רגשות'→12359` (PNG ב-public/symbols/); `'משחק'→9813` כבר היה ב-generated.
+
+- **2026-06-21 (M22 — TTS היברידי, ADR-0003)** — Google Cloud TTS Neural2 he-IL + cache IndexedDB.
+  **DB:** `db.ts` DB_VERSION 8→9 — store `audioCache` (keyPath: 'cacheKey') אדיטיבי. `data/audioCache.ts` — `buildCacheKey(text,voiceId,rate,pitch)→SHA-256`, `getAudioFromCache/saveAudioToCache/pruneAudioCache(maxEntries=500)`.
+  **Provider interface:** `services/tts/ttsProvider.ts` — `TTSProvider` interface + `NullTTSProvider` stub.
+  **Google provider:** `services/tts/googleTtsProvider.ts` — `GoogleTtsProvider(apiKey)`, 4 קולות he-IL (Neural2-A/C + Wavenet-A/B); API key מועבר ב-header `x-goog-api-key` (לא URL — מניעת חשיפה ב-DevTools).
+  **HybridTtsService:** `services/tts/hybridTtsService.ts` — `class HybridTtsService implements TtsLike`; זרימה: 1)cache hit→playBlob 2)online+provider→synthesize+cache+playBlob 3)fallback→HebrewTts.speak(); triple try-catch מבטיח offline fallback תמיד; cancel() מנקה currentAudio + currentObjectUrl + קורא fallback.cancel().
+  **TtsLike interface:** `services/tts/ttsService.ts` — נוסף `TtsLike {speak, cancel}` interface; `speakCell` מקבל `TtsLike | null` (לא `HebrewTts | null` — תאימות לאחור); `createHybridTts()` factory.
+  **settingsRepo:** `getTtsApiKey/setTtsApiKey/getTtsProvider/setTtsProvider` (ללא DB_VERSION bump).
+  **App.tsx:** `ttsRef: useRef<TtsLike | null>`; init effect טוען apiKey ויוצר HybridTtsService (lazy, לא חוסם); tts כבוי (null) אם אין HebrewTts (אופליין ≥ קודם).
+  **בדיקות:** `hybridTtsService.test.ts` — 8 tests (empty/cache-hit/provider-ok/offline/provider-throws/voice-pref/cancel). **244 tests סה"כ** (+8). precache 163 entries.
+
+## 8. Changelog (עדכון M20–M21 — 2026-06-21, סמלים + ניקוד)
+
+- **2026-06-21 (M20 — סמל לכל מילה, FR-002/§4.2)** — כל ~136 המילים הייחודיות בספרייה קיבלו פיקטוגרמת ARASAAC מקומית.
+  **Build script:** `app/scripts/build-symbol-map.mjs` — מפענח `boardLibrary.ts`, שולף id מ-ARASAAC לכל מילה, מוריד `{id}_500.png` ל-`public/symbols/`, מחולל `domain/symbolMap.generated.ts`. idempotent.
+  **Map:** `domain/symbolMap.ts` — `GENERATED_SYMBOL_MAP` + `SYMBOL_OVERRIDES` (תיקוני אימות ידני: רוצה→5441, רועש→24833, כואב/ספרייה/איך/במבה/ביסלי). `symbolIdFor(label)` + `localSymbolPath(id)` (`BASE_URL+symbols/{id}.png`).
+  **חיבור:** `boardLibrary.word()` מצרף `symbolId:'arasaac:{id}'`+`imageUri` אוטומטית לפי label; חסר→label בלבד (fallback CellButton). **iPad** = החריג היחיד ללא סמל.
+  **Offline-first:** 141 PNG נארזים ב-`public/symbols/`; Workbox precache (`globPatterns` כולל png) — 148 entries (3.6MB). **לא נדרש DB bump** (סמלי-ספרייה בקוד seed).
+  **בדיקות:** +2 ב-`boardLibrary.test.ts` (כל speak-cell בעל סמל פרט ל-iPad; imageUri מקומי לא URL מרוחק).
+
+- **2026-06-21 (M21 — ניקוד מאומת, FR-009/§4.3)** — אימות שיטתי לניקוד הקיים (כבר היה ידני בכל תא).
+  ספוט-צ'ק נספח C: הומוגרף `סֵפֶר` (לא סָפַר) תקין; auto-nikud בבילדר ללא שינוי. **בדיקות:** +2 ב-`boardLibrary.test.ts` (כל speak-cell לא-לועזי בעל ניקוד עם סימן אחד לפחות; `ספר`==`סֵפֶר`).
+  **CI:** lint 0 errors, **236 tests** (+4), build ירוק, precache 148. `docs/m20-symbols-nikud.md`.
 
 ## 8. Changelog (עדכון Phase 2 — 2026-06-21, M16–M19)
 

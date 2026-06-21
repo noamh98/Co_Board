@@ -4,6 +4,13 @@
 
 import type { Cell } from '../../domain/models';
 import type { SymbolRepo } from '../../data/symbolRepo';
+import { HybridTtsService } from './hybridTtsService';
+import type { TTSProvider } from './ttsProvider';
+
+export interface TtsLike {
+  speak(text: string, opts?: SpeakOptions): Promise<SpeakResult>;
+  cancel(): void;
+}
 
 export interface VoiceLike {
   name: string;
@@ -186,7 +193,7 @@ export function waitForVoices(timeoutMs = 1500): Promise<void> {
 export async function speakCell(
   cell: Cell,
   symbolRepo: SymbolRepo,
-  tts: HebrewTts | null,
+  tts: TtsLike | null,
   opts: SpeakOptions = {},
 ): Promise<void> {
   if (cell.symbolId) {
@@ -206,3 +213,10 @@ export async function speakCell(
     if (text) await tts.speak(text, opts);
   }
 }
+
+export function createHybridTts(fallback: HebrewTts, provider: TTSProvider | null): HybridTtsService {
+  return new HybridTtsService(fallback, provider);
+}
+
+export { HybridTtsService } from './hybridTtsService';
+export type { TTSProvider, VoiceConfig } from './ttsProvider';

@@ -4,6 +4,7 @@
 // RTL: col=0 = עמודה ימנית ביותר.
 
 import type { Board, Cell, Fitzgerald } from './models';
+import { symbolIdFor, localSymbolPath } from './symbolMap';
 
 function word(
   cellId: string,
@@ -12,6 +13,7 @@ function word(
   fitz: Fitzgerald,
   isCore = false,
 ): Cell {
+  const sid = symbolIdFor(label);
   return {
     id: cellId,
     label,
@@ -20,15 +22,23 @@ function word(
     fitzgerald: fitz,
     isCore,
     action: { type: 'speak' },
+    // M20 — סמל ARASAAC מקומי לכל מילה עם מיפוי; חסר → label בלבד (fallback ב-CellButton).
+    ...(sid !== undefined
+      ? { symbolId: `arasaac:${sid}`, imageUri: localSymbolPath(sid) }
+      : {}),
   };
 }
 
 function navCell(cellId: string, label: string, targetBoardId: string): Cell {
+  const sid = symbolIdFor(label);
   return {
     id: cellId,
     label,
     fitzgerald: 'social',
     action: { type: 'navigate', targetBoardId },
+    ...(sid !== undefined
+      ? { symbolId: `arasaac:${sid}`, imageUri: localSymbolPath(sid) }
+      : {}),
   };
 }
 

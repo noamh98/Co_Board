@@ -14,6 +14,8 @@ const KEY_ANALYTICS_ENABLED = 'analyticsEnabled';
 const KEY_SELECTED_VOICE_URI = 'selectedVoiceURI';
 const KEY_TTS_RATE = 'ttsRate';
 const KEY_TTS_PITCH = 'ttsPitch';
+const KEY_TTS_PROVIDER = 'ttsProvider';
+const KEY_TTS_API_KEY = 'ttsApiKey';
 
 const DEFAULT_TTS_RATE = 1.0;
 const DEFAULT_TTS_PITCH = 1.0;
@@ -71,6 +73,26 @@ async function getAccessSettings(): Promise<AccessSettings> {
     return { ...DEFAULT_ACCESS_SETTINGS, ...(JSON.parse(raw) as Partial<AccessSettings>) };
   } catch {
     return { ...DEFAULT_ACCESS_SETTINGS };
+  }
+}
+
+export async function getTtsProvider(): Promise<'google' | 'azure' | 'none'> {
+  const raw = await readValue(KEY_TTS_PROVIDER);
+  return (raw as 'google' | 'azure' | 'none') ?? 'none';
+}
+export async function setTtsProvider(p: 'google' | 'azure' | 'none'): Promise<void> {
+  await writeValue(KEY_TTS_PROVIDER, p);
+}
+export async function getTtsApiKey(): Promise<string | null> {
+  const raw = await readValue(KEY_TTS_API_KEY);
+  return raw ?? null;
+}
+export async function setTtsApiKey(key: string | null): Promise<void> {
+  if (key === null) {
+    const db = await getDb();
+    await db.delete(STORE_SETTINGS, KEY_TTS_API_KEY);
+  } else {
+    await writeValue(KEY_TTS_API_KEY, key);
   }
 }
 
