@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Cell } from '../../domain/models';
 import { fitzgeraldStyle } from '../../domain/fitzgerald';
 import {
@@ -20,12 +21,10 @@ export function CellButton({
   settings?: AccessSettings;
 }) {
   const style = fitzgeraldStyle(cell.fitzgerald);
+  const [imgError, setImgError] = useState(false);
 
-  // הרכבת שיטות הגישה (FR-020): מניעת-מגע-כפול עוטפת את ההפעלה, ואז
-  // הפעלה-בשחרור קובעת אם היא ב-onClick או ב-onPointerUp. Dwell מוסיף ריחוף.
   const guarded = useDoubleTapPrevention(onActivate, settings);
   const release = useActivateOnRelease(guarded.onClick, settings);
-  // Dwell עובר דרך guarded.onClick כדי שמניעת-מגע-כפול תחול גם על הפעלה בהשהיה.
   const dwell = useDwellActivation(guarded.onClick, settings);
 
   return (
@@ -40,6 +39,16 @@ export function CellButton({
       aria-label={cell.label}
       style={{ backgroundColor: style.bg, color: style.text }}
     >
+      {cell.imageUri && !imgError && (
+        <img
+          src={cell.imageUri}
+          className="cell__image"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          onError={() => setImgError(true)}
+        />
+      )}
       <span className="cell__label">{cell.label}</span>
     </button>
   );

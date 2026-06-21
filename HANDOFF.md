@@ -61,6 +61,7 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | FirebaseProvider מוגדר ב-.env.local (gitignored); לא מחוייב hardcoded | `app/.env.local` · `services/sync/firebaseProvider.ts` (`import.meta.env.VITE_*`) |
 | Guided Access מלא (FR-019): במצב נעול חוסם ניווט-אחורה (popstate) + beforeunload (PWA לא נועל OS) | `App.tsx` (effect על `mode==='locked'`) |
 | הסתרת תא (FR-014) = `hidden` flag, **לא מחיקה**; מוצג בעריכה (opacity 0.4), מסונן במצב ילד | `domain/adaptivity.ts` (`toggleCellVisibility`/`hiddenFilter`) · `BoardView.tsx` · `BuilderView.tsx` |
+| CellButton מרנדר `imageUri` אם קיים; label **תמיד גלוי** (AAC invariant); `onError` → img נסתר, label נשאר | `presentation/components/CellButton.tsx` |
 | גריד דינמי (FR-015) משתמש ב-`applyCellSize`→`resizeBoard`; ViolationError אם ליבה נופלת — UI חוסם | `domain/adaptivity.ts` · `presentation/builder/GridSizePicker.tsx` |
 | הגדרות גישה (FR-020) נשמרות offline; dwell=0 ⇒ onClick רגיל עובד; ברירת מחדל = הכל כבוי | `domain/accessSettings.ts` · `services/access/dwellService.ts` · `data/settingsRepo.ts` |
 | מיגרציית DB לא הורסת נתונים קיימים (upgrade אדיטיבי) | `data/db.ts` (`upgrade` עם guard) + `migration.test.ts` |
@@ -103,6 +104,16 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/m4-adaptivity-access.md` | M4: הסתרה הדרגתית, גריד דינמי, Guided Access, הגדרות גישה מוטוריות |
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
+
+## 8. Changelog (עדכון M11 — 2026-06-21)
+- **2026-06-21 (M11 — Cell Image Rendering)** — תצוגת סמלים בתאים.
+  **CellButton:** `presentation/components/CellButton.tsx` — אם `cell.imageUri` קיים: מרנדר `<img className="cell__image" loading="lazy" aria-hidden="true">` מעל ה-label; `onError` → `setImgError(true)` → img נסתר, label נשאר (graceful fallback). label תמיד גלוי (AAC invariant).
+  **CSS:** `index.css` — `.cell` קיבל `flex-direction: column`; נוספו `.cell__image` (width:100%, max-height:60%, object-fit:contain) ו-`.cell__label` (font-size:0.85rem, text-align:center).
+  **BuilderView:** כבר כלל img rendering לפני M11 (שורות 379–385). לא שונה.
+  **טסטים:** `CellButton.test.tsx` (חדש, 3 בדיקות): ללא imageUri→אין img; עם imageUri→img עם src נכון; onError→img נסתר. `BuilderView.test.tsx` (חדש, 1 בדיקה): תא עם imageUri מציג img בעורך.
+  **Invariants (נאמתו):** label גלוי תמיד; onError=graceful fallback; RTL=img ממורכז (flex column + align-items:center); loading="lazy".
+  **CI:** lint 0 errors, 194 tests (+4), build ירוק. `docs/m11-cell-images.md`.
+  **הבא (M12):** ממתין לאישור.
 
 ## 8. Changelog (עדכון M10 — 2026-06-21)
 - **2026-06-21 (M10 — Phrase Bank / בנק משפטים)** — שמירה וטעינה של משפטים מוכנים.
