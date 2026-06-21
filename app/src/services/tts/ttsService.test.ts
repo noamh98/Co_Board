@@ -5,6 +5,9 @@ import {
   type SpeechUtteranceLike,
   type SynthLike,
 } from './ttsService';
+import type { Cell } from '../../domain/models';
+import type { SymbolRepo } from '../../data/symbolRepo';
+import { speakCell } from './ttsService';
 
 function voice(
   name: string,
@@ -95,5 +98,71 @@ describe('HebrewTts', () => {
       makeUtterance,
     );
     expect((await tts.speak('שלום')).spoken).toBe(false);
+  });
+});
+
+describe('speakCell', () => {
+  const RECORDING_ENTRY = {
+    id: 'sym1',
+    uri: 'data:audio/webm;base64,fake',
+    mimeType: 'image/webp' as const,
+    source: 'recording' as const,
+    createdAt: 0,
+  };
+
+  function makeRepo(resolveWith: (typeof RECORDING_ENTRY) | undefined): SymbolRepo {
+    return {
+      get: vi.fn().mockResolvedValue(resolveWith),
+      save: vi.fn(),
+      list: vi.fn().mockResolvedValue([]),
+      remove: vi.fn(),
+    };
+  }
+
+  function makeTts(): HebrewTts {
+    const tts = new HebrewTts(mockSynth([voice('Carmit', 'he-IL')]), makeUtterance);
+    vi.spyOn(tts, 'speak').mockResolvedValue({ spoken: true });
+    return tts;
+  }
+
+  function makeCell(overrides: Partial<Cell> = {}): Cell {
+    return { id: 'c1', label: 'כלב', action: { type: 'speak' }, ...overrides };
+  }
+
+  it('הקלטה קיימת → Audio.play נקרא; speak לא נקרא', async () => {
+    const mockPlay = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(globalThis, 'Audio').mockImplementation(
+      () => ({ play: mockPlay } as unknown as HTMLAudioElement),
+    );
+
+    const tts = makeTts();
+    const repo = makeRepo(RECORDING_ENTRY);
+    const cell = makeCell({ symbolId: 'sym1' });
+
+    await speakCell(cell, repo, tts);
+
+    expect(mockPlay).toHaveBeenCalled();
+    expect(tts.speak).not.toHaveBeenCalled();
+  });
+
+  it('symbolId קיים אך אין entry → speak(label) נקרא', async () => {
+    const tts = makeTts();
+    const repo = makeRepo(undefined);
+    const cell = makeCell({ symbolId: 'sym1' });
+
+    await speakCell(cell, repo, tts);
+
+    expect(tts.speak).toHaveBeenCalledWith('כלב');
+  });
+
+  it('אין symbolId → speak(label) נקרא, get לא נקרא', async () => {
+    const tts = makeTts();
+    const repo = makeRepo(undefined);
+    const cell = makeCell({ label: 'שלום' });
+
+    await speakCell(cell, repo, tts);
+
+    expect(tts.speak).toHaveBeenCalledWith('שלום');
+    expect(repo.get).not.toHaveBeenCalled();
   });
 });

@@ -40,8 +40,10 @@ import { savePhrase, listPhrases, deletePhrase } from './data/phraseRepo';
 import {
   createBrowserTts,
   waitForVoices,
+  speakCell,
   type HebrewTts,
 } from './services/tts/ttsService';
+import { createSymbolRepo, type SymbolRepo } from './data/symbolRepo';
 import { NikudService } from './services/nikud/nikudService';
 import { createIdbNikudCache } from './services/nikud/nikudCache';
 import { createNakdanFetcher } from './services/nikud/nakdanClient';
@@ -91,6 +93,7 @@ export function App() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
   const ttsRef = useRef<HebrewTts | null>(null);
+  const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
   const syncEngineRef = useRef<SyncEngine | null>(null);
@@ -217,7 +220,7 @@ export function App() {
 
     if (action.type === 'speak') {
       setSentence((s) => [...s, cell]);
-      speak(vocalize(cell));
+      void speakCell(cell, symbolRepoRef.current, ttsRef.current);
       if (ctx && currentBoard) {
         analyticsService.trackCellPress(
           ctx.activeProfile.id,

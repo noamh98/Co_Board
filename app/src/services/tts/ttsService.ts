@@ -2,6 +2,9 @@
 // Offline-first: מעדיף קולות מקומיים (localService=true) שעובדים ללא רשת (HANDOFF §4).
 // ניתן-לבדיקה: התלויות (synth + יצירת utterance) מוזרקות — לא נגיעה ישירה ב-window.
 
+import type { Cell } from '../../domain/models';
+import type { SymbolRepo } from '../../data/symbolRepo';
+
 export interface VoiceLike {
   name: string;
   lang: string;
@@ -171,4 +174,27 @@ export function waitForVoices(timeoutMs = 1500): Promise<void> {
     });
     setTimeout(finish, timeoutMs);
   });
+}
+
+export async function speakCell(
+  cell: Cell,
+  symbolRepo: SymbolRepo,
+  tts: HebrewTts | null,
+): Promise<void> {
+  if (cell.symbolId) {
+    const entry = await symbolRepo.get(cell.symbolId);
+    if (entry?.source === 'recording') {
+      const audio = new Audio(entry.uri);
+      try {
+        await audio.play();
+        return;
+      } catch {
+        // fallback to web speech below
+      }
+    }
+  }
+  if (tts) {
+    const text = cell.vocalization ?? cell.nikud ?? cell.label;
+    if (text) await tts.speak(text);
+  }
 }

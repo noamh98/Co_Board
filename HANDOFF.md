@@ -52,6 +52,7 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | Offline-first: תקשורת/ניווט/TTS בסיסי/סמלים **חייבים** לעבוד ללא רשת | `vite.config.ts` (VitePWA) · `services/tts` (קול מקומי) · `services/nikud` (cache) · `data/db.ts` |
 | ניקוד: עדיפות ידני>cache>רשת>גלם; ללא תלות ברשת בשימוש חוזר; ידני לעולם לא נדרס | `app/src/services/nikud/nikudService.ts` + `nikudService.test.ts` |
 | TTS מעדיף קול מקומי (אופליין); נפילה חיננית אם אין קול עברי | `app/src/services/tts/ttsService.ts` (`pickVoice`/`speak`) |
+| speakCell: symbolId+recording → Audio(uri).play(); entry חסר → Web Speech; onError → speak fallback | `app/src/services/tts/ttsService.ts` (`speakCell`) · `App.tsx` (`onCell`) |
 | נתוני ילדים רגישים: מקומי/פרטי כברירת מחדל; אנליטיקה כבויה | פרופילים/לוחות ב-IndexedDB מקומי בלבד (`data/*Repo.ts`); ענן ב-M5 |
 | מחיקת פרופיל/לוח = ארכוב (לא הסרה) — שחזור אפשרי | `data/boardRepo.ts`/`profileRepo.ts` (`archive` → `archived:true`) + `repos.test.ts` |
 | מצב ילד נעול כברירת מחדל; מעבר לעריכה רק בקוד מטפל (PIN/RBAC) | `domain/access.ts` + `App.tsx` (mode=`locked`) + `presentation/PinGate.tsx` |
@@ -104,6 +105,14 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/m4-adaptivity-access.md` | M4: הסתרה הדרגתית, גריד דינמי, Guided Access, הגדרות גישה מוטוריות |
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
+
+## 8. Changelog (עדכון M12 — 2026-06-21)
+- **2026-06-21 (M12 — Voice Recording Playback)** — השמעת הקלטות קוליות בלחיצת תא.
+  **ttsService.ts:** נוספה `speakCell(cell, symbolRepo, tts)` — אם `cell.symbolId` + `entry.source==='recording'` → `new Audio(entry.uri).play()`; אחרת → `tts.speak(vocalization??nikud??label)`. `Audio.play` נכשל → fallback ל-speak ללא קריסה. `speak` קיים — ללא שינוי (תאימות לאחור).
+  **App.tsx:** `onCell` מחליף `speak(vocalize(cell))` ב-`void speakCell(cell, symbolRepoRef.current, ttsRef.current)`. נוסף `symbolRepoRef = useRef(createSymbolRepo())`.
+  **Invariants (נאמתו):** blob קיים→Audio; חסר→Web Speech; onError→speak fallback; speak קיים ללא רגרסיה.
+  **CI:** lint 0 errors, 197 tests (+3), build ירוק. `docs/m12-voice-playback.md`.
+  **הבא (M13):** ממתין לאישור.
 
 ## 8. Changelog (עדכון M11 — 2026-06-21)
 - **2026-06-21 (M11 — Cell Image Rendering)** — תצוגת סמלים בתאים.
