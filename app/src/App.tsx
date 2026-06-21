@@ -34,6 +34,7 @@ import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
 import { QuickStartWizard } from './presentation/wizard/QuickStartWizard';
 import { PhraseBankPanel } from './presentation/phraseBank/PhraseBankPanel';
+import { WordFinderPanel } from './presentation/wordFinder/WordFinderPanel';
 import { createPhrase } from './domain/phraseBank';
 import type { PhraseEntry } from './domain/phraseBank';
 import { savePhrase, listPhrases, deletePhrase } from './data/phraseRepo';
@@ -92,6 +93,7 @@ export function App() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [phraseBankOpen, setPhraseBankOpen] = useState(false);
+  const [wordFinderOpen, setWordFinderOpen] = useState(false);
   const [phrases, setPhrases] = useState<PhraseEntry[]>([]);
   const [saveToast, setSaveToast] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
@@ -420,6 +422,7 @@ export function App() {
               onOpenBackup={() => setBackupOpen(true)}
               onOpenAnalytics={() => setAnalyticsOpen(true)}
               onOpenPhraseBank={onOpenPhraseBank}
+              onOpenWordFinder={() => setWordFinderOpen(true)}
               onSignOut={authUser ? onSignOut : undefined}
               modelingActive={modelingActive}
               onToggleModeling={onToggleModeling}
@@ -560,6 +563,14 @@ export function App() {
           onLoad={onLoadPhrase}
           onDelete={onDeletePhrase}
           onClose={() => setPhraseBankOpen(false)}
+        />
+      )}
+
+      {wordFinderOpen && ctx && (
+        <WordFinderPanel
+          boards={ctx.allBoards}
+          homeId={ctx.activeProfile.homeBoardId}
+          onClose={() => setWordFinderOpen(false)}
         />
       )}
     </div>

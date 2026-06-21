@@ -15,6 +15,7 @@ export function AdultBar({
   onOpenBackup,
   onOpenAnalytics,
   onOpenPhraseBank,
+  onOpenWordFinder,
   onSignOut,
   modelingActive,
   onToggleModeling,
@@ -32,6 +33,7 @@ export function AdultBar({
   onOpenBackup?: () => void;
   onOpenAnalytics?: () => void;
   onOpenPhraseBank?: () => void;
+  onOpenWordFinder?: () => void;
   onSignOut?: () => void;
   modelingActive?: boolean;
   onToggleModeling?: () => void;
@@ -126,6 +128,12 @@ export function AdultBar({
       {onOpenPhraseBank && (
         <button type="button" className="adultbar__btn" onClick={onOpenPhraseBank}>
           ביטויים שמורים
+        </button>
+      )}
+
+      {onOpenWordFinder && (
+        <button type="button" className="adultbar__btn" onClick={onOpenWordFinder}>
+          מצא מילה
         </button>
       )}
 
