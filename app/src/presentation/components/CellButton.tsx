@@ -10,6 +10,16 @@ import {
   useActivateOnRelease,
   useDoubleTapPrevention,
 } from '../../services/access/dwellService';
+import { localSymbolPath } from '../../domain/symbolMap';
+
+function resolveImageUri(cell: Cell): string | undefined {
+  if (cell.imageUri) return cell.imageUri;
+  if (cell.symbolId?.startsWith('arasaac:')) {
+    const id = Number(cell.symbolId.slice('arasaac:'.length));
+    if (id > 0) return localSymbolPath(id);
+  }
+  return undefined;
+}
 
 export function CellButton({
   cell,
@@ -22,6 +32,7 @@ export function CellButton({
 }) {
   const style = fitzgeraldStyle(cell.fitzgerald);
   const [imgError, setImgError] = useState(false);
+  const imageUri = resolveImageUri(cell);
 
   const guarded = useDoubleTapPrevention(onActivate, settings);
   const release = useActivateOnRelease(guarded.onClick, settings);
@@ -39,9 +50,9 @@ export function CellButton({
       aria-label={cell.label}
       style={{ backgroundColor: style.bg, color: style.text }}
     >
-      {cell.imageUri && !imgError && (
+      {imageUri && !imgError && (
         <img
-          src={cell.imageUri}
+          src={imageUri}
           className="cell__image"
           alt=""
           aria-hidden="true"
