@@ -27,7 +27,7 @@ Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/ · ima
         │
 Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · symbolRepo · bootstrap)
 ```
-**שכבת Data (M1+M2+M3+M5):** `db.ts` — IndexedDB (idb), DB_VERSION=4, stores: nikud/boards/profiles/settings/symbols/outbox/versions.
+**שכבת Data (M1+M2+M3+M5+M17):** `db.ts` — IndexedDB (idb), DB_VERSION=8, stores: nikud/boards/profiles/settings/symbols/outbox/versions/usage/symbolCache/phrases.
 `boardRepo`/`profileRepo` — load/save/list, **מחיקה=ארכוב**. `settingsRepo` — פרופיל פעיל + PIN.
 `symbolRepo` (M3) — save/get/list/remove סמלים ותקליטות קוליות.
 `bootstrap.ts` — `ensureSeeded` (seed ספריית לוחות M2 + פרופיל דמו), `createProfile` (קלון לוח עצמאי),
@@ -72,7 +72,7 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | Builder: moveCell/removeCell זורקים ViolationError ללא allowCoreMove; BuilderView מציג window.confirm | `domain/boardEditor.ts` + `presentation/builder/BuilderView.tsx` |
 | UndoStack מגביל ל-50 מצבים; push אחרי undo מוחק redo history | `domain/boardEditor.ts` (UndoStack class) |
 | removeBackground — fallback אופליין: מחזיר blob מקורי ללא שגיאה | `services/image/imageService.ts` |
-| symbolRepo.mimeType אודיו-recording מאוחסן כ-'image/webp' (TODO: לתקן ל-'audio/webm' ב-M4) | `data/symbolRepo.ts` |
+| symbolRepo.mimeType הקלטות = 'audio/webm' (תוקן ב-M17; מיגרציה אוטומטית ל-entries ישנות) | `data/symbolRepo.ts` · `data/db.ts` (DB_VERSION=8 upgrade) |
 
 ## 5. Data flow (happy path — שימוש יומיומי)
 1. פתיחה במצב נעול (Guided Access) → טעינת פרופיל ילד מה-DB המקומי.
@@ -105,6 +105,20 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/m4-adaptivity-access.md` | M4: הסתרה הדרגתית, גריד דינמי, Guided Access, הגדרות גישה מוטוריות |
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
+
+## 8. Changelog (עדכון Phase 2 — 2026-06-21, M16–M19)
+
+- **2026-06-21 (P1 — CI/CD)** — `.github/workflows/deploy.yml`: push→main מריץ npm ci + lint + test + build + `firebase deploy --only hosting`. שער חוסם: כל כשל עוצר לפני deploy. Secrets נדרשים: `FIREBASE_SERVICE_ACCOUNT` + 6 × `VITE_FIREBASE_*`.
+
+- **2026-06-21 (M16 — TTS Rate & Pitch, FR-010 Phase 2)** — `settingsRepo`: נוספו `getTtsRate`/`setTtsRate`/`getTtsPitch`/`setTtsPitch` (ברירת מחדל 1.0, key/value ב-IndexedDB ללא DB_VERSION bump). `AccessSettingsPanel`: שני sliders (rate/pitch: 0.5–2.0 step 0.1). `App.tsx`: `speakOpts()` helper מחיל rate+pitch+voiceURI על כל קריאת `speakCell`/`speak`. **+6 בדיקות (220 סה"כ).**
+
+- **2026-06-21 (M17 — mimeType fix, P3)** — `SymbolEntry.mimeType` union הורחב ל-`'audio/webm' | 'image/webp' | 'image/png' | 'image/jpeg'`. `DB_VERSION` 7→8: upgrade hook מתקן ב-IndexedDB כל entry עם `source='recording' && mimeType='image/webp'` → `'audio/webm'`; entries אחרות לא נגעות. **+2 בד��קות מיגרציה (222 סה"כ). MVP יציב.**
+
+- **2026-06-21 (M18 — OBF Import/Export, FR-035 Phase 2)** — `services/obf/obfService.ts`: `exportToOBF(board)→OBFBoard` + `importFromOBF(obf)→Board`. מיפוי: cells↔buttons, placements↔grid.order, fitzgerald→background_color, navigate↔load_board. שדות Co_Board-specific ב-`ext_co_board` (isCore/fitzgerald/nikud/symbolId/imageUri) לround-trip ללא אובדן. `BackupPanel`: כפתורי "ייצוא OBF" + "ייבוא OBF"; App.tsx מעביר `currentBoard` + `onBoardImported`. **+6 בדיקות (228 סה"כ).**
+
+- **2026-06-21 (M19 — Word Finder, FR-029 Phase 2)** — `services/wordFinder/wordFinderService.ts`: `findPath(label, boards, homeId)→CellPath|null`. BFS מ-homeId; מעקב visited למניעת לולאות; מדלג על hidden cells. `CellPath = {boardId, boardName, cellId, label}[]`. `presentation/wordFinder/WordFinderPanel.tsx`: input + חיפוש + תצוגת נתיב breadcrumb. `AdultBar`: כפתור "מצא מילה" (`onOpenWordFinder` prop). **+4 בדיקות (232 סה"כ).**
+
+  **סיכום Phase 2:** lint 0 errors, **232 tests**, build ירוק. DB_VERSION=8.
 
 ## 8. Changelog (עדכון M13 — 2026-06-21)
 - **2026-06-21 (M13 — Guided Modeling Mode)** — מצב הדגמה שקט למטפלים.
