@@ -12,10 +12,12 @@ const baseCell: Cell = {
 };
 
 describe('CellButton — image rendering (M11)', () => {
-  it('תא ללא imageUri — לא מרנדר img', () => {
-    const { container } = render(<CellButton cell={baseCell} onActivate={vi.fn()} />);
+  it('תא ללא imageUri וללא מיפוי label — לא מרנדר img', () => {
+    // label ללא מיפוי ב-symbolMap (אחרת נופלים לסמל ARASAAC לפי label).
+    const cell: Cell = { ...baseCell, label: 'קשקושיתזזז' };
+    const { container } = render(<CellButton cell={cell} onActivate={vi.fn()} />);
     expect(container.querySelector('img')).toBeNull();
-    expect(screen.getByText('שלום')).toBeInTheDocument();
+    expect(screen.getByText('קשקושיתזזז')).toBeInTheDocument();
   });
 
   it('תא עם imageUri — מרנדר img עם src נכון', () => {

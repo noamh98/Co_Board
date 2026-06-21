@@ -19,3 +19,6 @@ dev-dist/
 coverage/
 
 app/vite.config.ts.timestamp-*.mjs
+
+# Firebase deploy cache
+.firebase/

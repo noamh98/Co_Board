@@ -23,6 +23,7 @@ import { SentenceBar } from './presentation/components/SentenceBar';
 import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
 import { NavBar } from './presentation/components/NavBar';
+import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
@@ -98,6 +99,7 @@ export function App() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [phraseBankOpen, setPhraseBankOpen] = useState(false);
   const [wordFinderOpen, setWordFinderOpen] = useState(false);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [phrases, setPhrases] = useState<PhraseEntry[]>([]);
   const [saveToast, setSaveToast] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
@@ -470,7 +472,20 @@ export function App() {
         onHome={() => {
           if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
         }}
+        onCategories={ctx ? () => setCategoryMenuOpen(true) : undefined}
       />
+
+      {categoryMenuOpen && ctx && (
+        <CategoryMenu
+          boards={Object.values(ctx.allBoards)}
+          homeId={ctx.activeProfile.homeBoardId}
+          onSelect={(boardId) => {
+            setNavStack((prev) => (prev ? navPush(prev, boardId) : prev));
+            setCategoryMenuOpen(false);
+          }}
+          onClose={() => setCategoryMenuOpen(false)}
+        />
+      )}
 
       {builderMode && ctx && currentBoard ? (
         <BuilderView

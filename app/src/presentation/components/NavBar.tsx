@@ -4,10 +4,12 @@ export function NavBar({
   canGoBack,
   onBack,
   onHome,
+  onCategories,
 }: {
   canGoBack: boolean;
   onBack: () => void;
   onHome: () => void;
+  onCategories?: () => void;
 }) {
   return (
     <nav className="navbar" aria-label="ניווט">
@@ -19,6 +21,16 @@ export function NavBar({
       >
         בית
       </button>
+      {onCategories && (
+        <button
+          type="button"
+          className="navbar__btn"
+          onClick={onCategories}
+          aria-label="קטגוריות"
+        >
+          קטגוריות
+        </button>
+      )}
       <button
         type="button"
         className="navbar__btn navbar__btn--back"

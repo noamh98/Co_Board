@@ -10,7 +10,7 @@ import {
   useActivateOnRelease,
   useDoubleTapPrevention,
 } from '../../services/access/dwellService';
-import { localSymbolPath } from '../../domain/symbolMap';
+import { localSymbolPath, symbolIdFor } from '../../domain/symbolMap';
 
 function resolveImageUri(cell: Cell): string | undefined {
   if (cell.imageUri) return cell.imageUri;
@@ -18,6 +18,9 @@ function resolveImageUri(cell: Cell): string | undefined {
     const id = Number(cell.symbolId.slice('arasaac:'.length));
     if (id > 0) return localSymbolPath(id);
   }
+  // נפילה: תאים ישנים ב-DB (נזרעו לפני M20) ללא symbolId — מיפוי לפי label.
+  const sid = symbolIdFor(cell.label);
+  if (sid !== undefined) return localSymbolPath(sid);
   return undefined;
 }
 
@@ -48,7 +51,10 @@ export function CellButton({
       onPointerLeave={dwell.onPointerLeave}
       onPointerMove={dwell.onPointerMove}
       aria-label={cell.label}
-      style={{ backgroundColor: style.bg, color: style.text }}
+      style={{
+        color: style.text,
+        ...(cell.fitzgerald ? { borderColor: style.bg } : {}),
+      }}
     >
       {imageUri && !imgError && (
         <img
