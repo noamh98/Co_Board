@@ -10,6 +10,7 @@ export interface VoiceLike {
   lang: string;
   localService: boolean;
   default: boolean;
+  voiceURI?: string;
 }
 
 export interface SpeechUtteranceLike {
@@ -39,6 +40,8 @@ export interface SpeakOptions {
   voicePref?: VoicePreference;
   /** מעדיף קול מקומי (אופליין). ברירת מחדל: true. */
   preferOffline?: boolean;
+  /** URI של קול שנבחר ע"י המטפל (FR-010). null = ברירת מחדל; undefined = בחירה אוטומטית. */
+  voiceURI?: string | null;
 }
 
 export interface SpeakResult {
@@ -73,6 +76,10 @@ export class HebrewTts {
 
   /** בחירת קול עברי; מעדיף מקומי (אופליין), ואז ברירת-מחדל. null אם אין עברי. */
   pickVoice(opts: SpeakOptions = {}): VoiceLike | null {
+    if ('voiceURI' in opts) {
+      if (!opts.voiceURI) return null;
+      return this.synth.getVoices().find((v) => v.voiceURI === opts.voiceURI) ?? null;
+    }
     const preferOffline = opts.preferOffline ?? true;
     const hebrew = this.listHebrewVoices();
     if (hebrew.length === 0) return null;
@@ -180,6 +187,7 @@ export async function speakCell(
   cell: Cell,
   symbolRepo: SymbolRepo,
   tts: HebrewTts | null,
+  opts: SpeakOptions = {},
 ): Promise<void> {
   if (cell.symbolId) {
     const entry = await symbolRepo.get(cell.symbolId);
@@ -195,6 +203,6 @@ export async function speakCell(
   }
   if (tts) {
     const text = cell.vocalization ?? cell.nikud ?? cell.label;
-    if (text) await tts.speak(text);
+    if (text) await tts.speak(text, opts);
   }
 }

@@ -98,6 +98,7 @@ export function App() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [modelingActive, setModelingActive] = useState(false);
   const [modelingSession, setModelingSession] = useState<ModelingSession | null>(null);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
 
   const ttsRef = useRef<HebrewTts | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -126,9 +127,11 @@ export function App() {
       const settingsRepo = createSettingsRepo();
       storedPinRef.current = (await settingsRepo.getCaregiverPin()) ?? '';
       const access = await settingsRepo.getAccessSettings();
+      const voiceURI = await settingsRepo.getSelectedVoiceURI();
       const loaded = await loadActiveContext();
       if (alive) {
         setAccessSettings(access);
+        setSelectedVoiceURI(voiceURI);
         setCtx(loaded);
         setNavStack(createNavStack(loaded.activeProfile.homeBoardId));
       }
@@ -212,6 +215,11 @@ export function App() {
     void createSettingsRepo().saveAccessSettings(next);
   };
 
+  const onVoiceURIChange = (uri: string | null): void => {
+    setSelectedVoiceURI(uri);
+    void createSettingsRepo().setSelectedVoiceURI(uri);
+  };
+
   const speak = (text: string): void => {
     void ttsRef.current?.speak(text);
   };
@@ -244,7 +252,7 @@ export function App() {
 
     if (action.type === 'speak') {
       setSentence((s) => [...s, cell]);
-      void speakCell(cell, symbolRepoRef.current, ttsRef.current);
+      void speakCell(cell, symbolRepoRef.current, ttsRef.current, { voiceURI: selectedVoiceURI });
       if (ctx && currentBoard) {
         analyticsService.trackCellPress(
           ctx.activeProfile.id,
@@ -463,6 +471,8 @@ export function App() {
           settings={accessSettings}
           onChange={onChangeAccess}
           onClose={() => setSettingsOpen(false)}
+          voiceURI={selectedVoiceURI}
+          onVoiceURIChange={onVoiceURIChange}
         />
       )}
 

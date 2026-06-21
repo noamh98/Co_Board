@@ -11,6 +11,7 @@ const KEY_ACTIVE_PROFILE = 'activeProfileId';
 const KEY_CAREGIVER_PIN = 'caregiverPin';
 const KEY_ACCESS_SETTINGS = 'accessSettings';
 const KEY_ANALYTICS_ENABLED = 'analyticsEnabled';
+const KEY_SELECTED_VOICE_URI = 'selectedVoiceURI';
 
 interface SettingEntry {
   key: string;
@@ -28,6 +29,9 @@ export interface SettingsRepo {
   /** אנליטיקה opt-in — כבויה כברירת מחדל (M7). */
   getAnalyticsEnabled(): Promise<boolean>;
   setAnalyticsEnabled(enabled: boolean): Promise<void>;
+  /** קול TTS שנבחר ע"י המטפל (FR-010). null = ברירת מחדל. */
+  getSelectedVoiceURI(): Promise<string | null>;
+  setSelectedVoiceURI(uri: string | null): Promise<void>;
 }
 
 async function readValue(key: string): Promise<string | undefined> {
@@ -67,5 +71,14 @@ export function createSettingsRepo(): SettingsRepo {
     },
     setAnalyticsEnabled: (enabled) =>
       writeValue(KEY_ANALYTICS_ENABLED, String(enabled)),
+    getSelectedVoiceURI: async () => (await readValue(KEY_SELECTED_VOICE_URI)) ?? null,
+    setSelectedVoiceURI: async (uri) => {
+      if (uri === null) {
+        const db = await getDb();
+        await db.delete(STORE_SETTINGS, KEY_SELECTED_VOICE_URI);
+      } else {
+        await writeValue(KEY_SELECTED_VOICE_URI, uri);
+      }
+    },
   };
 }

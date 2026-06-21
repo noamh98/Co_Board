@@ -101,6 +101,23 @@ describe('HebrewTts', () => {
   });
 });
 
+describe('HebrewTts — voiceURI (FR-010)', () => {
+  it('speak עם voiceURI=null → utt.voice לא מוגדר (ברירת מחדל)', async () => {
+    const synth = mockSynth([voice('Carmit', 'he-IL', true)]);
+    const tts = new HebrewTts(synth, makeUtterance, () => 0);
+    await tts.speak('שלום', { voiceURI: null });
+    expect(synth.spoken[0].voice).toBeNull();
+  });
+
+  it('speak עם voiceURI תואם → utt.voice מוגדר לקול הנבחר', async () => {
+    const carmit: VoiceLike = { name: 'Carmit', lang: 'he-IL', localService: true, default: false, voiceURI: 'com.apple.ttsbundle.Carmit-compact' };
+    const synth = mockSynth([carmit]);
+    const tts = new HebrewTts(synth, makeUtterance, () => 0);
+    await tts.speak('שלום', { voiceURI: 'com.apple.ttsbundle.Carmit-compact' });
+    expect(synth.spoken[0].voice).toBe(carmit);
+  });
+});
+
 describe('speakCell', () => {
   const RECORDING_ENTRY = {
     id: 'sym1',
@@ -152,7 +169,7 @@ describe('speakCell', () => {
 
     await speakCell(cell, repo, tts);
 
-    expect(tts.speak).toHaveBeenCalledWith('כלב');
+    expect(tts.speak).toHaveBeenCalledWith('כלב', {});
   });
 
   it('אין symbolId → speak(label) נקרא, get לא נקרא', async () => {
@@ -162,7 +179,7 @@ describe('speakCell', () => {
 
     await speakCell(cell, repo, tts);
 
-    expect(tts.speak).toHaveBeenCalledWith('שלום');
+    expect(tts.speak).toHaveBeenCalledWith('שלום', {});
     expect(repo.get).not.toHaveBeenCalled();
   });
 });

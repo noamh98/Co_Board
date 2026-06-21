@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { AccessSettings } from '../../domain/accessSettings';
 
 // פאנל הגדרות גישה מוטורית (FR-020, PRD §4.7).
@@ -7,12 +8,32 @@ export function AccessSettingsPanel({
   settings,
   onChange,
   onClose,
+  voiceURI,
+  onVoiceURIChange,
 }: {
   settings: AccessSettings;
   onChange: (next: AccessSettings) => void;
   onClose: () => void;
+  voiceURI: string | null;
+  onVoiceURIChange: (uri: string | null) => void;
 }) {
   const set = (patch: Partial<AccessSettings>) => onChange({ ...settings, ...patch });
+
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const load = () => {
+      if (typeof speechSynthesis === 'undefined') return;
+      setVoices(
+        speechSynthesis.getVoices().filter((v) => v.lang === 'he-IL' || v.lang.startsWith('he')),
+      );
+    };
+    load();
+    if (typeof speechSynthesis !== 'undefined') {
+      speechSynthesis.addEventListener('voiceschanged', load);
+      return () => speechSynthesis.removeEventListener('voiceschanged', load);
+    }
+  }, []);
 
   return (
     <div
@@ -82,6 +103,32 @@ export function AccessSettingsPanel({
           />
           מניעת מגע כפול (Double-Tap Prevention)
         </label>
+
+        {/* קול דיבור — FR-010 */}
+        <div>
+          <label htmlFor="voice-select" style={{ display: 'block', marginBottom: 6 }}>
+            קול דיבור
+          </label>
+          {voices.length === 0 ? (
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
+              אין קולות עבריים זמינים במכשיר
+            </p>
+          ) : (
+            <select
+              id="voice-select"
+              value={voiceURI ?? ''}
+              onChange={(e) => onVoiceURIChange(e.target.value || null)}
+              style={{ width: '100%', padding: '6px 8px', borderRadius: 6 }}
+            >
+              <option value="">ברירת מחדל</option>
+              {voices.map((v) => (
+                <option key={v.voiceURI} value={v.voiceURI}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
 
         <button type="button" className="adultbar__btn" onClick={onClose}>
           סגור

@@ -11,6 +11,21 @@ function resetIndexedDb(): void {
 
 beforeEach(resetIndexedDb);
 
+describe('settingsRepo — selectedVoiceURI (FR-010)', () => {
+  it('מחזיר null לפני כל שמירה', async () => {
+    const s = createSettingsRepo();
+    expect(await s.getSelectedVoiceURI()).toBeNull();
+  });
+
+  it('setSelectedVoiceURI + get round-trip', async () => {
+    const s = createSettingsRepo();
+    await s.setSelectedVoiceURI('com.apple.ttsbundle.Carmit-compact');
+    expect(await s.getSelectedVoiceURI()).toBe('com.apple.ttsbundle.Carmit-compact');
+    await s.setSelectedVoiceURI(null);
+    expect(await s.getSelectedVoiceURI()).toBeNull();
+  });
+});
+
 describe('settingsRepo — accessSettings (FR-020)', () => {
   it('ברירת מחדל כשלא נשמר דבר', async () => {
     const s = createSettingsRepo();
