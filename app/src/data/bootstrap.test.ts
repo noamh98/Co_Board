@@ -4,6 +4,7 @@ import { resetDbForTests } from './db';
 import { createBoardRepo } from './boardRepo';
 import { createProfileRepo } from './profileRepo';
 import { ensureSeeded, createProfileFromTemplate } from './bootstrap';
+import { listBoardLibrary } from '../domain/boardLibrary';
 
 function resetIndexedDb(): void {
   (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB =
@@ -12,6 +13,19 @@ function resetIndexedDb(): void {
 }
 
 beforeEach(resetIndexedDb);
+
+describe('ensureSeeded', () => {
+  it('זורע את כל 11 לוחות הספרייה בהתקנה נקייה', async () => {
+    await ensureSeeded();
+    const boards = await createBoardRepo().list();
+    const libraryIds = new Set(listBoardLibrary().map((b) => b.id));
+    const seededIds = new Set(boards.map((b) => b.id));
+    for (const id of libraryIds) {
+      expect(seededIds.has(id)).toBe(true);
+    }
+    expect(boards.length).toBeGreaterThanOrEqual(11);
+  });
+});
 
 describe('createProfileFromTemplate', () => {
   it('יוצר לוח ופרופיל ב-DB', async () => {

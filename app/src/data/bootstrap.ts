@@ -1,7 +1,8 @@
 import {
   HOME_BOARD,
-  LIBRARY_BOARDS,
+  HOME_BOARD_ID,
   DEMO_PROFILE_V2,
+  listBoardLibrary,
 } from '../domain/boardLibrary';
 import { getTemplate } from '../domain/boardTemplates';
 import { DEFAULT_PIN } from '../domain/access';
@@ -44,7 +45,7 @@ export async function createProfile(name: string): Promise<Profile> {
   // ספריית הלוחות כבר נזרעה; מוצא את לוח הבית ומשכפל.
   const libraryBoards = await boardRepo.list();
   const homeSource =
-    libraryBoards.find((b) => b.isCoreBoard) ?? LIBRARY_BOARDS[0];
+    libraryBoards.find((b) => b.id === HOME_BOARD_ID) ?? HOME_BOARD;
 
   const board = cloneBoard(homeSource, `לוח בית — ${name}`);
   await boardRepo.save(board);
@@ -73,7 +74,7 @@ export async function ensureSeeded(): Promise<void> {
   const existing = await profileRepo.list({ includeArchived: true });
   if (existing.length === 0) {
     // התקנה נקייה: seed כל הספרייה + פרופיל דמו
-    for (const board of LIBRARY_BOARDS) {
+    for (const board of listBoardLibrary()) {
       await boardRepo.save(board);
     }
     await profileRepo.save({ ...DEMO_PROFILE_V2 });
@@ -91,7 +92,7 @@ export async function ensureSeeded(): Promise<void> {
 async function seedLibraryBoards(
   boardRepo: ReturnType<typeof createBoardRepo>,
 ): Promise<void> {
-  for (const board of LIBRARY_BOARDS) {
+  for (const board of listBoardLibrary()) {
     const exists = await boardRepo.get(board.id);
     if (!exists) {
       await boardRepo.save(board);

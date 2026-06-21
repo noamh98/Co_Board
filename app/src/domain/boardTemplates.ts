@@ -1,5 +1,10 @@
 import type { Board, Cell, Fitzgerald } from './models';
-import { HOME_BOARD } from './boardLibrary';
+import {
+  HOME_BOARD,
+  CORE_VOCAB_6X4_BOARD,
+  CORE_VOCAB_6X6_BOARD,
+  FEELINGS_6X4_BOARD,
+} from './boardLibrary';
 
 export interface BoardTemplate {
   id: string;
@@ -125,6 +130,24 @@ const TEMPLATES: BoardTemplate[] = [
     nameHe: 'לוח ריק (4×4)',
     description: 'לוח ריק לבנייה אישית מאפס',
     board: BLANK4X4_BOARD,
+  },
+  {
+    id: 'core6x4',
+    nameHe: 'אוצר ליבה — בינוני (6×4)',
+    description: '24 מילות ליבה לרמה בינונית',
+    board: CORE_VOCAB_6X4_BOARD,
+  },
+  {
+    id: 'core6x6',
+    nameHe: 'אוצר ליבה — מתקדם (6×6)',
+    description: '36 מילות ליבה לרמה מתקדמת',
+    board: CORE_VOCAB_6X6_BOARD,
+  },
+  {
+    id: 'feelings6x4',
+    nameHe: 'רגשות (6×4)',
+    description: '24 תאי רגש ומצב נפשי',
+    board: FEELINGS_6X4_BOARD,
   },
 ];
 
