@@ -11,6 +11,8 @@ import {
   STORE_OUTBOX,
   STORE_VERSIONS,
   STORE_USAGE,
+  STORE_SYMBOL_CACHE,
+  STORE_PHRASES,
   getDb,
   resetDbForTests,
 } from './db';
@@ -150,5 +152,61 @@ describe('מיגרציית DB v4→v5 — אינווריאנט: לא הורסת 
 
     const board = await db.get(STORE_BOARDS, 'board-v4');
     expect(board).toMatchObject({ name: 'לוח v4', archived: false });
+  });
+});
+
+describe('מיגרציית DB v7→v8 — תיקון mimeType הקלטות (P3)', () => {
+  function makeV7(): Promise<import('idb').IDBPDatabase> {
+    return openDB(DB_NAME, 7, {
+      upgrade(db) {
+        db.createObjectStore(STORE_NIKUD, { keyPath: 'text' });
+        db.createObjectStore(STORE_BOARDS, { keyPath: 'id' });
+        db.createObjectStore(STORE_PROFILES, { keyPath: 'id' });
+        db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+        db.createObjectStore(STORE_SYMBOLS, { keyPath: 'id' });
+        db.createObjectStore(STORE_OUTBOX, { keyPath: 'id' });
+        db.createObjectStore(STORE_VERSIONS, { keyPath: 'key' });
+        const usage = db.createObjectStore(STORE_USAGE, { keyPath: 'id' });
+        usage.createIndex('by-profile', 'profileId', { unique: false });
+        usage.createIndex('by-timestamp', 'timestamp', { unique: false });
+        db.createObjectStore(STORE_SYMBOL_CACHE, { keyPath: 'arasaacId' });
+        const phrases = db.createObjectStore(STORE_PHRASES, { keyPath: 'id' });
+        phrases.createIndex('by-profile', 'profileId', { unique: false });
+      },
+    });
+  }
+
+  it('entry הקלטה ישנה עם mimeType image/webp מתוקנת ל-audio/webm במיגרציה', async () => {
+    const v7 = await makeV7();
+    await v7.put(STORE_SYMBOLS, {
+      id: 'rec-1',
+      uri: 'data:audio/webm;base64,abc',
+      mimeType: 'image/webp',
+      source: 'recording',
+      createdAt: 1000,
+    });
+    v7.close();
+    resetDbForTests();
+
+    const db = await getDb();
+    const entry = await db.get(STORE_SYMBOLS, 'rec-1');
+    expect(entry?.mimeType).toBe('audio/webm');
+  });
+
+  it('entry מצלמה עם mimeType image/webp לא מושפע ממיגרציה', async () => {
+    const v7 = await makeV7();
+    await v7.put(STORE_SYMBOLS, {
+      id: 'cam-1',
+      uri: 'data:image/webp;base64,abc',
+      mimeType: 'image/webp',
+      source: 'camera',
+      createdAt: 1000,
+    });
+    v7.close();
+    resetDbForTests();
+
+    const db = await getDb();
+    const entry = await db.get(STORE_SYMBOLS, 'cam-1');
+    expect(entry?.mimeType).toBe('image/webp');
   });
 });

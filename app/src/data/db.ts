@@ -6,10 +6,12 @@ import { openDB, type IDBPDatabase } from 'idb';
 // v5 (M7): נוסף usage (אנליטיקה אנונימית, opt-in בלבד).
 // v6 (M8): נוסף symbolCache (ARASAAC blobs, offline-first).
 // v7 (M10): נוסף phrases (בנק משפטים שמורים).
+// v8 (M17): מיגרציה — entries של הקלטות קוליות (source='recording') תוקנו
+//           ל-mimeType='audio/webm' (היה שגוי: 'image/webp').
 // אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 7;
+export const DB_VERSION = 8;
 
 export const STORE_NIKUD = 'nikud';
 export const STORE_BOARDS = 'boards';
@@ -29,7 +31,7 @@ export function getDb(): Promise<IDBPDatabase> {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       // idb מריץ upgrade פעם אחת לכל מעבר גרסה. createObjectStore נכשל אם ה-store
       // כבר קיים, ולכן הבדיקה idempotent — בטוח גם בשדרוג v1→v2 וגם בהתקנה נקייה.
-      upgrade(db) {
+      async upgrade(db, oldVersion, _newVersion, tx) {
         if (!db.objectStoreNames.contains(STORE_NIKUD)) {
           db.createObjectStore(STORE_NIKUD, { keyPath: 'text' });
         }
@@ -63,6 +65,17 @@ export function getDb(): Promise<IDBPDatabase> {
         if (!db.objectStoreNames.contains(STORE_PHRASES)) {
           const phrasesStore = db.createObjectStore(STORE_PHRASES, { keyPath: 'id' });
           phrasesStore.createIndex('by-profile', 'profileId', { unique: false });
+        }
+
+        // v8: תיקון mimeType להקלטות קוליות — היה 'image/webp' בטעות (HANDOFF §4).
+        if (oldVersion < 8 && db.objectStoreNames.contains(STORE_SYMBOLS)) {
+          const store = tx.objectStore(STORE_SYMBOLS);
+          const all = await store.getAll();
+          for (const entry of all) {
+            if (entry.source === 'recording' && entry.mimeType === 'image/webp') {
+              await store.put({ ...entry, mimeType: 'audio/webm' });
+            }
+          }
         }
       },
     });

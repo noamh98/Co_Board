@@ -3,7 +3,7 @@ import { getDb, STORE_SYMBOLS } from './db';
 export interface SymbolEntry {
   id: string;
   uri: string;
-  mimeType: 'image/webp' | 'image/png' | 'image/jpeg';
+  mimeType: 'audio/webm' | 'image/webp' | 'image/png' | 'image/jpeg';
   source: 'camera' | 'gallery' | 'arasaac' | 'recording';
   createdAt: number;
 }
