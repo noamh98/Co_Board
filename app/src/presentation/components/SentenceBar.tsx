@@ -3,14 +3,16 @@ export function SentenceBar({
   onSpeak,
   onDelete,
   onClear,
+  onSave,
 }: {
   words: string[];
   onSpeak: () => void;
   onDelete: () => void;
   onClear: () => void;
+  onSave?: () => void;
 }) {
   return (
-    <div className="sentence">
+    <div className="sentence" dir="rtl">
       <button
         type="button"
         className="sentence__speak"
@@ -42,6 +44,16 @@ export function SentenceBar({
       >
         נקה
       </button>
+      {onSave && words.length > 0 && (
+        <button
+          type="button"
+          className="sentence__btn sentence__btn--save"
+          onClick={onSave}
+          aria-label="שמור ביטוי"
+        >
+          שמור
+        </button>
+      )}
     </div>
   );
 }

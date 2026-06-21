@@ -14,6 +14,7 @@ export function AdultBar({
   onOpenSettings,
   onOpenBackup,
   onOpenAnalytics,
+  onOpenPhraseBank,
   onSignOut,
 }: {
   profiles: Profile[];
@@ -28,6 +29,7 @@ export function AdultBar({
   onOpenSettings?: () => void;
   onOpenBackup?: () => void;
   onOpenAnalytics?: () => void;
+  onOpenPhraseBank?: () => void;
   onSignOut?: () => void;
 }) {
   const [newName, setNewName] = useState('');
@@ -114,6 +116,12 @@ export function AdultBar({
       {onOpenAnalytics && (
         <button type="button" className="adultbar__btn" onClick={onOpenAnalytics}>
           סטטיסטיקה
+        </button>
+      )}
+
+      {onOpenPhraseBank && (
+        <button type="button" className="adultbar__btn" onClick={onOpenPhraseBank}>
+          ביטויים שמורים
         </button>
       )}
 

@@ -5,10 +5,11 @@ import { openDB, type IDBPDatabase } from 'idb';
 // v4 (M5): נוספו outbox (שינויים ממתינים ל-sync) ו-versions (היסטוריה לשחזור).
 // v5 (M7): נוסף usage (אנליטיקה אנונימית, opt-in בלבד).
 // v6 (M8): נוסף symbolCache (ARASAAC blobs, offline-first).
+// v7 (M10): נוסף phrases (בנק משפטים שמורים).
 // אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 6;
+export const DB_VERSION = 7;
 
 export const STORE_NIKUD = 'nikud';
 export const STORE_BOARDS = 'boards';
@@ -19,6 +20,7 @@ export const STORE_OUTBOX = 'outbox';
 export const STORE_VERSIONS = 'versions';
 export const STORE_USAGE = 'usage';
 export const STORE_SYMBOL_CACHE = 'symbolCache';
+export const STORE_PHRASES = 'phrases';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -57,6 +59,10 @@ export function getDb(): Promise<IDBPDatabase> {
         }
         if (!db.objectStoreNames.contains(STORE_SYMBOL_CACHE)) {
           db.createObjectStore(STORE_SYMBOL_CACHE, { keyPath: 'arasaacId' });
+        }
+        if (!db.objectStoreNames.contains(STORE_PHRASES)) {
+          const phrasesStore = db.createObjectStore(STORE_PHRASES, { keyPath: 'id' });
+          phrasesStore.createIndex('by-profile', 'profileId', { unique: false });
         }
       },
     });

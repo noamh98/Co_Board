@@ -104,6 +104,19 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
+## 8. Changelog (עדכון M10 — 2026-06-21)
+- **2026-06-21 (M10 — Phrase Bank / בנק משפטים)** — שמירה וטעינה של משפטים מוכנים.
+  **Domain:** `domain/phraseBank.ts` — `PhraseEntry` interface (id/label/cells/profileId/createdAt); `createPhrase(profileId, cells)` — label = join תאים ברווח, id ייחודי. 2 בדיקות.
+  **Data:** `data/db.ts` DB_VERSION=7 — נוסף store `phrases` (keyPath: id, index: by-profile); אדיטיבי, לא שובר v6.
+  `data/phraseRepo.ts` — `savePhrase`/`listPhrases(profileId)`/`deletePhrase(id)` (IndexedDB). 3 בדיקות.
+  **Presentation:** `presentation/phraseBank/PhraseBankPanel.tsx` — modal RTL, רשימת ביטויים, כפתור "טען" → onLoad(cells), כפתור "×" → onDelete(id), ריק → "אין ביטויים שמורים עדיין". 3 בדיקות.
+  **SentenceBar:** נוסף `onSave?: () => void`; כפתור "שמור" מוצג רק כש-`sentence.length > 0 && onSave` קיים; RTL.
+  **AdultBar:** נוסף `onOpenPhraseBank?: () => void`; כפתור "ביטויים שמורים".
+  **App.tsx:** `phraseBankOpen`/`phrases`/`saveToast` states; `onSaveSentence` — createPhrase+savePhrase+toast "נשמר!" 1.5s; `onOpenPhraseBank` — listPhrases+פתיחת panel; `onLoadPhrase` — setSentence+סגירת panel; `onDeletePhrase` — deletePhrase+עדכון state. `onSave={adult ? onSaveSentence : undefined}` (ילד לא רואה כפתור שמור).
+  **Invariants (נאמתו):** DB=v7 אדיטיבי; listPhrases מסונן לפי profileId; כפתור שמור נסתר בשורה ריקה; "טען" מחליף (לא מוסיף) שורת משפט; ילד לא רואה PhraseBankPanel; RTL=dir="rtl".
+  **CI:** lint 0 errors, 190 tests (+8), build ירוק.
+  **הבא (M11):** ממתין לאישור.
+
 ## 8. Changelog (עדכון M9 — 2026-06-21)
 - **2026-06-21 (M9 — Board Templates & Quick-Start Wizard)** — אשף יצירת פרופיל עם תבנית לוח ראשונית.
   **Domain:** `domain/boardTemplates.ts` — `BoardTemplate` interface; 4 תבניות: `core4x4` (HOME_BOARD, Fitzgerald מלא), `pecs6x3` (3×6, 18 תאים, isCore מסומן), `feelings3x3` (3×3, 9 רגשות), `blank4x4` (ריק, 0 תאים); `listTemplates()` / `getTemplate(id)`. 3 בדיקות.

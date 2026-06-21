@@ -33,6 +33,10 @@ import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
 import { QuickStartWizard } from './presentation/wizard/QuickStartWizard';
+import { PhraseBankPanel } from './presentation/phraseBank/PhraseBankPanel';
+import { createPhrase } from './domain/phraseBank';
+import type { PhraseEntry } from './domain/phraseBank';
+import { savePhrase, listPhrases, deletePhrase } from './data/phraseRepo';
 import {
   createBrowserTts,
   waitForVoices,
@@ -79,6 +83,9 @@ export function App() {
   const [backupOpen, setBackupOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [phraseBankOpen, setPhraseBankOpen] = useState(false);
+  const [phrases, setPhrases] = useState<PhraseEntry[]>([]);
+  const [saveToast, setSaveToast] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatusType>('disabled');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -273,6 +280,34 @@ export function App() {
     });
   };
 
+  const onOpenPhraseBank = (): void => {
+    if (!ctx) return;
+    void listPhrases(ctx.activeProfile.id).then((list) => {
+      setPhrases(list);
+      setPhraseBankOpen(true);
+    });
+  };
+
+  const onSaveSentence = (): void => {
+    if (!ctx || sentence.length === 0) return;
+    const entry = createPhrase(ctx.activeProfile.id, sentence);
+    void savePhrase(entry).then(() => {
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 1500);
+    });
+  };
+
+  const onDeletePhrase = (id: string): void => {
+    void deletePhrase(id).then(() => {
+      setPhrases((prev) => prev.filter((p) => p.id !== id));
+    });
+  };
+
+  const onLoadPhrase = (cells: typeof sentence): void => {
+    setSentence(cells);
+    setPhraseBankOpen(false);
+  };
+
   const onSignOut = (): void => {
     const provider = syncEnabled ? new FirebaseProvider() : new LocalStubProvider();
     void authService.signOut(provider);
@@ -326,6 +361,7 @@ export function App() {
               onOpenSettings={() => setSettingsOpen(true)}
               onOpenBackup={() => setBackupOpen(true)}
               onOpenAnalytics={() => setAnalyticsOpen(true)}
+              onOpenPhraseBank={onOpenPhraseBank}
               onSignOut={authUser ? onSignOut : undefined}
             />
           )
@@ -347,7 +383,13 @@ export function App() {
         onSpeak={speakSentence}
         onDelete={() => setSentence((s) => s.slice(0, -1))}
         onClear={() => setSentence([])}
+        onSave={adult ? onSaveSentence : undefined}
       />
+      {saveToast && (
+        <div className="app__toast" role="status" aria-live="polite">
+          נשמר!
+        </div>
+      )}
 
       <NavBar
         canGoBack={canBack}
@@ -426,6 +468,15 @@ export function App() {
         <QuickStartWizard
           onComplete={onWizardComplete}
           onClose={() => setWizardOpen(false)}
+        />
+      )}
+
+      {phraseBankOpen && (
+        <PhraseBankPanel
+          phrases={phrases}
+          onLoad={onLoadPhrase}
+          onDelete={onDeletePhrase}
+          onClose={() => setPhraseBankOpen(false)}
         />
       )}
     </div>
