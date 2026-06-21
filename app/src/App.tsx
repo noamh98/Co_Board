@@ -64,6 +64,11 @@ import {
 import { LocalStubProvider } from './services/sync/syncProvider';
 import { FirebaseProvider } from './services/sync/firebaseProvider';
 import { authService, type AuthUser } from './services/sync/authService';
+import {
+  type ModelingSession,
+  createModelingSession,
+  toggleHighlight,
+} from './domain/modelingSession';
 
 /** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. */
 function vocalize(c: Cell): string {
@@ -91,6 +96,8 @@ export function App() {
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatusType>('disabled');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [modelingActive, setModelingActive] = useState(false);
+  const [modelingSession, setModelingSession] = useState<ModelingSession | null>(null);
 
   const ttsRef = useRef<HebrewTts | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -215,7 +222,24 @@ export function App() {
     return ctx.allBoards[navCurrent(navStack)] ?? ctx.board;
   }, [navStack, ctx]);
 
+  const onToggleModeling = (): void => {
+    setModelingActive((prev) => {
+      const next = !prev;
+      setModelingSession(next ? createModelingSession() : null);
+      return next;
+    });
+  };
+
   const onCell = (cell: Cell): void => {
+    if (modelingActive && mode === 'adult') {
+      setModelingSession((prev) =>
+        prev
+          ? toggleHighlight(prev, cell.id)
+          : toggleHighlight(createModelingSession(), cell.id),
+      );
+      return;
+    }
+
     const action = cell.action;
 
     if (action.type === 'speak') {
@@ -366,6 +390,8 @@ export function App() {
               onOpenAnalytics={() => setAnalyticsOpen(true)}
               onOpenPhraseBank={onOpenPhraseBank}
               onSignOut={authUser ? onSignOut : undefined}
+              modelingActive={modelingActive}
+              onToggleModeling={onToggleModeling}
             />
           )
         ) : pinPrompt ? (
@@ -420,7 +446,12 @@ export function App() {
           nikudService={nikudRef.current}
         />
       ) : ctx && currentBoard ? (
-        <BoardView board={currentBoard} onCell={onCell} accessSettings={accessSettings} />
+        <BoardView
+          board={currentBoard}
+          onCell={onCell}
+          accessSettings={accessSettings}
+          modelingHighlights={modelingSession?.activeHighlights}
+        />
       ) : (
         <div className="app__loading" role="status">
           טוען…

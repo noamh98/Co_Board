@@ -16,6 +16,8 @@ export function AdultBar({
   onOpenAnalytics,
   onOpenPhraseBank,
   onSignOut,
+  modelingActive,
+  onToggleModeling,
 }: {
   profiles: Profile[];
   activeProfileId: string;
@@ -31,6 +33,8 @@ export function AdultBar({
   onOpenAnalytics?: () => void;
   onOpenPhraseBank?: () => void;
   onSignOut?: () => void;
+  modelingActive?: boolean;
+  onToggleModeling?: () => void;
 }) {
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
@@ -128,6 +132,17 @@ export function AdultBar({
       {onSignOut && (
         <button type="button" className="adultbar__btn" onClick={onSignOut}>
           התנתק
+        </button>
+      )}
+
+      {onToggleModeling && (
+        <button
+          type="button"
+          onClick={onToggleModeling}
+          aria-pressed={modelingActive}
+          className={modelingActive ? 'adult-btn adult-btn--active' : 'adult-btn'}
+        >
+          מודלינג
         </button>
       )}
 

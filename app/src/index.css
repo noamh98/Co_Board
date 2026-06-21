@@ -400,3 +400,24 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.adult-btn {
+  min-height: var(--target-min);
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.adult-btn--active {
+  background: #7c3aed;
+  color: #fff;
+}
+.cell--modeling-highlight {
+  outline: 3px solid #7c3aed;
+  box-shadow: 0 0 10px #7c3aed99;
+  z-index: 1;
+}

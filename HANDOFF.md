@@ -106,6 +106,15 @@ hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `set
 | `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
+## 8. Changelog (עדכון M13 — 2026-06-21)
+- **2026-06-21 (M13 — Guided Modeling Mode)** — מצב הדגמה שקט למטפלים.
+  **Domain:** `domain/modelingSession.ts` — `ModelingSession` (activeHighlights: Set<string>); `createModelingSession`, `toggleHighlight` (immutable toggle), `clearHighlights` (immutable reset). 4 בדיקות.
+  **Presentation:** `BoardView.tsx` — prop `modelingHighlights?: Set<string>`; wrapper div מקבל `cell--modeling-highlight` לתאים ב-set. `AdultBar.tsx` — props `modelingActive?`/`onToggleModeling?`; כפתור "מודלינג" עם `aria-pressed`. `index.css` — `.adult-btn`, `.adult-btn--active` (סגול #7c3aed), `.cell--modeling-highlight` (outline+glow).
+  **App.tsx:** state `modelingActive`+`modelingSession`; `onToggleModeling` מפעיל/מכבה session; `onCell` — יציאה מוקדמת כש-`modelingActive && mode==='adult'` (highlight בלבד, ללא speak/שורת משפט); ילד (mode=locked) — onCell רגיל ללא רגרסיה.
+  **Invariants (נאמתו):** immutability; locked mode unaffected; highlights נעלמים כשמודלינג כבוי; 1 בדיקת BoardView.
+  **CI:** lint 0 errors, 202 tests (+5), build ירוק. `docs/m13-modeling.md`.
+  **הבא (M14):** ממתין לאישור.
+
 ## 8. Changelog (עדכון M12 — 2026-06-21)
 - **2026-06-21 (M12 — Voice Recording Playback)** — השמעת הקלטות קוליות בלחיצת תא.
   **ttsService.ts:** נוספה `speakCell(cell, symbolRepo, tts)` — אם `cell.symbolId` + `entry.source==='recording'` → `new Audio(entry.uri).play()`; אחרת → `tts.speak(vocalization??nikud??label)`. `Audio.play` נכשל → fallback ל-speak ללא קריסה. `speak` קיים — ללא שינוי (תאימות לאחור).

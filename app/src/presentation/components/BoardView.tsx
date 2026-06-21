@@ -6,10 +6,12 @@ export function BoardView({
   board,
   onCell,
   accessSettings,
+  modelingHighlights,
 }: {
   board: Board;
   onCell: (c: Cell) => void;
   accessSettings?: AccessSettings;
+  modelingHighlights?: Set<string>;
 }) {
   return (
     <div
@@ -28,6 +30,7 @@ export function BoardView({
           <div
             key={p.cellId}
             role="gridcell"
+            className={modelingHighlights?.has(p.cellId) ? 'cell--modeling-highlight' : undefined}
             // RTL: col=0 הוא הימני ביותר (הקונטיינר dir=rtl).
             style={{ gridColumn: p.col + 1, gridRow: p.row + 1 }}
           >
