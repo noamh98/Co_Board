@@ -137,7 +137,7 @@ Google Cloud TTS Neural2 he-IL + cache IndexedDB.
 ## M13 — Guided Modeling Mode — 2026-06-21
 מצב הדגמה שקט למטפלים. `domain/modelingSession.ts` — `createModelingSession`/`toggleHighlight`/`clearHighlights` (immutable). `BoardView`/`AdultBar` — highlight + כפתור מודלינג. `App.tsx` — `onCell` יוצא מוקדם כש-`modelingActive && mode==='adult'`. **CI:** 202 tests. `docs/m13-modeling.md`.
 
-> הערה: M14–M15 לא תועדו בנפרד (ראה Open questions ב-HANDOFF).
+> הערה: M14–M15 דולגו במכוון — Phase 2 עלה ישירות מ-M13→M16 (CI/CD + TTS enhancements). אין תוכן חסר.
 
 ## M12 — Voice Recording Playback — 2026-06-21
 `ttsService.speakCell(cell, symbolRepo, tts)` — recording→`Audio.play()`, אחרת→`tts.speak()`. fallback ל-speak ללא קריסה. **CI:** 197 tests. `docs/m12-voice-playback.md`.

@@ -77,7 +77,7 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 | `EXECUTION-PROMPT.md` | פרומפט הבנייה (תהליך, תתי-סוכנים, בדיקות) |
 | `app/README.md` | איך להריץ את ה-PWA (install/dev/test/build) |
 | `docs/CHANGELOG.md` | היסטוריית כל המיילסטונים (M0–M22) |
-| `docs/adr-0001-stack.md` · `adr-0002-sync.md` | החלטות ארכיטקטורה |
+| `docs/adr-0001-stack.md` · `adr-0002-sync.md` · `adr-0003-tts.md` | החלטות ארכיטקטורה |
 | `docs/m*.md` | פירוט per-milestone (M0–M13, M20) |
 | `docs/verification.md` | למה npm לא רץ בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
@@ -95,7 +95,7 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 
 ## Open questions
 - `[TODO: Clarify]` ספק/רישוי ניקוד סופי (Nakdan/Dicta — בסיס חינמי כעת). ראה `docs/adr-0001` / PRD נספח D.
-- `[TODO: Clarify]` ספק TTS פרימיום סופי (Almagu מועדף ב-PRD; כרגע Google Neural2). ADR-0003 צוין בקוד אך **לא נכתב כקובץ** — יש ליצור `docs/adr-0003-tts.md`.
-- `[TODO]` `docs/m2-communication-core.md` סומן "TODO לאחר CI" אך מעולם לא נוצר — להשלים או להסיר את ההפניה.
-- `[TODO]` M14–M15 אינם מתועדים (changelog קופץ M13→M16) — לאמת אם דולגו במכוון.
-- `[CONFLICT: README.md ↔ HANDOFF.md]` — נפתר בסשן זה: README השורש כתב "הקוד טרם נכתב" בעוד M22 הושלם. README עודכן.
+- `[RESOLVED]` ספק TTS פרימיום — `docs/adr-0003-tts.md` נכתב. Google Neural2 כעת; Almagu כיעד עתידי (interface מוכן להחלפה).
+- `[RESOLVED]` `docs/m2-communication-core.md` — ההפניה הוסרה; M2 מתועד ב-CHANGELOG תחת M4–M8 (sync + auth).
+- `[RESOLVED]` M14–M15 — דולגו במכוון; Phase 2 עלה ישירות M13→M16 (CI/CD + TTS rate/pitch). מתועד ב-CHANGELOG.
+- `[RESOLVED]` README ↔ HANDOFF conflict — נפתר, README עודכן.
