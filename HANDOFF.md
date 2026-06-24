@@ -47,6 +47,10 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 | נגעת ב | סיכון / בדוק |
 |---------|-------------|
 | `domain/layout.ts` · `placements` · גודל גריד | פגיעה בעקביות מיקום ליבה (Motor Planning) — ודא טסטים עוברים |
+| `domain/models.ts` (`Fitzgerald` type) | כל מפה `Record<Fitzgerald, …>` חייבת להתעדכן (obfService, FITZGERALD, CATEGORY_MAP) — TypeScript יתפוס |
+| `domain/fitzgerald.ts` (`FITZGERALD` map) | הצבעים נעולים-כברירת-מחדל; בדוק ניגודיות WCAG ב-`fitzgerald.test.ts`; אל תוסיף עריכה ידנית ע"י משתמש |
+| `domain/adaptivity.ts` (`GRID_MIN`/`GRID_MAX`) | `GridSizePicker` + `QuickStartWizard` תלויים בקבועים אלה |
+| `data/bootstrap.ts` (`createProfileFromTemplate`) | gridOverride עם ViolationError — חוזר לגריד ברירת-מחדל (silent); תקשר בUI אם צריך |
 | `services/tts` | רגרסיה באופליין; חביון; בחירת קול לא-עברי; חשיפת API key |
 | `services/nikud` | דריסת override ידני; תלות ברשת בשימוש חוזר |
 | `data/db.ts` (DB_VERSION) | מיגרציה הורסת — חייב upgrade אדיטיבי + `migration.test.ts` |
@@ -69,6 +73,7 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
 ## Session changelog (אחרונים — מלא ב-`docs/CHANGELOG.md`)
+- **2026-06-24 (חלק 1 — גדלים + Fitzgerald)** — 1A: GridSizePicker (פריסטים 2×2–8×8, טווח 2–12, guard מטרה מינ' 44/57px); `QuickStartWizard` עם בחירת גודל גריד; `adaptivity.ts` (GRID_MIN/MAX, estimateCellPx, cellSizeStatus). 1B: Fitzgerald type ← 3 קטגוריות חדשות (conjunction/adverb/determiner); `FITZGERALD` map + `categoryForLabel`; legend ב-AccessSettingsPanel; הצעה אוטומטית ב-CellEditor. 291 tests.
 - **2026-06-21 (M22)** — TTS היברידי (ADR-0003): Google Neural2 he-IL + cache IndexedDB (DB_VERSION 9, store `audioCache`); `hybridTtsService` עם fallback אופליין תמידי. 244 tests.
 - **2026-06-21 (M20–M21)** — סמל ARASAAC לכל מילה (~136, מקומי/offline) + סמלי ניווט; ניקוד מאומת. precache 148→163.
 - **2026-06-21 (M16–M19)** — TTS rate/pitch · mimeType fix (DB v8) · OBF import/export · Word Finder. CI/CD ל-Firebase Hosting.

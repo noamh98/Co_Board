@@ -4,6 +4,23 @@
 > פירוט עמוק כאן). 3–5 השינויים האחרונים נשארים ב-`HANDOFF.md §Session changelog`.
 > לכל מיילסטון יש גם מסמך פירוט ב-`docs/m*.md`.
 
+## חלק 1 — גדלי לוח + צבעי Fitzgerald — 2026-06-24
+
+### 1A — גדלי לוח (FR-015)
+- **`domain/adaptivity.ts`** — קבועי `GRID_MIN=2`/`GRID_MAX=12`; `estimateCellPx(rows,cols,vpW,vpH)` + `cellSizeStatus(…)→'ok'|'warn'|'block'` (CELL_WARN_PX=57/CELL_BLOCK_PX=44).
+- **`GridSizePicker.tsx`** — פריסטים (chips) 2×2/3×3/4×4/5×3/5×5/6×6/6×8/8×8 עם `aria-pressed`; טווח חופשי 2–12; אזהרה/חסימה לגודל-מטרה מינ'.
+- **`QuickStartWizard.tsx`** — שלב 2 כולל בחירת גודל גריד (פריסטים + selectors), מועברת ל-`createProfileFromTemplate`.
+- **`data/bootstrap.ts`** — `createProfileFromTemplate` מקבל `gridOverride?: GridSize`; fallback חיננית ל-ViolationError.
+- **טסטים:** `adaptivity.test.ts` +8 tests (estimateCellPx, cellSizeStatus, קבועים). **291 tests סה"כ.**
+
+### 1B — צבעי Fitzgerald קבועים עם חוקיות (PRD §6.3)
+- **`domain/models.ts`** — `Fitzgerald` type ← 3 קטגוריות חדשות: `conjunction` (מילות קישור), `adverb` (תארי פועל), `determiner` (מיידעים/כמתים).
+- **`domain/fitzgerald.ts`** — `FITZGERALD` map ← 3 ערכים חדשים (צבעים רכים, WCAG AA); הפך ל-`Readonly<Record<…>>`; `categoryForLabel(label)→Fitzgerald|undefined` — מילון 100+ מילים עבריות.
+- **`services/obf/obfService.ts`** — `FITZGERALD_COLORS` ← 3 צבעים חדשים (TypeScript אכיפה).
+- **`presentation/builder/CellEditor.tsx`** — `categoryForLabel` מוצע אוטומטית לפי label; override ידני נשמר; `aria-pressed` לכפתורי קטגוריה.
+- **`presentation/settings/AccessSettingsPanel.tsx`** — legend מקרא צבעי Fitzgerald (מצב מבוגר).
+- **`domain/fitzgerald.test.ts`** (חדש) — 40 tests: קיום 11 קטגוריות, WCAG AA ≥ 4.5:1 לכל זוג bg/text, רוויות < 70%, `fitzgeraldStyle`, `categoryForLabel` (32 מילים). **291 tests סה"כ.**
+
 ## M22 — TTS היברידי (ADR-0003) — 2026-06-21
 Google Cloud TTS Neural2 he-IL + cache IndexedDB.
 - **DB:** `db.ts` DB_VERSION 8→9 — store `audioCache` (keyPath: 'cacheKey') אדיטיבי. `data/audioCache.ts` — `buildCacheKey(text,voiceId,rate,pitch)→SHA-256`, `getAudioFromCache/saveAudioToCache/pruneAudioCache(maxEntries=500)`.

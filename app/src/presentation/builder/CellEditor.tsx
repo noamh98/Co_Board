@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { Board, Cell, CellAction, CellPlacement, Fitzgerald } from '../../domain/models';
-import { FITZGERALD } from '../../domain/fitzgerald';
+import { FITZGERALD, categoryForLabel } from '../../domain/fitzgerald';
 import { addCell } from '../../domain/boardEditor';
 import { ViolationError } from '../../domain/boardEditor';
 import { createSymbolRepo } from '../../data/symbolRepo';
@@ -40,6 +40,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
   const [label, setLabel] = useState(cell?.label ?? '');
   const [nikud, setNikud] = useState(cell?.nikud ?? '');
   const [fitzgerald, setFitzgerald] = useState<Fitzgerald | undefined>(cell?.fitzgerald);
+  const [fitzgeraldManual, setFitzgeraldManual] = useState(cell?.fitzgerald !== undefined);
   const [actionType, setActionType] = useState<CellAction['type']>(cell?.action.type ?? 'speak');
   const [targetBoardId, setTargetBoardId] = useState<string>(
     cell?.action.type === 'navigate' ? cell.action.targetBoardId : '',
@@ -55,6 +56,15 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+
+  const handleLabelChange = (val: string) => {
+    setLabel(val);
+    // הצעה אוטומטית לקטגוריה — רק אם המשתמש לא בחר ידנית
+    if (!fitzgeraldManual) {
+      const suggested = categoryForLabel(val);
+      setFitzgerald(suggested);
+    }
+  };
 
   const handleAutoNikud = async () => {
     if (!nikudService || !label.trim()) return;
@@ -211,7 +221,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
             dir="rtl"
             autoFocus
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={(e) => handleLabelChange(e.target.value)}
             style={{
               width: '100%',
               minHeight: 44,
@@ -268,6 +278,11 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
         <div className="cell-editor__field">
           <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 6 }}>
             קטגוריה (פיצ׳ג׳רלד)
+            {fitzgerald && !fitzgeraldManual && (
+              <span style={{ fontSize: '0.78rem', color: '#6b7280', marginRight: 6 }}>
+                (הצעה אוטומטית)
+              </span>
+            )}
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {(Object.keys(FITZGERALD) as Fitzgerald[]).map((key) => {
@@ -277,8 +292,13 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                 <button
                   key={key}
                   type="button"
+                  aria-pressed={selected}
                   title={catLabel}
-                  onClick={() => setFitzgerald(selected ? undefined : key)}
+                  onClick={() => {
+                    const next = selected ? undefined : key;
+                    setFitzgerald(next);
+                    setFitzgeraldManual(next !== undefined);
+                  }}
                   style={{
                     background: bg,
                     color: text,

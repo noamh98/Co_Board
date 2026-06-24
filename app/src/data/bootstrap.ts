@@ -6,7 +6,8 @@ import {
 } from '../domain/boardLibrary';
 import { getTemplate } from '../domain/boardTemplates';
 import { DEFAULT_PIN } from '../domain/access';
-import type { Board, Profile } from '../domain/models';
+import type { Board, GridSize, Profile } from '../domain/models';
+import { resizeBoard, ViolationError } from '../domain/boardEditor';
 import { createBoardRepo } from './boardRepo';
 import { createProfileRepo } from './profileRepo';
 import { createSettingsRepo } from './settingsRepo';
@@ -135,11 +136,14 @@ export async function switchActiveProfile(id: string): Promise<ActiveContext> {
 
 /**
  * יוצר פרופיל חדש מתבנית לוח. אם templateId אינו ידוע — נפילה ל-blank4x4.
+ * gridOverride אופציונלי: מאפשר לשנות את גודל הגריד ממה שמוגדר בתבנית.
+ * אם gridOverride קטן מדי ויגרום ל-ViolationError — חוזר לגריד ברירת-מחדל של התבנית.
  * מחזיר profileId של הפרופיל שנוצר.
  */
 export async function createProfileFromTemplate(
   name: string,
   templateId: string,
+  gridOverride?: GridSize,
 ): Promise<string> {
   const template =
     getTemplate(templateId) ?? getTemplate('blank4x4')!;
@@ -147,7 +151,15 @@ export async function createProfileFromTemplate(
   const boardRepo = createBoardRepo();
   const profileRepo = createProfileRepo();
 
-  const board = cloneBoard(template.board, `לוח בית — ${name}`);
+  let board = cloneBoard(template.board, `לוח בית — ${name}`);
+  if (gridOverride) {
+    try {
+      board = { ...resizeBoard(board, gridOverride), name: board.name };
+    } catch (err) {
+      if (!(err instanceof ViolationError)) throw err;
+      // gridOverride גורם ל-ViolationError — נשאר עם גריד ברירת-המחדל של התבנית
+    }
+  }
   await boardRepo.save(board);
 
   const profile: Profile = {
