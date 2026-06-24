@@ -1,5 +1,26 @@
 # CHANGELOG — היסטוריית מיילסטונים
 
+## חלק 5 — שדרוג UI/UX + רספונסיביות מלאה — 2026-06-24
+
+### 5A — App-wide Responsiveness
+- **`app/src/index.css`** — שכתוב מלא: design tokens (צבעים/ריווח/טיפוגרפיה/רדיוס/צל) כ-CSS custom properties; dark mode אוטומטי (`prefers-color-scheme`) + ידני (`.dark-mode` על `<html>`); `100dvh` (לא `100vh`); `env(safe-area-inset-*)` לכל הכיוונים; fluid typography עם `clamp()`; breakpoints phone<600/tablet 600–1024/desktop>1024; AdultBar גלילה אופקית + icon-only בטלפון; SentenceBar wrap בצר; modal bottom-sheet עם `safe-area-inset-bottom` בטלפון; WCAG 2.1 AA (focus-visible, min-height 44–48px, `prefers-reduced-motion`).
+- **`app/index.html`** — כבר היה עם `viewport-fit=cover` ✓ (לא שונה).
+
+### 5B — Settings Panel Redesign + Dark Mode
+- **`presentation/ui/Toggle.tsx`** (חדש) — מתג iOS-style: role="switch", aria-checked, visually-hidden input, CSS track+thumb עם transition. RTL: physical `left` property.
+- **`presentation/ui/Slider.tsx`** (חדש) — slider עם תצוגת ערך; aria-valuemin/max/now/text; format prop.
+- **`presentation/ui/Button.tsx`** (חדש) — כפתור עם variants (primary/secondary/ghost/danger) + sizes (sm/md/lg) + icon slot. WCAG 2.1 AA.
+- **`presentation/ui/Modal.tsx`** (חדש) — מודאל רספונסיבי: desktop=מרכז, phone=bottom-sheet. role="dialog", aria-modal, overlay click close. RTL.
+- **`presentation/settings/AccessSettingsPanel.tsx`** — שכתוב מלא: משתמש ב-Modal/Toggle/Slider; סקשנים עם אייקונים (⚡ גישה מוטורית / 🔊 קול ודיבור / 🌙 תצוגה / 🔒 פרטיות / 🎨 פיצ'רלד); PrivacyToggle + MediaPrivacyPanel + LoginPanel ממוזגים לסקשן פרטיות (props אופציונליים); `settings-section__header/body` CSS classes.
+- **`data/settingsRepo.ts`** — הוספו standalone exports: `getDarkMode(): Promise<boolean>`, `setDarkMode(enabled): Promise<void>` (KEY_DARK_MODE, ברירת מחדל false — מקומי ללא DB_VERSION bump).
+- **`App.tsx`** — `darkMode` state + `useEffect` (מחיל/מסיר `.dark-mode` על `document.documentElement`) + `onDarkModeChange` handler + props חדשים ל-AccessSettingsPanel; הסרת render נפרד של PrivacyToggle/MediaPrivacyPanel/LoginPanel מ-settingsOpen block.
+- **`presentation/components/AdultBar.tsx`** — כפתורים עם `adultbar__btn-icon` (aria-hidden) + `adultbar__btn-text`; הגדרות עם class `adultbar__btn--settings` + אייקון ⚙; ממשק `Btn` פנימי לשימוש חוזר. CSS מסתיר text בטלפון, DOM נשאר — בדיקות לא מושפעות.
+- **`presentation/components/NavBar.tsx`** — icon spans (navbar__btn-icon/text) + aria-label נשמר.
+
+### בדיקות (חלק 5)
+- 9 בדיקות שנכשלו קיימות (blob.text JSDOM, pre-existing) — לא נגרמו ע"י שינויים אלה.
+- 311 בדיקות עוברות — אפס נסיגה.
+
 ## חלק 3 — תמונות אישיות + פרטיות (FR-005/006) — 2026-06-24
 
 ### 3A — תשתית אחסון מדיה

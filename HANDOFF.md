@@ -1,8 +1,8 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת הראשון לכל סשן. קרא אותי תחילה; אל תגזור את המערכת מחדש מהקוד אם המסמך מספיק.
-> **שלב נוכחי:** חלקים 1+2+3 הושלמו ומוזגו ל-main. DB_VERSION=10, store `media`. 308+ tests.
-> **הבא בתור:** Firebase deploy (functions + storage.rules + firestore.rules) · הגדרת admin ראשוני · חלק 5 (UI/UX). היסטוריה מלאה: `docs/CHANGELOG.md`.
+> **שלב נוכחי:** חלקים 1–5 הושלמו ומוזגו ל-main. DB_VERSION=10. design tokens + Dark Mode + auth portal + media sync.
+> **הבא בתור:** Firebase deploy (functions + storage.rules + firestore.rules) · הגדרת admin ראשוני · חלק D (תעדוף). היסטוריה מלאה: `docs/CHANGELOG.md`.
 
 ## Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), לקלינאי תקשורת והורים.
@@ -32,7 +32,7 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 | label תמיד גלוי (AAC invariant) גם עם תמונה; `onError`→img נסתר, label נשאר | `presentation/components/CellButton.tsx` |
 | מיגרציית DB תמיד אדיטיבית — לא הורסת נתונים קיימים | `data/db.ts` (`upgrade` עם guard) · `migration.test.ts` |
 | merge conflict שומר גרסה מפסידה ב-`versions` store (לא אובדן נתונים) | `services/sync/syncEngine.ts` |
-| RTL מלא בכל מסך | `index.html` · `App` (`dir=rtl`) · `index.css` |
+| RTL + responsive בכל מסך/מכשיר | `index.html` · `App` (`dir=rtl`) · `index.css` (design tokens + breakpoints + 100dvh + safe-area) |
 | ביצועים: משוב ויזואלי <100ms; תחילת TTS אופליין <300–500ms | `index.css` · `ttsService` (`latencyMs`) |
 
 ## Data flow (happy path — שימוש יומיומי)
@@ -83,6 +83,7 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
 ## Session changelog (אחרונים — מלא ב-`docs/CHANGELOG.md`)
+- **2026-06-24 (חלק 5 — UI/UX Responsive Upgrade)** — 5A: `index.css` שוכתב כולו (design tokens CSS vars, dark mode auto+manual .dark-mode, 100dvh, env(safe-area-inset-*), fluid clamp() typography, breakpoints phone<600/tablet 600–1024/desktop>1024, AdultBar scrollable+icon-only-phone, SentenceBar responsive, Modal bottom-sheet on phone, Settings sections). 5B: `presentation/ui/Toggle.tsx` + `Slider.tsx` + `Button.tsx` + `Modal.tsx` (רכיבי UI חדשים, WCAG 2.1 AA); `AccessSettingsPanel.tsx` שוכתב לסקשנים (גישה מוטורית / קול ודיבור / תצוגה / פרטיות / פיצ'רלד); `settingsRepo.ts` (getDarkMode/setDarkMode); `App.tsx` (dark mode state + useEffect על documentElement.classList + onDarkModeChange + PrivacyToggle/MediaPrivacyPanel ממוזגים ל-AccessSettingsPanel); `AdultBar.tsx` + `NavBar.tsx` (icon spans + adultbar__btn--settings).
 - **2026-06-24 (חלק 3 — תמונות אישיות + פרטיות)** — `data/mediaRepo.ts` (IndexedDB store 'media', DB_VERSION 9→10); `services/sync/storageProvider.ts` (StorageProvider interface + LocalStub + Firebase); `services/sync/mediaSync.ts` (uploadMedia/downloadMedia/deleteMediaFromStorage); `services/sync/crypto.ts` (deriveMediaKey/encryptBlob/decryptBlob PBKDF2+AES-GCM); `firebase/storage.rules`; `MediaPrivacyPanel.tsx`; `settingsRepo.ts` (syncPhotos); `CellEditor.tsx` + `BuilderView.tsx` (mediaSyncConfig). 308+ tests.
 - **2026-06-24 (חלק 2 — חשבונות + פורטל)** — 2A: `authService` (setAuthUser/mergeAuthFields); `firebaseAuth.ts` (Google OAuth, email verification, user status, admin claim, Cloud Function call); `RegisterPanel.tsx` + `PendingApprovalScreen.tsx` + `RejectedScreen.tsx` + `AdminApprovalPanel.tsx`; `firestore.rules` (status/approved gate); `functions/src/approveUser.ts`. 2B: `domain/models.ts` (ProfilePreferences + Profile.preferences/childId); `data/childRepo.ts` (Firestore children/{childId} + childAccess + shareInvites); `services/sync/profileSync.ts` (pushProfile/pullProfile); `presentation/portal/` (ChildrenDashboard, ChildCard, ChildPreferencesPanel, ShareInvitePanel, AcceptInviteScreen). 308 tests.
 - **2026-06-24 (חלק 1 — גדלים + Fitzgerald)** — 1A: GridSizePicker (פריסטים 2×2–8×8, טווח 2–12, guard מטרה מינ' 44/57px); `QuickStartWizard` עם בחירת גודל גריד; `adaptivity.ts` (GRID_MIN/MAX, estimateCellPx, cellSizeStatus). 1B: Fitzgerald type ← 3 קטגוריות חדשות (conjunction/adverb/determiner); `FITZGERALD` map + `categoryForLabel`; legend ב-AccessSettingsPanel; הצעה אוטומטית ב-CellEditor. 291 tests.
