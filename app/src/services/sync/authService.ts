@@ -1,11 +1,17 @@
 // services/sync/authService.ts — Auth facade עבור App.tsx.
 // עוטף FirebaseProvider.signIn/signOut ומספק onAuthChange listener.
+// 2A: הרחבת AuthUser (emailVerified, displayName, status, claims) + setAuthUser.
 
 import type { SyncProvider } from './syncProvider';
+import type { UserStatus } from './firebaseAuth';
 
 export interface AuthUser {
   uid: string;
   email: string;
+  emailVerified?: boolean;
+  displayName?: string;
+  status?: UserStatus;
+  claims?: { admin?: boolean };
 }
 
 type AuthChangeCallback = (user: AuthUser | null) => void;
@@ -54,6 +60,17 @@ export const authService = {
     _listeners.add(cb);
     cb(_currentUser);
     return () => { _listeners.delete(cb); };
+  },
+
+  /** עדכן את המשתמש הנוכחי מחוץ (אחרי Google sign-in / status refresh). */
+  setAuthUser(user: AuthUser | null): void {
+    notify(user);
+  },
+
+  /** מיזוג שדות חדשים לתוך המשתמש הנוכחי (לא מחליף uid/email). */
+  mergeAuthFields(fields: Partial<AuthUser>): void {
+    if (!_currentUser) return;
+    notify({ ..._currentUser, ...fields });
   },
 
   _resetForTests(): void {

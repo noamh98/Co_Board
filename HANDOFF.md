@@ -1,8 +1,8 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת הראשון לכל סשן. קרא אותי תחילה; אל תגזור את המערכת מחדש מהקוד אם המסמך מספיק.
-> **שלב נוכחי:** חלק 3 — תמונות אישיות + פרטיות (FR-005/006) הושלמו. DB_VERSION=10, store `media`. 308+ tests.
-> **הבא בתור:** Firebase deploy (storage.rules) · UI להגדרת מפתח Google TTS. היסטוריה מלאה: `docs/CHANGELOG.md`.
+> **שלב נוכחי:** חלקים 1+2+3 הושלמו ומוזגו ל-main. DB_VERSION=10, store `media`. 308+ tests.
+> **הבא בתור:** Firebase deploy (functions + storage.rules + firestore.rules) · הגדרת admin ראשוני · חלק 5 (UI/UX). היסטוריה מלאה: `docs/CHANGELOG.md`.
 
 ## Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), לקלינאי תקשורת והורים.
@@ -43,6 +43,16 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 5. לחיצה על "דבר" → הקראת המשפט המלא ברצף.
 6. תיעוד שימוש נשמר מקומית (אם מופעל); סנכרון אסינכרוני לענן כשיש רשת (אם מופעל).
 
+## Invariants 2A/2B (נוספו)
+| כלל | היכן |
+|------|------|
+| status='approved'/'rejected' — נכתב **רק** ע"י Cloud Function (Admin SDK), לא ע"י client | `functions/src/approveUser.ts` · `docs/firestore.rules` |
+| Auth לא כופה sync — syncEnabled=false נשאר ברירת מחדל | `App.tsx` |
+| PendingApprovalScreen חוסם תוכן רק כשstatus='pending' AND authUser קיים (לא-מחובר → אפליקציה מקומית רגילה) | `App.tsx` |
+| מחיקת ילד = archivedAt (לא הסרה); שחזור אפשרי | `data/childRepo.ts` |
+| Profile.preferences/childId — שדות optional; נתוני ילד מקומיים ממשיכים ללא רשת | `domain/models.ts` · `data/profileRepo.ts` |
+| Cloud Function approveUser — מצריך הפעלה ידנית של Firebase Admin ראשון | `functions/src/approveUser.ts` + docs |
+
 ## Danger zones — אם נגעת ב-X, בדוק Y
 | נגעת ב | סיכון / בדוק |
 |---------|-------------|
@@ -74,6 +84,7 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 
 ## Session changelog (אחרונים — מלא ב-`docs/CHANGELOG.md`)
 - **2026-06-24 (חלק 3 — תמונות אישיות + פרטיות)** — `data/mediaRepo.ts` (IndexedDB store 'media', DB_VERSION 9→10); `services/sync/storageProvider.ts` (StorageProvider interface + LocalStub + Firebase); `services/sync/mediaSync.ts` (uploadMedia/downloadMedia/deleteMediaFromStorage); `services/sync/crypto.ts` (deriveMediaKey/encryptBlob/decryptBlob PBKDF2+AES-GCM); `firebase/storage.rules`; `MediaPrivacyPanel.tsx`; `settingsRepo.ts` (syncPhotos); `CellEditor.tsx` + `BuilderView.tsx` (mediaSyncConfig). 308+ tests.
+- **2026-06-24 (חלק 2 — חשבונות + פורטל)** — 2A: `authService` (setAuthUser/mergeAuthFields); `firebaseAuth.ts` (Google OAuth, email verification, user status, admin claim, Cloud Function call); `RegisterPanel.tsx` + `PendingApprovalScreen.tsx` + `RejectedScreen.tsx` + `AdminApprovalPanel.tsx`; `firestore.rules` (status/approved gate); `functions/src/approveUser.ts`. 2B: `domain/models.ts` (ProfilePreferences + Profile.preferences/childId); `data/childRepo.ts` (Firestore children/{childId} + childAccess + shareInvites); `services/sync/profileSync.ts` (pushProfile/pullProfile); `presentation/portal/` (ChildrenDashboard, ChildCard, ChildPreferencesPanel, ShareInvitePanel, AcceptInviteScreen). 308 tests.
 - **2026-06-24 (חלק 1 — גדלים + Fitzgerald)** — 1A: GridSizePicker (פריסטים 2×2–8×8, טווח 2–12, guard מטרה מינ' 44/57px); `QuickStartWizard` עם בחירת גודל גריד; `adaptivity.ts` (GRID_MIN/MAX, estimateCellPx, cellSizeStatus). 1B: Fitzgerald type ← 3 קטגוריות חדשות (conjunction/adverb/determiner); `FITZGERALD` map + `categoryForLabel`; legend ב-AccessSettingsPanel; הצעה אוטומטית ב-CellEditor. 291 tests.
 - **2026-06-21 (M22)** — TTS היברידי (ADR-0003): Google Neural2 he-IL + cache IndexedDB (DB_VERSION 9, store `audioCache`); `hybridTtsService` עם fallback אופליין תמידי. 244 tests.
 - **2026-06-21 (M20–M21)** — סמל ARASAAC לכל מילה (~136, מקומי/offline) + סמלי ניווט; ניקוד מאומת. precache 148→163.

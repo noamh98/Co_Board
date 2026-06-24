@@ -18,6 +18,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as fbSignOut,
+  GoogleAuthProvider,
+  signInWithPopup,
   type Auth,
 } from 'firebase/auth';
 import type { SyncProvider, SyncRecord } from './syncProvider';
@@ -126,5 +128,14 @@ export class FirebaseProvider implements SyncProvider {
   getCurrentUid(): string | null {
     const { auth } = getFirebaseInstances();
     return auth.currentUser?.uid ?? null;
+  }
+
+  /** כניסה עם Google — wrapper נוחות (הלוגיקה המלאה ב-firebaseAuth.ts). */
+  async signInWithGoogle(): Promise<string> {
+    const { auth } = getFirebaseInstances();
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    this._deviceId = await getDeviceId();
+    return result.user.uid;
   }
 }

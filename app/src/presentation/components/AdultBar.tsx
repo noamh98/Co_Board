@@ -17,6 +17,8 @@ export function AdultBar({
   onOpenPhraseBank,
   onOpenWordFinder,
   onSignOut,
+  onOpenPortal,
+  onOpenAdmin,
   modelingActive,
   onToggleModeling,
 }: {
@@ -35,6 +37,8 @@ export function AdultBar({
   onOpenPhraseBank?: () => void;
   onOpenWordFinder?: () => void;
   onSignOut?: () => void;
+  onOpenPortal?: () => void;
+  onOpenAdmin?: () => void;
   modelingActive?: boolean;
   onToggleModeling?: () => void;
 }) {
@@ -134,6 +138,18 @@ export function AdultBar({
       {onOpenWordFinder && (
         <button type="button" className="adultbar__btn" onClick={onOpenWordFinder}>
           מצא מילה
+        </button>
+      )}
+
+      {onOpenPortal && (
+        <button type="button" className="adultbar__btn" onClick={onOpenPortal}>
+          ילדים
+        </button>
+      )}
+
+      {onOpenAdmin && (
+        <button type="button" className="adultbar__btn adultbar__btn--admin" onClick={onOpenAdmin}>
+          אדמין
         </button>
       )}
 

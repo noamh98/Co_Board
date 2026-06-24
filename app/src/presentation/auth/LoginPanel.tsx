@@ -1,11 +1,13 @@
-// presentation/auth/LoginPanel.tsx — כניסה/הרשמה ל-AAC Cloud Sync.
+// presentation/auth/LoginPanel.tsx — כניסה ל-AAC Cloud Sync.
+// 2A: הוסף כפתור Google + קישור לדף הרשמה.
 // RTL מלא. הודעות שגיאה בעברית.
 
 import { useState } from 'react';
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<void>;
-  onSignUp: (email: string, password: string) => Promise<void>;
+  onGoogleSignIn?: () => Promise<void>;
+  onGoToRegister?: () => void;
   loading?: boolean;
 }
 
@@ -22,7 +24,7 @@ function translateError(err: unknown): string {
   return 'שגיאה בכניסה, נסה שנית';
 }
 
-export function LoginPanel({ onSignIn, onSignUp, loading = false }: Props) {
+export function LoginPanel({ onSignIn, onGoogleSignIn, onGoToRegister, loading = false }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -30,15 +32,24 @@ export function LoginPanel({ onSignIn, onSignUp, loading = false }: Props) {
 
   const isDisabled = busy || loading || !email.trim() || !password;
 
-  async function handle(action: 'signIn' | 'signUp'): Promise<void> {
+  async function handleSignIn(): Promise<void> {
     setError(null);
     setBusy(true);
     try {
-      if (action === 'signIn') {
-        await onSignIn(email.trim(), password);
-      } else {
-        await onSignUp(email.trim(), password);
-      }
+      await onSignIn(email.trim(), password);
+    } catch (e) {
+      setError(translateError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleGoogle(): Promise<void> {
+    if (!onGoogleSignIn) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await onGoogleSignIn();
     } catch (e) {
       setError(translateError(e));
     } finally {
@@ -88,19 +99,33 @@ export function LoginPanel({ onSignIn, onSignUp, loading = false }: Props) {
         <button
           type="button"
           className="login-panel__btn login-panel__btn--primary"
-          onClick={() => void handle('signIn')}
+          onClick={() => void handleSignIn()}
           disabled={isDisabled}
         >
           {busy ? 'מתחבר…' : 'כניסה'}
         </button>
-        <button
-          type="button"
-          className="login-panel__btn"
-          onClick={() => void handle('signUp')}
-          disabled={isDisabled}
-        >
-          הרשמה
-        </button>
+
+        {onGoogleSignIn && (
+          <button
+            type="button"
+            className="login-panel__btn login-panel__btn--google"
+            onClick={() => void handleGoogle()}
+            disabled={busy || loading}
+          >
+            כניסה עם Google
+          </button>
+        )}
+
+        {onGoToRegister && (
+          <button
+            type="button"
+            className="login-panel__btn"
+            onClick={onGoToRegister}
+            disabled={busy}
+          >
+            הרשמה
+          </button>
+        )}
       </div>
     </section>
   );
