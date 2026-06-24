@@ -84,7 +84,7 @@ export async function decryptData(encrypted: string): Promise<unknown | null> {
  * גוזר מפתח AES-GCM 256-bit מ-uid + salt דרך PBKDF2 (100k iterations).
  * המפתח לא עולה לענן לעולם — נגזר מחדש בכל פעם לפי uid+salt.
  */
-export async function deriveMediaKey(uid: string, salt: Uint8Array): Promise<CryptoKey> {
+export async function deriveMediaKey(uid: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(uid),

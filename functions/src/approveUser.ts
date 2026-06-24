@@ -4,9 +4,11 @@
 // deploy: firebase deploy --only functions
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-admin.initializeApp();
+if (!getApps().length) initializeApp();
 
 export const approveUser = onCall(
   { region: 'us-central1' },
@@ -29,12 +31,12 @@ export const approveUser = onCall(
     const claims = status === 'approved'
       ? { approved: true }
       : { approved: false };
-    await admin.auth().setCustomUserClaims(uid, claims);
+    await getAuth().setCustomUserClaims(uid, claims);
 
     // עדכן Firestore
-    await admin.firestore().doc(`users/${uid}`).update({
+    await getFirestore().doc(`users/${uid}`).update({
       status,
-      reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reviewedAt: FieldValue.serverTimestamp(),
     });
 
     return { success: true, uid, status };

@@ -12,5 +12,15 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
+  "firestore": {
+    "rules": "docs/firestore.rules"
+  },
+  "storage": {
+    "rules": "firebase/storage.rules"
   }
 }
