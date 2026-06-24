@@ -3,6 +3,7 @@ import type { Profile } from '../../domain/models';
 
 // סרגל מצב מבוגר: בורר פרופיל פעיל, יצירת פרופיל, וחזרה למצב נעול.
 // מוצג רק במצב מבוגר (canManageProfiles) — ניהול פרופילים נעול בקוד (PRD §4.5).
+// כפתורים: icon-span (aria-hidden) + text-span; CSS מסתיר text בפאן צר.
 export function AdultBar({
   profiles,
   activeProfileId,
@@ -49,6 +50,18 @@ export function AdultBar({
     setAdding(false);
   };
 
+  const Btn = ({
+    icon,
+    children,
+    className,
+    ...rest
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: string }) => (
+    <button type="button" className={['adultbar__btn', className].filter(Boolean).join(' ')} {...rest}>
+      <span className="adultbar__btn-icon" aria-hidden="true">{icon}</span>
+      <span className="adultbar__btn-text">{children}</span>
+    </button>
+  );
+
   return (
     <div className="adultbar" aria-label="ניהול מבוגר">
       <label className="adultbar__label" htmlFor="profile-select">
@@ -68,13 +81,7 @@ export function AdultBar({
       </select>
 
       {onOpenWizard ? (
-        <button
-          type="button"
-          className="adultbar__btn"
-          onClick={onOpenWizard}
-        >
-          פרופיל חדש
-        </button>
+        <Btn icon="➕" onClick={onOpenWizard}>פרופיל חדש</Btn>
       ) : adding ? (
         <>
           <input
@@ -83,64 +90,40 @@ export function AdultBar({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
           />
-          <button
-            type="button"
-            className="adultbar__btn"
-            onClick={submitNew}
-          >
-            הוסף
-          </button>
+          <Btn icon="✔" onClick={submitNew}>הוסף</Btn>
         </>
       ) : (
-        <button
-          type="button"
-          className="adultbar__btn"
-          onClick={() => setAdding(true)}
-        >
-          פרופיל חדש
-        </button>
+        <Btn icon="➕" onClick={() => setAdding(true)}>פרופיל חדש</Btn>
       )}
 
       {onEditBoard && (
-        <button type="button" className="adultbar__btn" onClick={onEditBoard}>
-          ערוך לוח
-        </button>
+        <Btn icon="✏" onClick={onEditBoard}>ערוך לוח</Btn>
       )}
 
       {onOpenSettings && (
-        <button type="button" className="adultbar__btn" onClick={onOpenSettings}>
+        <Btn icon="⚙" className="adultbar__btn--settings" onClick={onOpenSettings}>
           הגדרות
-        </button>
+        </Btn>
       )}
 
       {onOpenBackup && (
-        <button type="button" className="adultbar__btn" onClick={onOpenBackup}>
-          גיבוי וסנכרון
-        </button>
+        <Btn icon="☁" onClick={onOpenBackup}>גיבוי וסנכרון</Btn>
       )}
 
       {onOpenAnalytics && (
-        <button type="button" className="adultbar__btn" onClick={onOpenAnalytics}>
-          סטטיסטיקה
-        </button>
+        <Btn icon="📊" onClick={onOpenAnalytics}>סטטיסטיקה</Btn>
       )}
 
       {onOpenPhraseBank && (
-        <button type="button" className="adultbar__btn" onClick={onOpenPhraseBank}>
-          ביטויים שמורים
-        </button>
+        <Btn icon="💬" onClick={onOpenPhraseBank}>ביטויים שמורים</Btn>
       )}
 
       {onOpenWordFinder && (
-        <button type="button" className="adultbar__btn" onClick={onOpenWordFinder}>
-          מצא מילה
-        </button>
+        <Btn icon="🔍" onClick={onOpenWordFinder}>מצא מילה</Btn>
       )}
 
       {onSignOut && (
-        <button type="button" className="adultbar__btn" onClick={onSignOut}>
-          התנתק
-        </button>
+        <Btn icon="⬅" onClick={onSignOut}>התנתק</Btn>
       )}
 
       {onToggleModeling && (
@@ -150,13 +133,12 @@ export function AdultBar({
           aria-pressed={modelingActive}
           className={modelingActive ? 'adult-btn adult-btn--active' : 'adult-btn'}
         >
-          מודלינג
+          <span className="adultbar__btn-icon" aria-hidden="true">🎯</span>
+          <span className="adultbar__btn-text">מודלינג</span>
         </button>
       )}
 
-      <button type="button" className="adultbar__btn" onClick={onLock}>
-        נעל
-      </button>
+      <Btn icon="🔒" onClick={onLock}>נעל</Btn>
     </div>
   );
 }

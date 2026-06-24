@@ -47,14 +47,17 @@ export interface OBFBoard {
 // ---------------------------------------------------------------------------
 
 const FITZGERALD_COLORS: Record<Fitzgerald, string> = {
-  pronoun: 'rgb(255,255,0)',
-  verb: 'rgb(0,128,0)',
-  noun: 'rgb(255,165,0)',
-  adjective: 'rgb(0,0,255)',
+  pronoun:     'rgb(255,255,0)',
+  verb:        'rgb(0,128,0)',
+  noun:        'rgb(255,165,0)',
+  adjective:   'rgb(0,0,255)',
   preposition: 'rgb(255,0,255)',
-  question: 'rgb(128,0,128)',
-  negation: 'rgb(255,0,0)',
-  social: 'rgb(255,20,147)',
+  question:    'rgb(128,0,128)',
+  negation:    'rgb(255,0,0)',
+  social:      'rgb(255,20,147)',
+  conjunction: 'rgb(244,244,240)',
+  adverb:      'rgb(214,191,160)',
+  determiner:  'rgb(200,203,211)',
 };
 
 // ---------------------------------------------------------------------------

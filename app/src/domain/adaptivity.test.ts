@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import type { Board, Cell } from './models';
-import { toggleCellVisibility, hiddenFilter, applyCellSize } from './adaptivity';
+import {
+  toggleCellVisibility,
+  hiddenFilter,
+  applyCellSize,
+  estimateCellPx,
+  cellSizeStatus,
+  GRID_MIN,
+  GRID_MAX,
+} from './adaptivity';
 import { ViolationError } from './boardEditor';
 
 function cell(id: string, partial: Partial<Cell> = {}): Cell {
@@ -79,4 +87,46 @@ describe('applyCellSize', () => {
   it('הקטנה שמפילה ליבה — זורקת ViolationError', () => {
     expect(() => applyCellSize(board(), { rows: 1, cols: 1 })).toThrow(ViolationError);
   });
+});
+
+// ─── estimateCellPx ──────────────────────────────────────────────────────────
+
+describe('estimateCellPx', () => {
+  it('מחשב גודל תא נכון', () => {
+    const { width, height } = estimateCellPx(4, 4, 360, 640);
+    expect(width).toBeCloseTo(90, 1);
+    expect(height).toBeCloseTo(160, 1);
+  });
+
+  it('גריד גדול — תאים קטנים', () => {
+    const { width, height } = estimateCellPx(12, 12, 360, 640);
+    expect(width).toBeCloseTo(30, 1);
+    expect(height).toBeCloseTo(53.3, 1);
+  });
+});
+
+// ─── cellSizeStatus ───────────────────────────────────────────────────────────
+
+describe('cellSizeStatus', () => {
+  it('גריד קטן — ok', () => {
+    // 4×4 על 360×640: תא 90×160px — ok
+    expect(cellSizeStatus(4, 4, 360, 640)).toBe('ok');
+  });
+
+  it('גריד בינוני — warn', () => {
+    // 8×8 על 360×360: תא 45×45px — warn (44 < 45 < 57)
+    expect(cellSizeStatus(8, 8, 360, 360)).toBe('warn');
+  });
+
+  it('גריד גדול מאוד — block', () => {
+    // 12×12 על 360×360: תא 30×30px — block (< 44)
+    expect(cellSizeStatus(12, 12, 360, 360)).toBe('block');
+  });
+});
+
+// ─── GRID_MIN / GRID_MAX ──────────────────────────────────────────────────────
+
+describe('קבועי גריד', () => {
+  it('GRID_MIN = 2', () => expect(GRID_MIN).toBe(2));
+  it('GRID_MAX = 12', () => expect(GRID_MAX).toBe(12));
 });

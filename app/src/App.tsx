@@ -27,12 +27,15 @@ import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
-import { PrivacyToggle } from './presentation/settings/PrivacyToggle';
 import { LoginPanel } from './presentation/auth/LoginPanel';
 import { UsageDashboard } from './presentation/analytics/UsageDashboard';
 import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
+import { getSyncPhotos, setSyncPhotos, getDarkMode, setDarkMode as persistDarkMode } from './data/settingsRepo';
+import { createMediaRepo } from './data/mediaRepo';
+import { deleteMediaFromStorage } from './services/sync/mediaSync';
+import { FirebaseStorageProvider } from './services/sync/storageProvider';
 import { QuickStartWizard } from './presentation/wizard/QuickStartWizard';
 import { PhraseBankPanel } from './presentation/phraseBank/PhraseBankPanel';
 import { WordFinderPanel } from './presentation/wordFinder/WordFinderPanel';
@@ -110,6 +113,8 @@ export function App() {
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
+  const [syncPhotos, setSyncPhotosState] = useState(false);
+  const [darkMode, setDarkModeState] = useState(false);
 
   const ttsRef = useRef<TtsLike | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -142,12 +147,16 @@ export function App() {
       const voiceURI = await settingsRepo.getSelectedVoiceURI();
       const rate = await settingsRepo.getTtsRate();
       const pitch = await settingsRepo.getTtsPitch();
+      const photosEnabled = await getSyncPhotos();
+      const dark = await getDarkMode();
       const loaded = await loadActiveContext();
       if (alive) {
         setAccessSettings(access);
         setSelectedVoiceURI(voiceURI);
         setTtsRate(rate);
         setTtsPitch(pitch);
+        setSyncPhotosState(photosEnabled);
+        setDarkModeState(dark);
         setCtx(loaded);
         setNavStack(createNavStack(loaded.activeProfile.homeBoardId));
       }
@@ -249,6 +258,37 @@ export function App() {
   const onTtsPitchChange = (n: number): void => {
     setTtsPitch(n);
     void createSettingsRepo().setTtsPitch(n);
+  };
+
+  const onSyncPhotosChange = (enabled: boolean): void => {
+    setSyncPhotosState(enabled);
+    void setSyncPhotos(enabled);
+  };
+
+  const onDarkModeChange = (enabled: boolean): void => {
+    setDarkModeState(enabled);
+    void persistDarkMode(enabled);
+  };
+
+  // מחיל/מסיר class dark-mode על <html> כך שכל CSS tokens מתעדכנים
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark-mode');
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+    }
+  }, [darkMode]);
+
+  const onDeletePhotosFromCloud = async (): Promise<void> => {
+    if (!ctx || !authUser) return;
+    const repo = createMediaRepo();
+    const entries = await repo.listByProfile(ctx.activeProfile.id);
+    const storageProvider = new FirebaseStorageProvider();
+    await Promise.allSettled(
+      entries
+        .filter((e) => e.downloadUrl)
+        .map((e) => deleteMediaFromStorage(e.profileId, e.id, storageProvider)),
+    );
   };
 
   const speakOpts = (): SpeakOptions => ({
@@ -490,6 +530,12 @@ export function App() {
       {builderMode && ctx && currentBoard ? (
         <BuilderView
           board={currentBoard}
+          mediaSyncConfig={ctx ? {
+            profileId: ctx.activeProfile.id,
+            syncPhotos,
+            authUserId: authUser?.uid,
+            useFirebase: syncEnabled && !!authUser,
+          } : undefined}
           onBoardChange={(b) => {
             setCtx((prev) =>
               prev
@@ -528,29 +574,28 @@ export function App() {
           onTtsRateChange={onTtsRateChange}
           ttsPitch={ttsPitch}
           onTtsPitchChange={onTtsPitchChange}
-        />
-      )}
-
-      {settingsOpen && (
-        <PrivacyToggle
+          darkMode={darkMode}
+          onDarkModeChange={onDarkModeChange}
           syncEnabled={syncEnabled}
-          onChange={(enabled) => {
-            setSyncEnabled(enabled);
-          }}
-        />
-      )}
-
-      {/* LoginPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
-      {settingsOpen && syncEnabled && !authUser && (
-        <LoginPanel
-          onSignIn={async (email, password) => {
-            const provider = new FirebaseProvider();
-            await authService.signIn(provider, email, password);
-          }}
-          onSignUp={async (email, password) => {
-            const provider = new FirebaseProvider();
-            await authService.signUp(provider, email, password);
-          }}
+          onSyncEnabledChange={setSyncEnabled}
+          syncPhotos={syncPhotos}
+          onSyncPhotosChange={onSyncPhotosChange}
+          isAuthenticated={!!authUser}
+          onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
+          loginPanel={
+            syncEnabled && !authUser ? (
+              <LoginPanel
+                onSignIn={async (email, password) => {
+                  const provider = new FirebaseProvider();
+                  await authService.signIn(provider, email, password);
+                }}
+                onSignUp={async (email, password) => {
+                  const provider = new FirebaseProvider();
+                  await authService.signUp(provider, email, password);
+                }}
+              />
+            ) : undefined
+          }
         />
       )}
 

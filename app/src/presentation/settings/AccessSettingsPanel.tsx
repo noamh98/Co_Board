@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { AccessSettings } from '../../domain/accessSettings';
+import { FITZGERALD } from '../../domain/fitzgerald';
+import { Modal } from '../ui/Modal';
+import { Toggle } from '../ui/Toggle';
+import { Slider } from '../ui/Slider';
 
-// פאנל הגדרות גישה מוטורית (FR-020, PRD §4.7).
+// פאנל הגדרות גישה מוטורית (FR-020, PRD §4.7) — מחולק לסקשנים עם אייקונים.
 // controlled: onChange מעדכן את ה-state ב-App ושומר ב-settingsRepo.saveAccessSettings.
+// פרטיות וסנכרון ממוזגים כסקשן (props אופציונליים).
 
 export function AccessSettingsPanel({
   settings,
@@ -14,6 +19,15 @@ export function AccessSettingsPanel({
   onTtsRateChange,
   ttsPitch,
   onTtsPitchChange,
+  darkMode,
+  onDarkModeChange,
+  syncEnabled,
+  onSyncEnabledChange,
+  syncPhotos,
+  onSyncPhotosChange,
+  isAuthenticated,
+  onDeleteFromCloud,
+  loginPanel,
 }: {
   settings: AccessSettings;
   onChange: (next: AccessSettings) => void;
@@ -24,10 +38,21 @@ export function AccessSettingsPanel({
   onTtsRateChange: (n: number) => void;
   ttsPitch: number;
   onTtsPitchChange: (n: number) => void;
+  darkMode?: boolean;
+  onDarkModeChange?: (enabled: boolean) => void;
+  syncEnabled?: boolean;
+  onSyncEnabledChange?: (enabled: boolean) => void;
+  syncPhotos?: boolean;
+  onSyncPhotosChange?: (enabled: boolean) => void;
+  isAuthenticated?: boolean;
+  onDeleteFromCloud?: () => Promise<void>;
+  loginPanel?: ReactNode;
 }) {
   const set = (patch: Partial<AccessSettings>) => onChange({ ...settings, ...patch });
 
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     const load = () => {
@@ -43,139 +68,213 @@ export function AccessSettingsPanel({
     }
   }, []);
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 100,
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        dir="rtl"
-        role="dialog"
-        aria-label="הגדרות גישה"
-        style={{
-          background: '#fff',
-          borderRadius: 16,
-          padding: 24,
-          minWidth: 320,
-          maxWidth: 460,
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 18,
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: '1.1rem' }}>הגדרות גישה</h2>
+  const handleDelete = async () => {
+    if (!onDeleteFromCloud) return;
+    if (!confirm('האם למחוק את כל התמונות מהענן? התמונות יישמרו במכשיר זה.')) return;
+    setDeleting(true);
+    setDeleteMsg(null);
+    try {
+      await onDeleteFromCloud();
+      setDeleteMsg({ ok: true, text: 'נמחק בהצלחה' });
+    } catch {
+      setDeleteMsg({ ok: false, text: 'מחיקה נכשלה — נסה שוב' });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-        {/* Dwell Time slider */}
-        <div>
-          <label htmlFor="dwell-slider" style={{ display: 'block', marginBottom: 6 }}>
-            זמן השהייה (Dwell):{' '}
-            {settings.dwellTimeMs === 0 ? 'כבוי' : `${settings.dwellTimeMs} מ"ש`}
-          </label>
-          <input
+  const hasPrivacy =
+    onSyncEnabledChange !== undefined ||
+    onSyncPhotosChange !== undefined ||
+    loginPanel !== undefined;
+
+  return (
+    <Modal title="הגדרות גישה" onClose={onClose} aria-label="הגדרות גישה" className="settings-panel">
+
+      {/* ── גישה מוטורית ── */}
+      <section className="settings-section" aria-labelledby="s-motor">
+        <div className="settings-section__header">
+          <span className="settings-section__icon" aria-hidden="true">⚡</span>
+          <h3 className="settings-section__title" id="s-motor">גישה מוטורית</h3>
+        </div>
+        <div className="settings-section__body">
+          <Slider
             id="dwell-slider"
-            type="range"
+            label='זמן השהייה (Dwell)'
+            value={settings.dwellTimeMs}
             min={0}
             max={3000}
             step={100}
-            value={settings.dwellTimeMs}
-            onChange={(e) => set({ dwellTimeMs: Number(e.target.value) })}
-            style={{ width: '100%' }}
+            format={(v) => (v === 0 ? 'כבוי' : `${v} מ"ש`)}
+            onChange={(v) => set({ dwellTimeMs: v })}
           />
-        </div>
-
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input
-            type="checkbox"
+          <Toggle
+            id="activate-on-release"
             checked={settings.activateOnRelease}
-            onChange={(e) => set({ activateOnRelease: e.target.checked })}
+            onChange={(v) => set({ activateOnRelease: v })}
+            label="הפעלה בשחרור המגע (Activate on Release)"
           />
-          הפעלה בשחרור המגע (Activate on Release)
-        </label>
-
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input
-            type="checkbox"
+          <Toggle
+            id="double-tap-prevention"
             checked={settings.doubleTapPrevention}
-            onChange={(e) => set({ doubleTapPrevention: e.target.checked })}
+            onChange={(v) => set({ doubleTapPrevention: v })}
+            label="מניעת מגע כפול (Double-Tap Prevention)"
           />
-          מניעת מגע כפול (Double-Tap Prevention)
-        </label>
-
-        {/* קול דיבור — FR-010 */}
-        <div>
-          <label htmlFor="voice-select" style={{ display: 'block', marginBottom: 6 }}>
-            קול דיבור
-          </label>
-          {voices.length === 0 ? (
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
-              אין קולות עבריים זמינים במכשיר
-            </p>
-          ) : (
-            <select
-              id="voice-select"
-              value={voiceURI ?? ''}
-              onChange={(e) => onVoiceURIChange(e.target.value || null)}
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6 }}
-            >
-              <option value="">ברירת מחדל</option>
-              {voices.map((v) => (
-                <option key={v.voiceURI} value={v.voiceURI}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
+      </section>
 
-        {/* קצב הקראה — FR-010 הרחבה */}
-        <div>
-          <label htmlFor="rate-slider" style={{ display: 'block', marginBottom: 6 }}>
-            קצב הקראה: {ttsRate.toFixed(1)}×
-          </label>
-          <input
+      {/* ── קול ודיבור ── */}
+      <section className="settings-section" aria-labelledby="s-voice">
+        <div className="settings-section__header">
+          <span className="settings-section__icon" aria-hidden="true">🔊</span>
+          <h3 className="settings-section__title" id="s-voice">קול ודיבור</h3>
+        </div>
+        <div className="settings-section__body">
+          <div>
+            <label htmlFor="voice-select" className="voice-select-label">קול דיבור</label>
+            {voices.length === 0 ? (
+              <p className="voice-none">אין קולות עבריים זמינים במכשיר</p>
+            ) : (
+              <select
+                id="voice-select"
+                className="voice-select"
+                value={voiceURI ?? ''}
+                onChange={(e) => onVoiceURIChange(e.target.value || null)}
+              >
+                <option value="">ברירת מחדל</option>
+                {voices.map((v) => (
+                  <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <Slider
             id="rate-slider"
-            type="range"
-            min={0.5}
-            max={2.0}
-            step={0.1}
+            label="קצב הקראה"
             value={ttsRate}
-            onChange={(e) => onTtsRateChange(Number(e.target.value))}
-            style={{ width: '100%' }}
-          />
-        </div>
-
-        {/* גובה צליל — FR-010 הרחבה */}
-        <div>
-          <label htmlFor="pitch-slider" style={{ display: 'block', marginBottom: 6 }}>
-            גובה צליל: {ttsPitch.toFixed(1)}×
-          </label>
-          <input
-            id="pitch-slider"
-            type="range"
             min={0.5}
             max={2.0}
             step={0.1}
+            format={(v) => `${v.toFixed(1)}×`}
+            onChange={onTtsRateChange}
+          />
+          <Slider
+            id="pitch-slider"
+            label="גובה צליל"
             value={ttsPitch}
-            onChange={(e) => onTtsPitchChange(Number(e.target.value))}
-            style={{ width: '100%' }}
+            min={0.5}
+            max={2.0}
+            step={0.1}
+            format={(v) => `${v.toFixed(1)}×`}
+            onChange={onTtsPitchChange}
           />
         </div>
+      </section>
 
-        <button type="button" className="adultbar__btn" onClick={onClose}>
-          סגור
-        </button>
-      </div>
-    </div>
+      {/* ── תצוגה ── */}
+      {onDarkModeChange !== undefined && (
+        <section className="settings-section" aria-labelledby="s-display">
+          <div className="settings-section__header">
+            <span className="settings-section__icon" aria-hidden="true">🌙</span>
+            <h3 className="settings-section__title" id="s-display">תצוגה</h3>
+          </div>
+          <div className="settings-section__body">
+            <Toggle
+              id="dark-mode"
+              checked={darkMode ?? false}
+              onChange={onDarkModeChange}
+              label="מצב לילה"
+              description="מפחית עצימות האור — מתאים לשימוש בחושך"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ── פרטיות וסנכרון ── */}
+      {hasPrivacy && (
+        <section className="settings-section" aria-labelledby="s-privacy">
+          <div className="settings-section__header">
+            <span className="settings-section__icon" aria-hidden="true">🔒</span>
+            <h3 className="settings-section__title" id="s-privacy">פרטיות וסנכרון</h3>
+          </div>
+          <div className="settings-section__body">
+            <div className="privacy-section">
+              <p className="privacy-section__desc">
+                ברירת מחדל: נתוני הילד נשמרים <strong>מקומית בלבד</strong> במכשיר זה.
+                הפעלת סנכרון תעלה לוחות ופרופילים לשרת המאובטח.
+              </p>
+              {onSyncEnabledChange && (
+                <Toggle
+                  id="sync-enabled"
+                  checked={syncEnabled ?? false}
+                  onChange={onSyncEnabledChange}
+                  label="הפעל סנכרון ענן (גיבוי אוטומטי בין מכשירים)"
+                  description="הנתונים מוצפנים לפני העלאה. ניתן לכבות בכל עת."
+                />
+              )}
+              {onSyncPhotosChange && (
+                <Toggle
+                  id="sync-photos"
+                  checked={syncPhotos ?? false}
+                  onChange={onSyncPhotosChange}
+                  label="סנכרן תמונות לענן"
+                  description="ההצפנה מתבצעת במכשיר לפני ההעלאה. מפתח ההצפנה לא עולה לענן לעולם."
+                  disabled={!isAuthenticated}
+                />
+              )}
+              {onDeleteFromCloud && (
+                <div className="privacy-section__actions">
+                  <button
+                    type="button"
+                    className="ui-btn ui-btn--danger ui-btn--sm"
+                    onClick={() => void handleDelete()}
+                    disabled={deleting || !isAuthenticated}
+                    aria-busy={deleting}
+                  >
+                    {deleting ? 'מוחק…' : 'מחק תמונות מהענן'}
+                  </button>
+                  {deleteMsg && (
+                    <span
+                      role={deleteMsg.ok ? 'status' : 'alert'}
+                      className={`privacy-section__feedback privacy-section__feedback--${deleteMsg.ok ? 'ok' : 'err'}`}
+                    >
+                      {deleteMsg.text}
+                    </span>
+                  )}
+                  <p className="privacy-section__note">
+                    התמונות יישמרו במכשיר זה; רק העותק בענן יימחק.
+                  </p>
+                </div>
+              )}
+              {loginPanel}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── מקרא פיצג׳רלד ── */}
+      <section className="settings-section" aria-labelledby="s-fitzgerald">
+        <div className="settings-section__header">
+          <span className="settings-section__icon" aria-hidden="true">🎨</span>
+          <h3 className="settings-section__title" id="s-fitzgerald">מקרא צבעי פיצג׳רלד</h3>
+        </div>
+        <div className="settings-section__body">
+          <div className="fitz-legend" role="list" aria-label="מקרא קטגוריות פיצג׳רלד">
+            {(
+              Object.entries(FITZGERALD) as Array<[string, { bg: string; text: string; label: string }]>
+            ).map(([key, { bg, text, label }]) => (
+              <span
+                key={key}
+                role="listitem"
+                className="fitz-legend__chip"
+                style={{ background: bg, color: text }}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+    </Modal>
   );
 }
