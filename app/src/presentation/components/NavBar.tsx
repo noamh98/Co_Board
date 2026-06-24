@@ -19,7 +19,8 @@ export function NavBar({
         onClick={onHome}
         aria-label="בית"
       >
-        בית
+        <span className="navbar__btn-icon" aria-hidden="true">🏠</span>
+        <span className="navbar__btn-text">בית</span>
       </button>
       {onCategories && (
         <button
@@ -28,7 +29,8 @@ export function NavBar({
           onClick={onCategories}
           aria-label="קטגוריות"
         >
-          קטגוריות
+          <span className="navbar__btn-icon" aria-hidden="true">☰</span>
+          <span className="navbar__btn-text">קטגוריות</span>
         </button>
       )}
       <button
@@ -39,7 +41,8 @@ export function NavBar({
         aria-label="חזור"
         aria-disabled={!canGoBack}
       >
-        חזור
+        <span className="navbar__btn-icon" aria-hidden="true">↩</span>
+        <span className="navbar__btn-text">חזור</span>
       </button>
     </nav>
   );

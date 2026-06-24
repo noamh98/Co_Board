@@ -27,14 +27,12 @@ import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
-import { PrivacyToggle } from './presentation/settings/PrivacyToggle';
-import { MediaPrivacyPanel } from './presentation/settings/MediaPrivacyPanel';
 import { LoginPanel } from './presentation/auth/LoginPanel';
 import { UsageDashboard } from './presentation/analytics/UsageDashboard';
 import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
-import { getSyncPhotos, setSyncPhotos } from './data/settingsRepo';
+import { getSyncPhotos, setSyncPhotos, getDarkMode, setDarkMode as persistDarkMode } from './data/settingsRepo';
 import { createMediaRepo } from './data/mediaRepo';
 import { deleteMediaFromStorage } from './services/sync/mediaSync';
 import { FirebaseStorageProvider } from './services/sync/storageProvider';
@@ -116,6 +114,7 @@ export function App() {
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
   const [syncPhotos, setSyncPhotosState] = useState(false);
+  const [darkMode, setDarkModeState] = useState(false);
 
   const ttsRef = useRef<TtsLike | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -149,6 +148,7 @@ export function App() {
       const rate = await settingsRepo.getTtsRate();
       const pitch = await settingsRepo.getTtsPitch();
       const photosEnabled = await getSyncPhotos();
+      const dark = await getDarkMode();
       const loaded = await loadActiveContext();
       if (alive) {
         setAccessSettings(access);
@@ -156,6 +156,7 @@ export function App() {
         setTtsRate(rate);
         setTtsPitch(pitch);
         setSyncPhotosState(photosEnabled);
+        setDarkModeState(dark);
         setCtx(loaded);
         setNavStack(createNavStack(loaded.activeProfile.homeBoardId));
       }
@@ -263,6 +264,20 @@ export function App() {
     setSyncPhotosState(enabled);
     void setSyncPhotos(enabled);
   };
+
+  const onDarkModeChange = (enabled: boolean): void => {
+    setDarkModeState(enabled);
+    void persistDarkMode(enabled);
+  };
+
+  // מחיל/מסיר class dark-mode על <html> כך שכל CSS tokens מתעדכנים
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark-mode');
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+    }
+  }, [darkMode]);
 
   const onDeletePhotosFromCloud = async (): Promise<void> => {
     if (!ctx || !authUser) return;
@@ -559,38 +574,28 @@ export function App() {
           onTtsRateChange={onTtsRateChange}
           ttsPitch={ttsPitch}
           onTtsPitchChange={onTtsPitchChange}
-        />
-      )}
-
-      {settingsOpen && (
-        <PrivacyToggle
+          darkMode={darkMode}
+          onDarkModeChange={onDarkModeChange}
           syncEnabled={syncEnabled}
-          onChange={(enabled) => {
-            setSyncEnabled(enabled);
-          }}
-        />
-      )}
-
-      {settingsOpen && (
-        <MediaPrivacyPanel
+          onSyncEnabledChange={setSyncEnabled}
           syncPhotos={syncPhotos}
           onSyncPhotosChange={onSyncPhotosChange}
           isAuthenticated={!!authUser}
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
-        />
-      )}
-
-      {/* LoginPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
-      {settingsOpen && syncEnabled && !authUser && (
-        <LoginPanel
-          onSignIn={async (email, password) => {
-            const provider = new FirebaseProvider();
-            await authService.signIn(provider, email, password);
-          }}
-          onSignUp={async (email, password) => {
-            const provider = new FirebaseProvider();
-            await authService.signUp(provider, email, password);
-          }}
+          loginPanel={
+            syncEnabled && !authUser ? (
+              <LoginPanel
+                onSignIn={async (email, password) => {
+                  const provider = new FirebaseProvider();
+                  await authService.signIn(provider, email, password);
+                }}
+                onSignUp={async (email, password) => {
+                  const provider = new FirebaseProvider();
+                  await authService.signUp(provider, email, password);
+                }}
+              />
+            ) : undefined
+          }
         />
       )}
 
