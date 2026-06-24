@@ -124,7 +124,19 @@
 ---
 
 ## Definition of Done (לכל חלק)
-קוד עובד ✓ · בדיקות (unit+integration) ✓ · RTL+offline+נגישות ✓ · יעדי ביצועים ✓ · אינווריאנטים נשמרו ✓ · HANDOFF/docs/changelog עודכנו באותו commit ✓ · מעבר reviewer (Opus) ✓.
+קוד עובד ✓ · בדיקות (unit+integration) ✓ · RTL+offline+נגישות ✓ · יעדי ביצועים ✓ · אינווריאנטים נשמרו ✓ · HANDOFF/docs/changelog עודכנו באותו commit ✓ · מעבר reviewer (Opus) ✓ · **דחיפה ל-main + דיפלוי לפיירבייס ✓** (ראה למטה).
+
+## דחיפה ודיפלוי בסיום כל שלב (חובה)
+**בסיום כל שלב** (כל תת-חלק שמסומן Done — 1A, 1B, 2A, …) יש:
+1. לוודא ירוק מקומית: `npm run lint && npm test && npm run build` (ב-`app/`).
+2. לעדכן `HANDOFF.md` (אינווריאנט+changelog) + docs רלוונטי **באותו commit**.
+3. **לדחוף ל-`main`** (`git push origin main`; retry עם backoff על כשל רשת).
+4. **דיפלוי לפיירבייס:** הדחיפה ל-`main` מפעילה אוטומטית את `.github/workflows/deploy.yml`
+   (`npm ci → lint → test → build → firebase deploy --only hosting`). שער חוסם: כל כשל עוצר לפני deploy.
+   - ודא ש-CI עבר ירוק וש-deploy הושלם (בדוק run ב-GitHub Actions).
+   - אם נדרש סנכרון תוכן/Storage/Firestore — פרוס גם rules רלוונטיים (`firebase deploy --only firestore:rules,storage`).
+   - Secrets נדרשים (כבר מוגדרים): `FIREBASE_SERVICE_ACCOUNT` + 6 × `VITE_FIREBASE_*`.
+5. אם CI נכשל — תקן ודחוף מחדש לפני מעבר לשלב הבא (אל תשאיר main שבור).
 
 ## מקורות (מחקר Fitzgerald Key)
 - [Fitzgerald Key for AAC — Communication Community](https://www.communicationcommunity.com/fitzgerald-key-for-aac/)
