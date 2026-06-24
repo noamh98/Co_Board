@@ -28,11 +28,16 @@ import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
 import { PrivacyToggle } from './presentation/settings/PrivacyToggle';
+import { MediaPrivacyPanel } from './presentation/settings/MediaPrivacyPanel';
 import { LoginPanel } from './presentation/auth/LoginPanel';
 import { UsageDashboard } from './presentation/analytics/UsageDashboard';
 import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
+import { getSyncPhotos, setSyncPhotos } from './data/settingsRepo';
+import { createMediaRepo } from './data/mediaRepo';
+import { deleteMediaFromStorage } from './services/sync/mediaSync';
+import { FirebaseStorageProvider } from './services/sync/storageProvider';
 import { QuickStartWizard } from './presentation/wizard/QuickStartWizard';
 import { PhraseBankPanel } from './presentation/phraseBank/PhraseBankPanel';
 import { WordFinderPanel } from './presentation/wordFinder/WordFinderPanel';
@@ -110,6 +115,7 @@ export function App() {
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
+  const [syncPhotos, setSyncPhotosState] = useState(false);
 
   const ttsRef = useRef<TtsLike | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -142,12 +148,14 @@ export function App() {
       const voiceURI = await settingsRepo.getSelectedVoiceURI();
       const rate = await settingsRepo.getTtsRate();
       const pitch = await settingsRepo.getTtsPitch();
+      const photosEnabled = await getSyncPhotos();
       const loaded = await loadActiveContext();
       if (alive) {
         setAccessSettings(access);
         setSelectedVoiceURI(voiceURI);
         setTtsRate(rate);
         setTtsPitch(pitch);
+        setSyncPhotosState(photosEnabled);
         setCtx(loaded);
         setNavStack(createNavStack(loaded.activeProfile.homeBoardId));
       }
@@ -249,6 +257,23 @@ export function App() {
   const onTtsPitchChange = (n: number): void => {
     setTtsPitch(n);
     void createSettingsRepo().setTtsPitch(n);
+  };
+
+  const onSyncPhotosChange = (enabled: boolean): void => {
+    setSyncPhotosState(enabled);
+    void setSyncPhotos(enabled);
+  };
+
+  const onDeletePhotosFromCloud = async (): Promise<void> => {
+    if (!ctx || !authUser) return;
+    const repo = createMediaRepo();
+    const entries = await repo.listByProfile(ctx.activeProfile.id);
+    const storageProvider = new FirebaseStorageProvider();
+    await Promise.allSettled(
+      entries
+        .filter((e) => e.downloadUrl)
+        .map((e) => deleteMediaFromStorage(e.profileId, e.id, storageProvider)),
+    );
   };
 
   const speakOpts = (): SpeakOptions => ({
@@ -490,6 +515,12 @@ export function App() {
       {builderMode && ctx && currentBoard ? (
         <BuilderView
           board={currentBoard}
+          mediaSyncConfig={ctx ? {
+            profileId: ctx.activeProfile.id,
+            syncPhotos,
+            authUserId: authUser?.uid,
+            useFirebase: syncEnabled && !!authUser,
+          } : undefined}
           onBoardChange={(b) => {
             setCtx((prev) =>
               prev
@@ -537,6 +568,15 @@ export function App() {
           onChange={(enabled) => {
             setSyncEnabled(enabled);
           }}
+        />
+      )}
+
+      {settingsOpen && (
+        <MediaPrivacyPanel
+          syncPhotos={syncPhotos}
+          onSyncPhotosChange={onSyncPhotosChange}
+          isAuthenticated={!!authUser}
+          onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
         />
       )}
 

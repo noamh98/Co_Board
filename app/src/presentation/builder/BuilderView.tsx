@@ -8,7 +8,7 @@ import type { GridSize } from '../../domain/models';
 import { createBoardRepo } from '../../data/boardRepo';
 import type { NikudService } from '../../services/nikud/nikudService';
 import { BoardView } from '../components/BoardView';
-import { CellEditor } from './CellEditor';
+import { CellEditor, type MediaSyncConfig } from './CellEditor';
 import { GridSizePicker } from './GridSizePicker';
 
 export interface BuilderViewProps {
@@ -16,9 +16,10 @@ export interface BuilderViewProps {
   onBoardChange: (b: Board) => void;
   onExitBuilder: () => void;
   nikudService: NikudService | null;
+  mediaSyncConfig?: MediaSyncConfig;
 }
 
-export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService }: BuilderViewProps) {
+export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService, mediaSyncConfig }: BuilderViewProps) {
   const undoStackRef = useRef(new UndoStack<Board>(board));
   const [currentBoard, setCurrentBoard] = useState<Board>(board);
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
@@ -431,6 +432,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService 
           nikudService={nikudService}
           onSave={handleEditorSave}
           onCancel={() => setEditingCell(null)}
+          mediaSyncConfig={mediaSyncConfig}
         />
       )}
     </div>

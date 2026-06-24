@@ -1,301 +1,89 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
-> מקור-האמת היחיד לפרויקט. קרא אותי בתחילת כל סשן. אל תגזור את המערכת מחדש מהקוד אם מסמך זה מספיק.
-> **שלב נוכחי:** M20.5+M22 בוצעו — סמלי ניווט (אוכל/רגשות/משחק) + TTS היברידי (Google Neural2 + cache IndexedDB). 244 tests, precache 163. הבא בתור: UI להגדרת מפתח API (Google TTS), אימות ויזואלי סמלים.
+> מקור-האמת הראשון לכל סשן. קרא אותי תחילה; אל תגזור את המערכת מחדש מהקוד אם המסמך מספיק.
+> **שלב נוכחי:** חלק 3 — תמונות אישיות + פרטיות (FR-005/006) הושלמו. DB_VERSION=10, store `media`. 308+ tests.
+> **הבא בתור:** Firebase deploy (storage.rules) · UI להגדרת מפתח Google TTS. היסטוריה מלאה: `docs/CHANGELOG.md`.
 
-## 1. Purpose
-אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), עבור קלינאי תקשורת והורים. המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) ולא רק מחולל לוחות. מסחרי, אנדרואיד+Web תחילה ואז iPad.
+## Purpose
+אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), לקלינאי תקשורת והורים.
+המוצר הוא **מערכת לפיתוח שפה** (אוצר ליבה, עקביות מוטורית, מודלינג, הדרגתיות) — לא רק מחולל לוחות. מסחרי; Android+Web תחילה, iPad בהמשך.
 
-## 2. Stack (הוכרע ב-M0)
-- **Client:** **PWA — React 18 + TypeScript + Vite** (offline-first עם vite-plugin-pwa/Workbox). עטיפה ל-Android בהמשך (Capacitor/TWA); iOS בפאזה 2. (החלופה Flutter נדחתה ל-MVP כדי לקבל מוצר רץ ובדיק מיידית בדפדפן — ראה `docs/adr-0001-stack.md`.)
-- **State/Logic:** שכבת domain מופרדת (TS טהור, ניתן-לבדיקה ללא UI).
-- **Data:** Offline-first — IndexedDB (ספריית `idb`) כמקור אמת מקומי; Sync Engine לענן (M5).
-- **TTS:** היברידי — Web Speech API (קולות he-IL של ה-OS, אופליין) כבסיס; קולות פרימיום מקוונים (Almagu) בהמשך.
-- **Nikud:** Nakdan (Dicta) + cache ב-IndexedDB + override ידני. בסיס חינמי כעת; ספק/רישוי סופי — TODO.
-- **Symbols:** ARASAAC (בסיס חינמי) → SymbolStix/PCS/Widgit (רישוי) — M3.
-- **Test/CI:** Vitest + Testing Library; ESLint (flat); GitHub Actions (lint+test+build כשער חוסם).
+## Architecture overview
+PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), RTL מלא. 4 שכבות (פירוט: `ARCHITECTURE.md`):
+- **Presentation** `app/src/presentation/` + `App.tsx` — UI, מצבי ילד/מבוגר, builder.
+- **Domain** `app/src/domain/` — models · fitzgerald · layout (Motor Planning) · access (RBAC) · navigationStack · boardLibrary · boardEditor · adaptivity · sync.
+- **Services** `app/src/services/` — tts/ (היברידי) · nikud/ (Nakdan+cache) · image/ · symbols/ · sync/ (crypto+storageProvider+mediaSync) · analytics/ · obf/ · wordFinder/.
+- **Data** `app/src/data/` — db (IndexedDB, idb, DB_VERSION=10) · *Repo (כולל mediaRepo) · bootstrap (seed/פרופילים).
 
-## 3. Architecture (layers) — מיפוי לקוד (עודכן M3)
-```
-Presentation (UI, RTL-first)      → app/src/presentation/ + App.tsx + index.css
-        │  React + TypeScript (PWA)   (BoardView · CellButton · SentenceBar · AdultBar · PinGate · NavBar)
-        │                             builder/ (BuilderView · CellEditor) — M3
-Domain / Logic                    → app/src/domain/   (models · fitzgerald · layout/Motor-Planning · access/RBAC
-        │                                              navigationStack · boardLibrary · boardEditor/UndoStack
-        │                                              adaptivity · accessSettings) — M4
-Services (TTS · Nikud · ...)      → app/src/services/ (tts/ · nikud/ · image/ · access/dwellService) — M4
-        │
-Data (Offline-first local DB)     → app/src/data/  (db · boardRepo · profileRepo · settingsRepo · symbolRepo · bootstrap)
-```
-**שכבת Data (M1+M2+M3+M5+M17):** `db.ts` — IndexedDB (idb), DB_VERSION=8, stores: nikud/boards/profiles/settings/symbols/outbox/versions/usage/symbolCache/phrases.
-`boardRepo`/`profileRepo` — load/save/list, **מחיקה=ארכוב**. `settingsRepo` — פרופיל פעיל + PIN.
-`symbolRepo` (M3) — save/get/list/remove סמלים ותקליטות קוליות.
-`bootstrap.ts` — `ensureSeeded` (seed ספריית לוחות M2 + פרופיל דמו), `createProfile` (קלון לוח עצמאי),
-`loadActiveContext` (מחזיר גם `allBoards` מלא), `switchActiveProfile`. **ניווט:** `domain/navigationStack.ts` —
-מחסנית TS טהורה (push/pop/home; מניעת לולאה; בית תמיד בתחתית). **ספריית לוחות M2:** `domain/boardLibrary.ts` —
-HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4. **בקרת גישה:** `domain/access.ts`.
-**Builder M3:** `domain/boardEditor.ts` — addCell/removeCell/moveCell/resizeBoard (immutable) + UndoStack<T> (max 50).
-`services/image/imageService.ts` — cropImage/removeBackground(fallback)/compressToWebP (Canvas API, offline).
-`presentation/builder/BuilderView.tsx` — עריכת גריד, drag-drop RTL, multi-select, undo/redo, preview.
-`presentation/builder/CellEditor.tsx` — modal לעריכת תא (label/nikud/fitzgerald/action/image/voice + HiddenToggle M4).
-**Adaptivity M4:** `domain/adaptivity.ts` — `toggleCellVisibility`/`hiddenFilter`/`applyCellSize`.
-`domain/accessSettings.ts` — `AccessSettings` + `DEFAULT_ACCESS_SETTINGS`. `services/access/dwellService.ts` —
-hooks `useDwellActivation`/`useActivateOnRelease`/`useDoubleTapPrevention`. `settingsRepo` —
-`getAccessSettings`/`saveAccessSettings` (JSON ב-key `accessSettings`, ללא שינוי DB_VERSION).
-`presentation/builder/GridSizePicker.tsx`+`HiddenToggle.tsx`, `presentation/settings/AccessSettingsPanel.tsx`.
 זרימה: UI → Domain → Services → Data(local) → (sync) Cloud.
 
-## 4. Non-obvious rules / invariants (עודכן M3)
-| כלל | היכן בקוד |
-|------|----------|
-| מילות ליבה (`isCore`) **לא זזות** ממיקומן (Motor Planning); אזהרה+אישור לפני כל הזזה | `app/src/domain/layout.ts` (`detectPositionViolations`/`applyLayout`) + טסטים `layout.test.ts` |
-| Offline-first: תקשורת/ניווט/TTS בסיסי/סמלים **חייבים** לעבוד ללא רשת | `vite.config.ts` (VitePWA) · `services/tts` (קול מקומי) · `services/nikud` (cache) · `data/db.ts` |
-| ניקוד: עדיפות ידני>cache>רשת>גלם; ללא תלות ברשת בשימוש חוזר; ידני לעולם לא נדרס | `app/src/services/nikud/nikudService.ts` + `nikudService.test.ts` |
-| TTS מעדיף קול מקומי (אופליין); נפילה חיננית אם אין קול עברי | `app/src/services/tts/ttsService.ts` (`pickVoice`/`speak`) |
-| speakCell: symbolId+recording → Audio(uri).play(); entry חסר → Web Speech; onError → speak fallback | `app/src/services/tts/ttsService.ts` (`speakCell`) · `App.tsx` (`onCell`) |
-| נתוני ילדים רגישים: מקומי/פרטי כברירת מחדל; אנליטיקה כבויה | פרופילים/לוחות ב-IndexedDB מקומי בלבד (`data/*Repo.ts`); ענן ב-M5 |
-| מחיקת פרופיל/לוח = ארכוב (לא הסרה) — שחזור אפשרי | `data/boardRepo.ts`/`profileRepo.ts` (`archive` → `archived:true`) + `repos.test.ts` |
-| מצב ילד נעול כברירת מחדל; מעבר לעריכה רק בקוד מטפל (PIN/RBAC) | `domain/access.ts` + `App.tsx` (mode=`locked`) + `presentation/PinGate.tsx` |
-| Sync offline-first: syncEngine לא חוסם UI; offline = no-op שקט (לא alert) | `services/sync/syncEngine.ts` (`runSync` returns early, no throw) |
-| ברירת מחדל סנכרון = כבוי; הורה מפעיל מ-PrivacyToggle | `App.tsx` (`syncEnabled=false`) · `presentation/settings/PrivacyToggle.tsx` |
-| merge conflict שומר גרסה מפסידה ב-versions store (לא אובדן נתונים) | `services/sync/syncEngine.ts` (`backupRepo.saveVersion(loser)`) |
-| FirebaseProvider מוגדר ב-.env.local (gitignored); לא מחוייב hardcoded | `app/.env.local` · `services/sync/firebaseProvider.ts` (`import.meta.env.VITE_*`) |
-| Guided Access מלא (FR-019): במצב נעול חוסם ניווט-אחורה (popstate) + beforeunload (PWA לא נועל OS) | `App.tsx` (effect על `mode==='locked'`) |
-| הסתרת תא (FR-014) = `hidden` flag, **לא מחיקה**; מוצג בעריכה (opacity 0.4), מסונן במצב ילד | `domain/adaptivity.ts` (`toggleCellVisibility`/`hiddenFilter`) · `BoardView.tsx` · `BuilderView.tsx` |
-| CellButton מרנדר `imageUri` אם קיים; label **תמיד גלוי** (AAC invariant); `onError` → img נסתר, label נשאר | `presentation/components/CellButton.tsx` |
-| גריד דינמי (FR-015) משתמש ב-`applyCellSize`→`resizeBoard`; ViolationError אם ליבה נופלת — UI חוסם | `domain/adaptivity.ts` · `presentation/builder/GridSizePicker.tsx` |
-| הגדרות גישה (FR-020) נשמרות offline; dwell=0 ⇒ onClick רגיל עובד; ברירת מחדל = הכל כבוי | `domain/accessSettings.ts` · `services/access/dwellService.ts` · `data/settingsRepo.ts` |
-| מיגרציית DB לא הורסת נתונים קיימים (upgrade אדיטיבי) | `data/db.ts` (`upgrade` עם guard) + `migration.test.ts` |
-| הקראה כמעט-מיידית: משוב ויזואלי <100ms; תחילת TTS אופליין <300–500ms | `index.css` (`.cell` transition) · `ttsService` (`latencyMs`) |
-| RTL מלא בכל מסך | `index.html` (`dir=rtl`) · `App` (`dir=rtl`) · `index.css` |
-| שינוי AI/אוטומטי ללוח מכבד עקביות מיקום (אזהרה לפני הזזה) | אותו מנגנון `layout.ts` חל גם על שינוי אוטומטי |
-| Builder: moveCell/removeCell זורקים ViolationError ללא allowCoreMove; BuilderView מציג window.confirm | `domain/boardEditor.ts` + `presentation/builder/BuilderView.tsx` |
-| UndoStack מגביל ל-50 מצבים; push אחרי undo מוחק redo history | `domain/boardEditor.ts` (UndoStack class) |
-| removeBackground — fallback אופליין: מחזיר blob מקורי ללא שגיאה | `services/image/imageService.ts` |
-| symbolRepo.mimeType הקלטות = 'audio/webm' (תוקן ב-M17; מיגרציה אוטומטית ל-entries ישנות) | `data/symbolRepo.ts` · `data/db.ts` (DB_VERSION=8 upgrade) |
+## Invariants (אסור להפר — אכיפה בטסטים)
+| כלל | היכן |
+|------|------|
+| מילות ליבה (`isCore`) **לא זזות** (Motor Planning); אזהרה+אישור לפני כל הזזה | `domain/layout.ts` · `domain/boardEditor.ts` · `layout.test.ts` |
+| Offline-first: תקשורת/ניווט/TTS בסיסי/סמלים **חייבים** לעבוד ללא רשת | `vite.config.ts` (VitePWA) · `services/tts` · `services/nikud` · `data/db.ts` |
+| ניקוד: עדיפות ידני>cache>רשת>גלם; ידני לעולם לא נדרס; ללא תלות ברשת בשימוש חוזר | `services/nikud/nikudService.ts` |
+| TTS: cache→online provider→fallback אופליין; תמיד נופל חיננית לקול מקומי | `services/tts/hybridTtsService.ts` · `ttsService.ts` (`speakCell`) |
+| נתוני ילדים רגישים: מקומי/פרטי כברירת מחדל; אנליטיקה כבויה; סנכרון כבוי | `data/*Repo.ts` · `App.tsx` (`syncEnabled=false`) · `analyticsService.ts` |
+| מחיקת פרופיל/לוח = **ארכוב** (לא הסרה); שחזור אפשרי | `data/boardRepo.ts`/`profileRepo.ts` (`archived:true`) |
+| מצב ילד נעול כברירת מחדל; מעבר לעריכה רק בקוד מטפל (PIN/RBAC) | `domain/access.ts` · `App.tsx` · `PinGate.tsx` |
+| Guided Access (FR-019): מצב נעול חוסם popstate + beforeunload | `App.tsx` (effect על `mode==='locked'`) |
+| הסתרת תא (FR-014) = `hidden` flag, לא מחיקה; מוצג בעריכה, מסונן במצב ילד | `domain/adaptivity.ts` · `BoardView.tsx` |
+| label תמיד גלוי (AAC invariant) גם עם תמונה; `onError`→img נסתר, label נשאר | `presentation/components/CellButton.tsx` |
+| מיגרציית DB תמיד אדיטיבית — לא הורסת נתונים קיימים | `data/db.ts` (`upgrade` עם guard) · `migration.test.ts` |
+| merge conflict שומר גרסה מפסידה ב-`versions` store (לא אובדן נתונים) | `services/sync/syncEngine.ts` |
+| RTL מלא בכל מסך | `index.html` · `App` (`dir=rtl`) · `index.css` |
+| ביצועים: משוב ויזואלי <100ms; תחילת TTS אופליין <300–500ms | `index.css` · `ttsService` (`latencyMs`) |
 
-## 5. Data flow (happy path — שימוש יומיומי)
+## Data flow (happy path — שימוש יומיומי)
 1. פתיחה במצב נעול (Guided Access) → טעינת פרופיל ילד מה-DB המקומי.
-2. רינדור לוח הבית (מילות ליבה במיקום קבוע) — `BoardView` לפי `placements`.
-3. הילד לוחץ תא → הוספה לשורת המשפט + הקראת מילה (TTS אופליין).
-4. ניווט לקטגוריה → בחירת מילה נוספת → עדכון המשפט.
+2. רינדור לוח הבית (מילות ליבה במיקום קבוע) לפי `placements`.
+3. הילד לוחץ תא → הוספה לשורת המשפט + הקראת מילה (TTS, cache/אופליין תחילה).
+4. ניווט לקטגוריה → בחירת מילה → עדכון המשפט.
 5. לחיצה על "דבר" → הקראת המשפט המלא ברצף.
-6. תיעוד שימוש נשמר מקומית (אם מופעל); סנכרון אסינכרוני לענן כשיש רשת.
+6. תיעוד שימוש נשמר מקומית (אם מופעל); סנכרון אסינכרוני לענן כשיש רשת (אם מופעל).
 
-## 6. If you touch X, be careful with Y
-| נגעת ב | סיכון |
-|---------|--------|
-| `domain/layout.ts` / `placements` / גודל גריד | פגיעה בעקביות מיקום מילות ליבה (Motor Planning) — ודא שטסטים עוברים |
-| `services/tts` | רגרסיה באופליין; חביון; בחירת קול לא-עברי |
+## Danger zones — אם נגעת ב-X, בדוק Y
+| נגעת ב | סיכון / בדוק |
+|---------|-------------|
+| `domain/layout.ts` · `placements` · גודל גריד | פגיעה בעקביות מיקום ליבה (Motor Planning) — ודא טסטים עוברים |
+| `domain/models.ts` (`Fitzgerald` type) | כל מפה `Record<Fitzgerald, …>` חייבת להתעדכן (obfService, FITZGERALD, CATEGORY_MAP) — TypeScript יתפוס |
+| `domain/fitzgerald.ts` (`FITZGERALD` map) | הצבעים נעולים-כברירת-מחדל; בדוק ניגודיות WCAG ב-`fitzgerald.test.ts`; אל תוסיף עריכה ידנית ע"י משתמש |
+| `domain/adaptivity.ts` (`GRID_MIN`/`GRID_MAX`) | `GridSizePicker` + `QuickStartWizard` תלויים בקבועים אלה |
+| `data/bootstrap.ts` (`createProfileFromTemplate`) | gridOverride עם ViolationError — חוזר לגריד ברירת-מחדל (silent); תקשר בUI אם צריך |
+| `services/tts` | רגרסיה באופליין; חביון; בחירת קול לא-עברי; חשיפת API key |
 | `services/nikud` | דריסת override ידני; תלות ברשת בשימוש חוזר |
-| שכבת Sync (M5) | התנגשות רב-מכשירית; דריסת נתוני שימוש; אובדן גרסאות |
+| `data/db.ts` (DB_VERSION) | מיגרציה הורסת — חייב upgrade אדיטיבי + `migration.test.ts` |
+| שכבת sync | התנגשות רב-מכשירית; דריסת נתוני שימוש; אובדן גרסאות |
 | הרשאות / מצב נעול | חשיפת עריכה לילד; דליפת פרטיות |
 | ספריות סמלים | רישוי (SymbolStix/PCS/Widgit) — ודא זכאות בחבילה |
 
-## 7. Docs
+## Doc index
 | קובץ | מתי לקרוא |
 |------|-----------|
 | `PRD/PRD-he.md` | מקור-האמת המלא למוצר (12 סעיפים) — קרא תחילה |
 | `PRD/PRD-en.md` | גרסה אנגלית מקבילה |
-| `EXECUTION-PROMPT.md` | פרומפט הבנייה (תהליך, תתי-סוכנים, בדיקות, תיעוד) |
-| `app/README.md` | איך להריץ את ה-PWA (install/dev/test/build) + מבנה |
-| `docs/adr-0001-stack.md` | החלטת ה-stack (PWA React/TS) — נימוק וחלופות |
-| `docs/m0-tts-nikud-spike.md` | ספייק TTS+ניקוד: ארכיטקטורה, אופליין, סיכונים פתוחים |
-| `docs/m1-data-profiles.md` | M1: שכבת Data, מאגרים, פרופילים, מיגרציה, מצב נעול/PIN |
-| `docs/m4-adaptivity-access.md` | M4: הסתרה הדרגתית, גריד דינמי, Guided Access, הגדרות גישה מוטוריות |
-| `docs/verification.md` | סטטוס אימות: למה לא ניתן להריץ npm בסנדבוקס; אימות דרך CI |
+| `ARCHITECTURE.md` | דיאגרמת מודולים, טבלת אחריות, גבולות תקשורת |
+| `EXECUTION-PROMPT.md` | פרומפט הבנייה (תהליך, תתי-סוכנים, בדיקות) |
+| `app/README.md` | איך להריץ את ה-PWA (install/dev/test/build) |
+| `docs/CHANGELOG.md` | היסטוריית כל המיילסטונים (M0–M22) |
+| `docs/adr-0001-stack.md` · `adr-0002-sync.md` | החלטות ארכיטקטורה |
+| `docs/m*.md` | פירוט per-milestone (M0–M13, M20) |
+| `docs/verification.md` | למה npm לא רץ בסנדבוקס; אימות דרך CI |
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
-## 8. Changelog (עדכון M20.5+M22 — 2026-06-21, סמלי ניווט + TTS היברידי)
+## Session changelog (אחרונים — מלא ב-`docs/CHANGELOG.md`)
+- **2026-06-24 (חלק 3 — תמונות אישיות + פרטיות)** — `data/mediaRepo.ts` (IndexedDB store 'media', DB_VERSION 9→10); `services/sync/storageProvider.ts` (StorageProvider interface + LocalStub + Firebase); `services/sync/mediaSync.ts` (uploadMedia/downloadMedia/deleteMediaFromStorage); `services/sync/crypto.ts` (deriveMediaKey/encryptBlob/decryptBlob PBKDF2+AES-GCM); `firebase/storage.rules`; `MediaPrivacyPanel.tsx`; `settingsRepo.ts` (syncPhotos); `CellEditor.tsx` + `BuilderView.tsx` (mediaSyncConfig). 308+ tests.
+- **2026-06-24 (חלק 1 — גדלים + Fitzgerald)** — 1A: GridSizePicker (פריסטים 2×2–8×8, טווח 2–12, guard מטרה מינ' 44/57px); `QuickStartWizard` עם בחירת גודל גריד; `adaptivity.ts` (GRID_MIN/MAX, estimateCellPx, cellSizeStatus). 1B: Fitzgerald type ← 3 קטגוריות חדשות (conjunction/adverb/determiner); `FITZGERALD` map + `categoryForLabel`; legend ב-AccessSettingsPanel; הצעה אוטומטית ב-CellEditor. 291 tests.
+- **2026-06-21 (M22)** — TTS היברידי (ADR-0003): Google Neural2 he-IL + cache IndexedDB (DB_VERSION 9, store `audioCache`); `hybridTtsService` עם fallback אופליין תמידי. 244 tests.
+- **2026-06-21 (M20–M21)** — סמל ARASAAC לכל מילה (~136, מקומי/offline) + סמלי ניווט; ניקוד מאומת. precache 148→163.
+- **2026-06-21 (M16–M19)** — TTS rate/pitch · mimeType fix (DB v8) · OBF import/export · Word Finder. CI/CD ל-Firebase Hosting.
+- **2026-06-21 (M9–M13)** — Quick-Start Wizard · Phrase Bank · cell images · voice playback · Modeling mode.
+- **2026-06-20 (M4–M8)** — Adaptivity/Access · Sync & Cloud · Firebase Auth · Analytics · ARASAAC search.
 
-- **2026-06-21 (M20.5 — סמלי ניווט, FR-002)** — תאי ניווט (HOME→FOOD/EMOTIONS/PLAY) מקבלים כעת סמל ARASAAC.
-  `navCell()` ב-`boardLibrary.ts` עודכן לצרף `symbolId:'arasaac:{id}'` + `imageUri` דרך `symbolIdFor()`, בדיוק כמו `word()`.
-  `SYMBOL_OVERRIDES` ב-`symbolMap.ts`: `'אוכל'→4610`, `'רגשות'→12359` (PNG ב-public/symbols/); `'משחק'→9813` כבר היה ב-generated.
-
-- **2026-06-21 (M22 — TTS היברידי, ADR-0003)** — Google Cloud TTS Neural2 he-IL + cache IndexedDB.
-  **DB:** `db.ts` DB_VERSION 8→9 — store `audioCache` (keyPath: 'cacheKey') אדיטיבי. `data/audioCache.ts` — `buildCacheKey(text,voiceId,rate,pitch)→SHA-256`, `getAudioFromCache/saveAudioToCache/pruneAudioCache(maxEntries=500)`.
-  **Provider interface:** `services/tts/ttsProvider.ts` — `TTSProvider` interface + `NullTTSProvider` stub.
-  **Google provider:** `services/tts/googleTtsProvider.ts` — `GoogleTtsProvider(apiKey)`, 4 קולות he-IL (Neural2-A/C + Wavenet-A/B); API key מועבר ב-header `x-goog-api-key` (לא URL — מניעת חשיפה ב-DevTools).
-  **HybridTtsService:** `services/tts/hybridTtsService.ts` — `class HybridTtsService implements TtsLike`; זרימה: 1)cache hit→playBlob 2)online+provider→synthesize+cache+playBlob 3)fallback→HebrewTts.speak(); triple try-catch מבטיח offline fallback תמיד; cancel() מנקה currentAudio + currentObjectUrl + קורא fallback.cancel().
-  **TtsLike interface:** `services/tts/ttsService.ts` — נוסף `TtsLike {speak, cancel}` interface; `speakCell` מקבל `TtsLike | null` (לא `HebrewTts | null` — תאימות לאחור); `createHybridTts()` factory.
-  **settingsRepo:** `getTtsApiKey/setTtsApiKey/getTtsProvider/setTtsProvider` (ללא DB_VERSION bump).
-  **App.tsx:** `ttsRef: useRef<TtsLike | null>`; init effect טוען apiKey ויוצר HybridTtsService (lazy, לא חוסם); tts כבוי (null) אם אין HebrewTts (אופליין ≥ קודם).
-  **בדיקות:** `hybridTtsService.test.ts` — 8 tests (empty/cache-hit/provider-ok/offline/provider-throws/voice-pref/cancel). **244 tests סה"כ** (+8). precache 163 entries.
-
-## 8. Changelog (עדכון M20–M21 — 2026-06-21, סמלים + ניקוד)
-
-- **2026-06-21 (M20 — סמל לכל מילה, FR-002/§4.2)** — כל ~136 המילים הייחודיות בספרייה קיבלו פיקטוגרמת ARASAAC מקומית.
-  **Build script:** `app/scripts/build-symbol-map.mjs` — מפענח `boardLibrary.ts`, שולף id מ-ARASAAC לכל מילה, מוריד `{id}_500.png` ל-`public/symbols/`, מחולל `domain/symbolMap.generated.ts`. idempotent.
-  **Map:** `domain/symbolMap.ts` — `GENERATED_SYMBOL_MAP` + `SYMBOL_OVERRIDES` (תיקוני אימות ידני: רוצה→5441, רועש→24833, כואב/ספרייה/איך/במבה/ביסלי). `symbolIdFor(label)` + `localSymbolPath(id)` (`BASE_URL+symbols/{id}.png`).
-  **חיבור:** `boardLibrary.word()` מצרף `symbolId:'arasaac:{id}'`+`imageUri` אוטומטית לפי label; חסר→label בלבד (fallback CellButton). **iPad** = החריג היחיד ללא סמל.
-  **Offline-first:** 141 PNG נארזים ב-`public/symbols/`; Workbox precache (`globPatterns` כולל png) — 148 entries (3.6MB). **לא נדרש DB bump** (סמלי-ספרייה בקוד seed).
-  **בדיקות:** +2 ב-`boardLibrary.test.ts` (כל speak-cell בעל סמל פרט ל-iPad; imageUri מקומי לא URL מרוחק).
-
-- **2026-06-21 (M21 — ניקוד מאומת, FR-009/§4.3)** — אימות שיטתי לניקוד הקיים (כבר היה ידני בכל תא).
-  ספוט-צ'ק נספח C: הומוגרף `סֵפֶר` (לא סָפַר) תקין; auto-nikud בבילדר ללא שינוי. **בדיקות:** +2 ב-`boardLibrary.test.ts` (כל speak-cell לא-לועזי בעל ניקוד עם סימן אחד לפחות; `ספר`==`סֵפֶר`).
-  **CI:** lint 0 errors, **236 tests** (+4), build ירוק, precache 148. `docs/m20-symbols-nikud.md`.
-
-## 8. Changelog (עדכון Phase 2 — 2026-06-21, M16–M19)
-
-- **2026-06-21 (P1 — CI/CD)** — `.github/workflows/deploy.yml`: push→main מריץ npm ci + lint + test + build + `firebase deploy --only hosting`. שער חוסם: כל כשל עוצר לפני deploy. Secrets נדרשים: `FIREBASE_SERVICE_ACCOUNT` + 6 × `VITE_FIREBASE_*`.
-
-- **2026-06-21 (M16 — TTS Rate & Pitch, FR-010 Phase 2)** — `settingsRepo`: נוספו `getTtsRate`/`setTtsRate`/`getTtsPitch`/`setTtsPitch` (ברירת מחדל 1.0, key/value ב-IndexedDB ללא DB_VERSION bump). `AccessSettingsPanel`: שני sliders (rate/pitch: 0.5–2.0 step 0.1). `App.tsx`: `speakOpts()` helper מחיל rate+pitch+voiceURI על כל קריאת `speakCell`/`speak`. **+6 בדיקות (220 סה"כ).**
-
-- **2026-06-21 (M17 — mimeType fix, P3)** — `SymbolEntry.mimeType` union הורחב ל-`'audio/webm' | 'image/webp' | 'image/png' | 'image/jpeg'`. `DB_VERSION` 7→8: upgrade hook מתקן ב-IndexedDB כל entry עם `source='recording' && mimeType='image/webp'` → `'audio/webm'`; entries אחרות לא נגעות. **+2 בד��קות מיגרציה (222 סה"כ). MVP יציב.**
-
-- **2026-06-21 (M18 — OBF Import/Export, FR-035 Phase 2)** — `services/obf/obfService.ts`: `exportToOBF(board)→OBFBoard` + `importFromOBF(obf)→Board`. מיפוי: cells↔buttons, placements↔grid.order, fitzgerald→background_color, navigate↔load_board. שדות Co_Board-specific ב-`ext_co_board` (isCore/fitzgerald/nikud/symbolId/imageUri) לround-trip ללא אובדן. `BackupPanel`: כפתורי "ייצוא OBF" + "ייבוא OBF"; App.tsx מעביר `currentBoard` + `onBoardImported`. **+6 בדיקות (228 סה"כ).**
-
-- **2026-06-21 (M19 — Word Finder, FR-029 Phase 2)** — `services/wordFinder/wordFinderService.ts`: `findPath(label, boards, homeId)→CellPath|null`. BFS מ-homeId; מעקב visited למניעת לולאות; מדלג על hidden cells. `CellPath = {boardId, boardName, cellId, label}[]`. `presentation/wordFinder/WordFinderPanel.tsx`: input + חיפוש + תצוגת נתיב breadcrumb. `AdultBar`: כפתור "מצא מילה" (`onOpenWordFinder` prop). **+4 בדיקות (232 סה"כ).**
-
-  **סיכום Phase 2:** lint 0 errors, **232 tests**, build ירוק. DB_VERSION=8.
-
-## 8. Changelog (עדכון M13 — 2026-06-21)
-- **2026-06-21 (M13 — Guided Modeling Mode)** — מצב הדגמה שקט למטפלים.
-  **Domain:** `domain/modelingSession.ts` — `ModelingSession` (activeHighlights: Set<string>); `createModelingSession`, `toggleHighlight` (immutable toggle), `clearHighlights` (immutable reset). 4 בדיקות.
-  **Presentation:** `BoardView.tsx` — prop `modelingHighlights?: Set<string>`; wrapper div מקבל `cell--modeling-highlight` לתאים ב-set. `AdultBar.tsx` — props `modelingActive?`/`onToggleModeling?`; כפתור "מודלינג" עם `aria-pressed`. `index.css` — `.adult-btn`, `.adult-btn--active` (סגול #7c3aed), `.cell--modeling-highlight` (outline+glow).
-  **App.tsx:** state `modelingActive`+`modelingSession`; `onToggleModeling` מפעיל/מכבה session; `onCell` — יציאה מוקדמת כש-`modelingActive && mode==='adult'` (highlight בלבד, ללא speak/שורת משפט); ילד (mode=locked) — onCell רגיל ללא רגרסיה.
-  **Invariants (נאמתו):** immutability; locked mode unaffected; highlights נעלמים כשמודלינג כבוי; 1 בדיקת BoardView.
-  **CI:** lint 0 errors, 202 tests (+5), build ירוק. `docs/m13-modeling.md`.
-  **הבא (M14):** ממתין לאישור.
-
-## 8. Changelog (עדכון M12 — 2026-06-21)
-- **2026-06-21 (M12 — Voice Recording Playback)** — השמעת הקלטות קוליות בלחיצת תא.
-  **ttsService.ts:** נוספה `speakCell(cell, symbolRepo, tts)` — אם `cell.symbolId` + `entry.source==='recording'` → `new Audio(entry.uri).play()`; אחרת → `tts.speak(vocalization??nikud??label)`. `Audio.play` נכשל → fallback ל-speak ללא קריסה. `speak` קיים — ללא שינוי (תאימות לאחור).
-  **App.tsx:** `onCell` מחליף `speak(vocalize(cell))` ב-`void speakCell(cell, symbolRepoRef.current, ttsRef.current)`. נוסף `symbolRepoRef = useRef(createSymbolRepo())`.
-  **Invariants (נאמתו):** blob קיים→Audio; חסר→Web Speech; onError→speak fallback; speak קיים ללא רגרסיה.
-  **CI:** lint 0 errors, 197 tests (+3), build ירוק. `docs/m12-voice-playback.md`.
-  **הבא (M13):** ממתין לאישור.
-
-## 8. Changelog (עדכון M11 — 2026-06-21)
-- **2026-06-21 (M11 — Cell Image Rendering)** — תצוגת סמלים בתאים.
-  **CellButton:** `presentation/components/CellButton.tsx` — אם `cell.imageUri` קיים: מרנדר `<img className="cell__image" loading="lazy" aria-hidden="true">` מעל ה-label; `onError` → `setImgError(true)` → img נסתר, label נשאר (graceful fallback). label תמיד גלוי (AAC invariant).
-  **CSS:** `index.css` — `.cell` קיבל `flex-direction: column`; נוספו `.cell__image` (width:100%, max-height:60%, object-fit:contain) ו-`.cell__label` (font-size:0.85rem, text-align:center).
-  **BuilderView:** כבר כלל img rendering לפני M11 (שורות 379–385). לא שונה.
-  **טסטים:** `CellButton.test.tsx` (חדש, 3 בדיקות): ללא imageUri→אין img; עם imageUri→img עם src נכון; onError→img נסתר. `BuilderView.test.tsx` (חדש, 1 בדיקה): תא עם imageUri מציג img בעורך.
-  **Invariants (נאמתו):** label גלוי תמיד; onError=graceful fallback; RTL=img ממורכז (flex column + align-items:center); loading="lazy".
-  **CI:** lint 0 errors, 194 tests (+4), build ירוק. `docs/m11-cell-images.md`.
-  **הבא (M12):** ממתין לאישור.
-
-## 8. Changelog (עדכון M10 — 2026-06-21)
-- **2026-06-21 (M10 — Phrase Bank / בנק משפטים)** — שמירה וטעינה של משפטים מוכנים.
-  **Domain:** `domain/phraseBank.ts` — `PhraseEntry` interface (id/label/cells/profileId/createdAt); `createPhrase(profileId, cells)` — label = join תאים ברווח, id ייחודי. 2 בדיקות.
-  **Data:** `data/db.ts` DB_VERSION=7 — נוסף store `phrases` (keyPath: id, index: by-profile); אדיטיבי, לא שובר v6.
-  `data/phraseRepo.ts` — `savePhrase`/`listPhrases(profileId)`/`deletePhrase(id)` (IndexedDB). 3 בדיקות.
-  **Presentation:** `presentation/phraseBank/PhraseBankPanel.tsx` — modal RTL, רשימת ביטויים, כפתור "טען" → onLoad(cells), כפתור "×" → onDelete(id), ריק → "אין ביטויים שמורים עדיין". 3 בדיקות.
-  **SentenceBar:** נוסף `onSave?: () => void`; כפתור "שמור" מוצג רק כש-`sentence.length > 0 && onSave` קיים; RTL.
-  **AdultBar:** נוסף `onOpenPhraseBank?: () => void`; כפתור "ביטויים שמורים".
-  **App.tsx:** `phraseBankOpen`/`phrases`/`saveToast` states; `onSaveSentence` — createPhrase+savePhrase+toast "נשמר!" 1.5s; `onOpenPhraseBank` — listPhrases+פתיחת panel; `onLoadPhrase` — setSentence+סגירת panel; `onDeletePhrase` — deletePhrase+עדכון state. `onSave={adult ? onSaveSentence : undefined}` (ילד לא רואה כפתור שמור).
-  **Invariants (נאמתו):** DB=v7 אדיטיבי; listPhrases מסונן לפי profileId; כפתור שמור נסתר בשורה ריקה; "טען" מחליף (לא מוסיף) שורת משפט; ילד לא רואה PhraseBankPanel; RTL=dir="rtl".
-  **CI:** lint 0 errors, 190 tests (+8), build ירוק.
-  **הבא (M11):** ממתין לאישור.
-
-## 8. Changelog (עדכון M9 — 2026-06-21)
-- **2026-06-21 (M9 — Board Templates & Quick-Start Wizard)** — אשף יצירת פרופיל עם תבנית לוח ראשונית.
-  **Domain:** `domain/boardTemplates.ts` — `BoardTemplate` interface; 4 תבניות: `core4x4` (HOME_BOARD, Fitzgerald מלא), `pecs6x3` (3×6, 18 תאים, isCore מסומן), `feelings3x3` (3×3, 9 רגשות), `blank4x4` (ריק, 0 תאים); `listTemplates()` / `getTemplate(id)`. 3 בדיקות.
-  **Data:** `data/bootstrap.ts` — נוסף `createProfileFromTemplate(name, templateId): Promise<string>`; תבנית לא ידועה → נפילה ל-`blank4x4` (לא קורס); לוח = קלון (`cloneBoard`) → id חדש, לא נוגע בתבנית המקור. 4 בדיקות (`data/bootstrap.test.ts`).
-  **Wizard UI:** `presentation/wizard/QuickStartWizard.tsx` — 3 שלבים: (1) שם פרופיל + validation, (2) 4 כרטיסיות תבנית (aria-pressed), (3) אישור + "צור פרופיל"; RTL מלא, progress indicator, כפתור X לסגירה. 4 בדיקות (`QuickStartWizard.test.tsx`).
-  **AdultBar:** נוסף `onOpenWizard?: () => void`; כשמסופק — "פרופיל חדש" פותח wizard (לא טופס inline).
-  **App.tsx:** `wizardOpen` state; `onWizardComplete(profileId)` → `switchActiveProfile` → `setCtx`; `QuickStartWizard` modal.
-  **CSS:** `.wizard*` — overlay, כרטיסיות תבנית, progress steps, RTL.
-  **Invariants (נאמתו):** תבנית לא ידועה=blank fallback; clone=id חדש; locked=true; RTL=dir="rtl" על overlay; App.test.tsx עודכן לזרימת wizard.
-  **CI:** lint 0 errors, 182 tests (+11), build ירוק. `docs/m9-templates.md`.
-  **הבא (M10):** ממתין לאישור.
-
-## 8. Changelog (עדכון M8 — 2026-06-21)
-- **2026-06-21 (M8 — ARASAAC Symbol Search & Offline Cache)** — חיפוש סמלים עברי + cache offline.
-  **ARASAAC Client:** `services/symbols/arasaacClient.ts` — `searchSymbols(query, lang='he')` → GET `/pictograms/he/search/{q}`, מקסימום 20 תוצאות; `getImageUrl(id)` → `static.arasaac.org`. ללא API key, ללא Authorization.
-  **Symbol Cache:** `data/symbolCache.ts` — `getFromCache`/`saveToCache`/`pruneCache` על IndexedDB STORE_SYMBOL_CACHE. `pruneCache(maxAgeDays)` עם early-exit כשאין מה למחוק (לא יוצר transaction מיותר).
-  **DB:** `data/db.ts` DB_VERSION=6 — נוסף `STORE_SYMBOL_CACHE` (`symbolCache`, keyPath: `arasaacId`); אדיטיבי, לא שובר v5.
-  **Symbol Search Service:** `services/symbols/symbolSearchService.ts` — `searchAndCache(query)`, `fetchAndCacheBlob(arasaacId)` (cache-first → fetch → saveToCache → objectURL); `SymbolOfflineError` (לא קורס, זורק שגיאה מוכרת).
-  **SymbolPicker UI:** `presentation/builder/SymbolPicker.tsx` — modal RTL, חיפוש עברי debounce 400ms, גריד 4×5, spinner, "אין תוצאות", "שגיאה — בדוק חיבור"; לחיצה → fetchAndCacheBlob → onSelect.
-  **CellEditor:** נוסף כפתור "סמלים ARASAAC" פותח SymbolPicker; בחירת סמל → imageUri+symbolId; כפתור × למחיקת תמונה.
-  **App.tsx:** `void pruneCache(30)` ב-init useEffect (ניקוי סמלים ישנים).
-  **Invariants (נאמתו):** Offline safety=SymbolOfflineError; No API key=ללא Authorization; Cache-first=getFromCache לפני fetch; DB=v6 אדיטיבי; prune=App init.
-  **CI:** lint 0 errors, 171 tests (+15), build ירוק. `docs/m8-symbols.md`.
-  **הבא (M9):** ממתין לאישור.
-
-## 8. Changelog (עדכון M7 — 2026-06-20)
-- **2026-06-20 (M7 — Usage Analytics & Logging)** — מעקב שימוש אנונימי opt-in (PRD §4).
-  **Domain:** `domain/usageEvent.ts` — `UsageEvent` interface (id/profileId/boardId/cellId/label/timestamp/sessionId). ללא PII (uid/email).
-  **Data:** `db.ts` DB_VERSION=5 — store `usage` (keyPath: id, indexes: by-profile/by-timestamp); אדיטיבי, לא שובר v4.
-  `data/usageRepo.ts` — `logEvent`/`getEvents`/`clearEvents`/`clearProfileEvents` (4 פונקציות, 5 בדיקות).
-  `data/settingsRepo.ts` — נוסף `getAnalyticsEnabled`/`setAnalyticsEnabled` (ללא שינוי DB_VERSION — כמו accessSettings).
-  **Services:** `services/analytics/analyticsService.ts` — `trackCellPress` (fire-and-forget void, no-op כש-disabled), `getTopCells` (top-n לפי count desc, since=שבוע ברירת מחדל), `clearAllData` (GDPR — מוחק כל events של profileId). 6 בדיקות.
-  **Presentation:** `presentation/analytics/UsageDashboard.tsx` — top-10, opt-in toggle, "נקה נתונים"+אישור עברי, RTL, מוצג מ-AdultBar. 4 בדיקות.
-  **App.tsx:** `sessionIdRef` (crypto.randomUUID per launch, לא נשמר), auto-cleanup 90 יום ב-init, `onCell→trackCellPress` (fire-and-forget), `analyticsOpen` state, `AdultBar.onOpenAnalytics`.
-  **Invariants (נאמתו):** Privacy=no-op כש-disabled; No PII=אין uid/email ב-UsageEvent; Perf=void trackCellPress; GDPR=clearAllData מוחק הכל לפרופיל; DB=v5 אדיטיבי; Auto-cleanup=90 יום.
-  **CI:** lint 0 errors, 156 tests (+16), build ירוק. `docs/m7-analytics.md`.
-  **הבא (M8):** ממתין לאישור.
-
-## 8. Changelog (עדכון M6 — 2026-06-20)
-- **2026-06-20 (M6 — Firebase Auth + Firestore Rules + Login UI)** — **FR-022/Auth** (PRD §4.8).
-  **Firestore Rules:** `docs/firestore.rules` — `users/{uid}/{document=**}` read/write רק לבעל uid; פריסה ידנית ב-Firebase Console.
-  **SyncProvider interface:** נוסף `signUp(email, password): Promise<string>` + LocalStubProvider + FirebaseProvider (uses `createUserWithEmailAndPassword`).
-  **Auth Service:** `services/sync/authService.ts` — signIn/signUp/signOut/getCurrentUser/onAuthChange (module-level state, _resetForTests). 6 בדיקות.
-  **Login UI:** `presentation/auth/LoginPanel.tsx` — email+password, translateError→עברית, RTL, 5 בדיקות.
-  **App.tsx:** `authUser: AuthUser | null` state; `syncEnabledRef` לסנכרון ref/state; useEffect על `[syncEnabled, authUser?.uid]` מחליף provider (FirebaseProvider רק כש-syncEnabled&&authUser, אחרת LocalStubProvider — Privacy invariant); AdultBar מקבל `onSignOut`; header badge uid.
-  **Security invariants (נאמתו):** uid-check לפני כל Firestore call; FirebaseProvider לא נוצר כש-syncEnabled=false; translateError→עברית; offline→status='offline'; signOut→LocalStubProvider.
-  **CI:** lint 0 errors, 140 tests (+11), build ירוק. `docs/m6-auth.md`.
-  **תיקון baseline:** `syncQueue.ts` peek מיין לפי `updatedAt` (לא `enqueuedAt`) — הטסט היה צודק.
-  **הבא (M7):** Analytics/Logging — **ממתין לאישור**.
-
-## 8. Changelog (עדכון M5 — 2026-06-20)
-- **2026-06-20 (M5 — Sync & Cloud)** — **FR-022, FR-023** (PRD §4.8).
-  **Architecture:** `docs/adr-0002-sync.md` — `SyncProvider` interface backend-אגנוסטי; Firebase כספק ברירת מחדל; `LocalStubProvider` לבדיקות offline. `firebase` SDK הותקן.
-  **Domain:** `domain/sync.ts` — `Versioned<T>`, `mergeLastWriteWins` (אחרון מנצח, tie-break דטרמיניסטי), `isRemoteNewer`, `toVersioned`, `bumpVersion`. 10 בדיקות.
-  **Data:** `db.ts` DB_VERSION=4 — stores `outbox` + `versions` (אדיטיבי, לא שובר v3). `data/syncQueue.ts` — enqueue/peek/ack/ackAll/count/clear. `data/backupRepo.ts` — exportBackup/importBackup (JSON round-trip), saveVersion/listVersions/restoreVersion. 11 בדיקות.
-  **Services:** `services/sync/syncProvider.ts` — `SyncProvider` interface + `LocalStubProvider` (in-memory). `services/sync/firebaseProvider.ts` — `FirebaseProvider` (Firestore push/pull, Auth). `services/sync/syncEngine.ts` — `createSyncEngine` (pull→merge→push, debounce 3s, offline=no-op שקט, status listener). `services/sync/crypto.ts` — `encryptData`/`decryptData` (AES-GCM, Web Crypto, fallback בטוח). 8 בדיקות.
-  **Presentation:** `SyncStatus.tsx` — מחוון סטטוס (idle/syncing/error/offline/disabled). `BackupPanel.tsx` — ייצוא/ייבוא JSON + שחזור גרסה. `PrivacyToggle.tsx` — ברירת מחדל מקומי, הורה שולט. `AdultBar` — כפתור "גיבוי וסנכרון". `App.tsx` — syncEngine ברקע (לא חוסם), backupOpen state.
-  **CI:** lint 0 errors, 129 tests (+30), build ירוק. `docs/adr-0002-sync.md` + `docs/m5-sync-cloud.md`.
-  **הבא (M6):** Firebase Auth UI (login screen), Firestore Security Rules, החלפת LocalStubProvider ב-FirebaseProvider בייצור, FirebaseProvider.signIn → App.tsx.
-
-## 8. Changelog (עדכון M4 — 2026-06-20)
-- **2026-06-20 (M4 — Adaptivity & Access)** — **FR-014, FR-015, FR-019, FR-020** (PRD §4.7).
-  **Domain:** `domain/adaptivity.ts` — `toggleCellVisibility`/`hiddenFilter`/`applyCellSize` (טהור, immutable;
-  hidden=הסתרה לא מחיקה, ליבה ניתנת להסתרה; `applyCellSize` עוטף `resizeBoard` עם ViolationError). 8 בדיקות.
-  `domain/accessSettings.ts` — טיפוסי `AccessSettings` + `DEFAULT_ACCESS_SETTINGS` (הכל כבוי).
-  **Data:** `settingsRepo` — `getAccessSettings`/`saveAccessSettings` (JSON ב-key `accessSettings`,
-  **ללא שינוי DB_VERSION** — upgrade אדיטיבי; merge עם ברירת מחדל). 3 בדיקות.
-  **Services:** `services/access/dwellService.ts` — `useDwellActivation` (dwell, cleanup ב-unmount, 0=כבוי),
-  `useActivateOnRelease`, `useDoubleTapPrevention` (חלון 800ms). 7 בדיקות (fake timers).
-  **Presentation:** `GridSizePicker` (2–8, אזהרה+חסימה אם ליבה נופלת), `HiddenToggle` (ב-CellEditor),
-  `AccessSettingsPanel` (slider+checkboxes, controlled), `CellButton` מרכיב 3 hooks (settings prop אופציונלי),
-  `BoardView` מעביר accessSettings, `BuilderView` opacity 0.4 לתאים hidden + `handleResize`,
-  `AdultBar` כפתור "הגדרות", `App.tsx` Guided Access (FR-019: חסימת popstate+beforeunload במצב נעול) +
-  טעינה/שמירה של accessSettings. **CI:** lint 0 errors, 99 tests עוברות (+18), build ירוק.
-  פרטים: `docs/m4-adaptivity-access.md`.
-
-- **2026-06-20 (M3 — Builder & Symbols)** — **FR-003–007, FR-011, FR-017, FR-018**.
-  **Domain:** `domain/boardEditor.ts` — `addCell`/`removeCell`/`moveCell`/`resizeBoard` (immutable, ViolationError על הזזת ליבה ללא allowCoreMove);
-  `UndoStack<T>` (max 50, pointer-based, push-after-undo מוחק redo). 19 בדיקות ב-`boardEditor.test.ts`.
-  **Data:** `db.ts` DB_VERSION=3 + store `symbols` (keyPath: id); `symbolRepo.ts` — save/get/list/remove;
-  `migration.test.ts` — בדיקת v1→v2→v3 אדיטיבית (2 tests). **Services:** `services/image/imageService.ts` —
-  `cropImage` (Canvas API, offline), `removeBackground` (fallback — מחזיר blob מקורי), `compressToWebP` (WebP quality 0.85, fallback לoriginal);
-  9 בדיקות עם mock canvas. **Presentation:** `presentation/builder/CellEditor.tsx` — modal עריכת תא
-  (label/ניקוד auto+override/fitzgerald/action/תמונה+camera/הקלטת קול MediaRecorder→symbolRepo);
-  `presentation/builder/BuilderView.tsx` — גריד עריכה drag-drop RTL-aware, multi-select+bulk Fitzgerald/מחיקה,
-  Undo/Redo (Ctrl+Z/Y), תצוגה מקדימה (preview mode). `AdultBar.tsx` — כפתור "ערוך לוח" (onEditBoard prop).
-  `App.tsx` — `builderMode` state, BuilderView מחליף BoardView במצב עריכה.
-  **CI:** lint 0 errors, 81 tests עוברות, build ירוק. פרטים: `docs/m3-builder-symbols.md`.
-
-- **2026-06-19 (M2 — Communication Core)** — **ניווט בין לוחות** (FR-013): `domain/navigationStack.ts` —
-  מחסנית TS טהורה (`createNavStack`/`navPush`/`navPop`/`navHome`/`navCurrent`/`navCanGoBack`); מניעת לולאה ישירה;
-  בית תמיד בתחתית; 8 בדיקות יחידה. **ספריית לוחות מוכנים** (FR-002): `domain/boardLibrary.ts` — 4 לוחות עבריים
-  (HOME 4×4, FOOD 4×4, EMOTIONS 3×3, PLAY 4×4), מילות ליבה במיקום קבוע, תאי ניווט (`navigate`) מלוח הבית לקטגוריות.
-  **`data/bootstrap.ts`**: `ensureSeeded` זורע ספריית לוחות מלאה + idempotent upgrade למשתמשי M1; `loadActiveContext`
-  מחזיר `allBoards` מלא; `createProfile` מקלון מלוח הבית הנוכחי. **`App.tsx`**: מחסנית ניווט כ-state, טיפול
-  ב-`navigate`/`back`/`home`/`deleteWord`/`clear` ב-`onCell` (back לא מוסיף לשורת המשפט — מניעת באג TouchChat);
-  NikudService מחובר לרקע (לא חוסם TTS); NavBar קבוע (בית+חזור, disabled בבית). **`NavBar.tsx`**: כפתורים קבועים
-  במיקום גאומטרי קבוע (PRD §4.4). **בדיקות**: 8 בדיקות ניווט חדשות ב-App.test.tsx. lint/test/build ירוקים.
-  פרטים: `docs/m2-communication-core.md` (TODO לאחר CI).
-- **2026-06-19 (M1 — Data & Profiles)** — שכבת Data הורחבה: `DB_VERSION 2` עם stores
-  `boards`/`profiles`/`settings` לצד `nikud`; **upgrade אדיטיבי** שאינו הורס נתוני v1 (נבדק
-  `migration.test.ts`). מאגרים: `boardRepo`/`profileRepo`/`settingsRepo` (load/save/list);
-  **מחיקה=ארכוב** (FR-022). ריבוי פרופילי ילד (FR-001): `bootstrap.ts` — `ensureSeeded` (seed מ-SAMPLE),
-  `createProfile` (קלון לוח-בית עצמאי, עקביות מיקום נשמרת), `loadActiveContext`/`switchActiveProfile`.
-  **מצב נעול/RBAC** (FR-019/FR-027): `domain/access.ts` (`verifyPin`/`canEdit`/`canManageProfiles`),
-  `App.tsx` נטען מה-DB (לא מהקבוע), נעול כברירת מחדל, מעבר למצב מבוגר בקוד מטפל (PIN, MVP) דרך
-  `PinGate`/`AdultBar`. baseline M0 תוקן לירוק (lint). בדיקות: 35 עוברות (unit מאגרים+מיגרציה+access,
-  integration מעבר-פרופיל+נעילה עם fake-indexeddb). lint/test/build ירוקים. פרטים: `docs/m1-data-profiles.md`.
-- **2026-06-19 (M0)** — הוכרע stack: **PWA React+TS+Vite** (במקום Flutter ל-MVP; ADR-0001). נבנה scaffold תחת `app/` במבנה 4-שכבתי. אינווריאנט **Motor Planning** מומש ונבדק (`domain/layout.ts`). ספייקים: **TTS עברי** (Web Speech API, העדפת קול מקומי/אופליין, חביון) ו**ניקוד** (Nakdan+cache IndexedDB+override ידני, נפילה אופליין) — שניהם עם טסטים. מעטפת RTL מלאה + פרוסה אנכית (לחיצת תא→שורת משפט→הקראה). CI (GitHub Actions: lint+test+build). **הערה:** אימות `npm install/test/build` לא רץ בסנדבוקס (תקרת 45ש' לפקודה) — מאומת ע"י CI בדחיפה. ראה `docs/verification.md`.
-- **2026-06-19** — הקמת repo; איחוד 4 מסמכי מחקר ל-PRD דו-לשוני (`PRD-he.md` + `PRD-en.md`, 12 סעיפים). הכרעות: פלטפורמה Android/Web→iPad; חביון הופרד למשוב/הקראה; Modified Fitzgerald כברירת מחדל. נוצרו `HANDOFF.md`, `README.md`, `EXECUTION-PROMPT.md`.
+## Open questions
+- `[TODO: Clarify]` ספק/רישוי ניקוד סופי (Nakdan/Dicta — בסיס חינמי כעת). ראה `docs/adr-0001` / PRD נספח D.
+- `[TODO: Clarify]` ספק TTS פרימיום סופי (Almagu מועדף ב-PRD; כרגע Google Neural2). ADR-0003 צוין בקוד אך **לא נכתב כקובץ** — יש ליצור `docs/adr-0003-tts.md`.
+- `[TODO]` `docs/m2-communication-core.md` סומן "TODO לאחר CI" אך מעולם לא נוצר — להשלים או להסיר את ההפניה.
+- `[TODO]` M14–M15 אינם מתועדים (changelog קופץ M13→M16) — לאמת אם דולגו במכוון.
+- `[CONFLICT: README.md ↔ HANDOFF.md]` — נפתר בסשן זה: README השורש כתב "הקוד טרם נכתב" בעוד M22 הושלם. README עודכן.

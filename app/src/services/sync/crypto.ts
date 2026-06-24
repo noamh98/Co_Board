@@ -80,6 +80,68 @@ export async function decryptData(encrypted: string): Promise<unknown | null> {
   }
 }
 
+/**
+ * גוזר מפתח AES-GCM 256-bit מ-uid + salt דרך PBKDF2 (100k iterations).
+ * המפתח לא עולה לענן לעולם — נגזר מחדש בכל פעם לפי uid+salt.
+ */
+export async function deriveMediaKey(uid: string, salt: Uint8Array): Promise<CryptoKey> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(uid),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: ALGORITHM, length: KEY_LENGTH },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/**
+ * מצפין Blob ומחזיר Blob: [salt(16)] + [iv(12)] + [ciphertext].
+ * מאפשר גזירת מפתח מחדש בפענוח ללא שמירת salt נפרדת.
+ */
+export async function encryptBlob(blob: Blob, uid: string): Promise<Blob> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveMediaKey(uid, salt);
+  const plaintext = await blob.arrayBuffer();
+  const ciphertext = await crypto.subtle.encrypt({ name: ALGORITHM, iv }, key, plaintext);
+  const combined = new Uint8Array(16 + 12 + ciphertext.byteLength);
+  combined.set(salt, 0);
+  combined.set(iv, 16);
+  combined.set(new Uint8Array(ciphertext), 28);
+  return new Blob([combined], { type: 'application/octet-stream' });
+}
+
+/**
+ * מפענח Blob שהוצפן ע"י encryptBlob.
+ * מחזיר null אם Web Crypto לא זמין או הפענוח נכשל (fallback בטוח).
+ */
+export async function decryptBlob(
+  encryptedBlob: Blob,
+  uid: string,
+  mimeType: string,
+): Promise<Blob | null> {
+  try {
+    if (!crypto.subtle) return null;
+    const buffer = await encryptedBlob.arrayBuffer();
+    const data = new Uint8Array(buffer);
+    const salt = data.slice(0, 16);
+    const iv = data.slice(16, 28);
+    const ciphertext = data.slice(28);
+    const key = await deriveMediaKey(uid, salt);
+    const plaintext = await crypto.subtle.decrypt({ name: ALGORITHM, iv }, key, ciphertext);
+    return new Blob([plaintext], { type: mimeType });
+  } catch {
+    return null;
+  }
+}
+
 export async function getDeviceId(): Promise<string> {
   const stored = localStorage.getItem('sync-device-id');
   if (stored) return stored;

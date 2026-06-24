@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AccessSettings } from '../../domain/accessSettings';
+import { FITZGERALD } from '../../domain/fitzgerald';
 
 // פאנל הגדרות גישה מוטורית (FR-020, PRD §4.7).
 // controlled: onChange מעדכן את ה-state ב-App ושומר ב-settingsRepo.saveAccessSettings.
@@ -171,6 +172,39 @@ export function AccessSettingsPanel({
             style={{ width: '100%' }}
           />
         </div>
+
+        {/* מקרא צבעי פיצג'רלד (מצב מבוגר בלבד) — PRD §6.3 */}
+        <details>
+          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem', marginBottom: 4 }}>
+            מקרא צבעי פיצג׳רלד
+          </summary>
+          <div
+            role="list"
+            aria-label="מקרא קטגוריות פיצג׳רלד"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}
+          >
+            {(Object.entries(FITZGERALD) as Array<[string, { bg: string; text: string; label: string }]>).map(
+              ([key, { bg, text, label }]) => (
+                <span
+                  key={key}
+                  role="listitem"
+                  style={{
+                    background: bg,
+                    color: text,
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {label}
+                </span>
+              ),
+            )}
+          </div>
+        </details>
 
         <button type="button" className="adultbar__btn" onClick={onClose}>
           סגור

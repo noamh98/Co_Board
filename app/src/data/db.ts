@@ -9,10 +9,11 @@ import { openDB, type IDBPDatabase } from 'idb';
 // v8 (M17): מיגרציה — entries של הקלטות קוליות (source='recording') תוקנו
 //           ל-mimeType='audio/webm' (היה שגוי: 'image/webp').
 // v9 (M18): נוסף audioCache (TTS blobs, hybrid offline-first).
+// v10 (חלק 3): נוסף media (תמונות אישיות, offline-first + סנכרון מוצפן אופציונלי).
 // אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 9;
+export const DB_VERSION = 10;
 
 export const STORE_NIKUD = 'nikud';
 export const STORE_BOARDS = 'boards';
@@ -25,6 +26,7 @@ export const STORE_USAGE = 'usage';
 export const STORE_SYMBOL_CACHE = 'symbolCache';
 export const STORE_PHRASES = 'phrases';
 export const STORE_AUDIO_CACHE = 'audioCache';
+export const STORE_MEDIA = 'media';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -70,6 +72,10 @@ export function getDb(): Promise<IDBPDatabase> {
         }
         if (!db.objectStoreNames.contains(STORE_AUDIO_CACHE)) {
           db.createObjectStore(STORE_AUDIO_CACHE, { keyPath: 'cacheKey' });
+        }
+        if (!db.objectStoreNames.contains(STORE_MEDIA)) {
+          const mediaStore = db.createObjectStore(STORE_MEDIA, { keyPath: 'id' });
+          mediaStore.createIndex('by-profile', 'profileId', { unique: false });
         }
 
         // v8: תיקון mimeType להקלטות קוליות — היה 'image/webp' בטעות (HANDOFF §4).
