@@ -1,8 +1,78 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    // ── פונקציות עזר ──────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnUid(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isApproved() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.approved == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function hasChildAccess(childId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/childAccess/$(childId)/members/$(request.auth.uid));
+    }
+
+    // ── רשומות משתמש ──────────────────────────────────────
+    match /users/{uid} {
+      // קריאת רשומה עצמית בלבד (לבדיקת status)
+      allow read: if isOwnUid(uid) || isAdmin();
+      // יצירה: רק בעל החשבון, status חייב להיות 'pending'
+      allow create: if isOwnUid(uid)
+        && request.resource.data.status == 'pending';
+      // עדכון: המשתמש יכול לעדכן שדות שאינם status (כגון displayName)
+      // status='approved'/'rejected' נכתב רק ע"י Cloud Function (Admin SDK)
+      allow update: if isOwnUid(uid)
+        && request.resource.data.status == 'pending';
+    }
+
+    // ── תוכן (boards, profiles, settings וכו') ─────────────
+    // גישה רק למשתמשים מאושרים + מייל מאומת (approved custom claim)
+    match /users/{uid}/{collection}/{document} {
+      allow read, write: if isOwnUid(uid) && isApproved();
+    }
+
+    // ── ילדים (2B) ─────────────────────────────────────────
+    match /users/{uid}/children/{childId} {
+      // גישה לבעלים ולמי שרשום ב-childAccess
+      allow read, write: if isOwnUid(uid)
+        || (isApproved() && hasChildAccess(childId));
+    }
+
+    // ── גישת ילד (childAccess) ─────────────────────────────
+    match /childAccess/{childId}/members/{memberId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == memberId || hasChildAccess(childId));
+      // כתיבה: רק בעלים (parent/clinician) — נאכף בצד הלקוח + Cloud Function
+      allow write: if isApproved()
+        && hasChildAccess(childId);
+    }
+
+    // ── קודי שיתוף (shareInvites) ──────────────────────────
+    match /shareInvites/{code} {
+      allow read: if isApproved();
+      allow create: if isApproved()
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if isApproved()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ── Admin: קריאת כל רשומות users לאישור ────────────────
+    match /users/{uid} {
+      allow list: if isAdmin();
     }
   }
 }

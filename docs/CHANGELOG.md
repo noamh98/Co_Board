@@ -4,6 +4,34 @@
 > פירוט עמוק כאן). 3–5 השינויים האחרונים נשארים ב-`HANDOFF.md §Session changelog`.
 > לכל מיילסטון יש גם מסמך פירוט ב-`docs/m*.md`.
 
+## חלק 2 — תשתית חשבונות + פורטל מבוגר↔ילד — 2026-06-24
+
+### 2A — התחברות + הרשמה + אישור אדמין (FR-022/Auth)
+- **`services/sync/authService.ts`** — `AuthUser` ← שדות חדשים: `emailVerified`, `displayName`, `status`, `claims`; `setAuthUser(user)` + `mergeAuthFields(fields)` — מאפשרים עדכון Auth state ממקורות חיצוניים (Firebase listener).
+- **`services/sync/firebaseAuth.ts`** (חדש) — מודול Firebase-specific: `signInWithGoogle` (popup+redirect fallback) · `sendVerificationEmail` · `isEmailVerified` · `getUserStatus` · `createUserRecord` · `getPendingUsers` · `setUserStatusViaFunction` (קריאה ל-Cloud Function) · `getAdminClaim` · `onFirebaseAuthChange` · `signOutFirebase`.
+- **`services/sync/firebaseProvider.ts`** — `signInWithGoogle()` wrapper נוחות.
+- **`presentation/auth/LoginPanel.tsx`** — עדכון API: `onGoToRegister` במקום `onSignUp`; כפתורי Google + הרשמה.
+- **`presentation/auth/RegisterPanel.tsx`** (חדש) — שם + אימייל + סיסמה + אימות סיסמה; כפתור Google; HTML validation.
+- **`presentation/auth/PendingApprovalScreen.tsx`** (חדש) — מסך "ממתין לאישור"; כפתור שליחת מייל אימות מחדש.
+- **`presentation/auth/RejectedScreen.tsx`** (חדש) — מסך "בקשה נדחתה" עם קישור לתמיכה.
+- **`presentation/auth/AdminApprovalPanel.tsx`** (חדש) — רשימת pending users; אישור/דחייה ע"י Cloud Function; מוגן בclaims.admin.
+- **`presentation/components/AdultBar.tsx`** — `onOpenPortal` + `onOpenAdmin` props; כפתורי "ילדים" + "אדמין".
+- **`App.tsx`** — Firebase auth listener (`onFirebaseAuthChange`); handlers: `onGoogleSignIn`, `onRegister`; screens: `PendingApprovalScreen`, `RejectedScreen`, `AdminApprovalPanel`, `ChildrenDashboard`; state: `showRegister`, `adminPanelOpen`, `portalOpen`.
+- **`docs/firestore.rules`** — שכבות: `isApproved()` (emailVerified + approved claim) שומר על תוכן; users/{uid} — create=pending בלבד; children/{childId}; childAccess; shareInvites; admin list.
+- **`functions/src/approveUser.ts`** (חדש) — Cloud Function `onCall`: בודק admin claim → `setCustomUserClaims({approved})` + עדכון Firestore status.
+- **בדיקות:** `auth2.test.ts` +7 tests; `LoginPanel.test.tsx` עדכון. **308 tests סה"כ.**
+
+### 2B — פורטל משתמשים + קשר מבוגר↔ילד (FR-001/027/031)
+- **`domain/models.ts`** — `ProfilePreferences` interface חדש (`preferredGridSize`, `defaultVoice`, `visualLoadLevel`, `activeWordIds`); `Profile` ← `preferences?: ProfilePreferences` + `childId?: string`.
+- **`data/childRepo.ts`** (חדש) — Firestore CRUD: `ChildRecord` (users/{uid}/children/{childId}) · `ChildAccessEntry` (childAccess/{childId}/members/{uid}) · `ShareInvite` (shareInvites/{code}); פונקציות: `createChild`, `getChild`, `saveChild`, `listChildren`, `archiveChild`, `grantChildAccess`, `createShareInvite`, `acceptShareInvite` (TTL 48h).
+- **`services/sync/profileSync.ts`** (חדש) — `pushProfile(uid, profile)` → Firestore children/{childId}; `pullProfile(uid, profile)` → מיזוג (local wins); גרציה אופליין.
+- **`presentation/portal/ChildrenDashboard.tsx`** (חדש) — רשימת ילדים, הוספת ילד, קבלת גישה.
+- **`presentation/portal/ChildCard.tsx`** (חדש) — כרטיסית ילד עם כפתורי הגדרות + שיתוף גישה.
+- **`presentation/portal/ChildPreferencesPanel.tsx`** (חדש) — עריכת preferences: גריד + קול + עומס ויזואלי.
+- **`presentation/portal/ShareInvitePanel.tsx`** (חדש) — יצירת קוד שיתוף 6 ספרות + העתקה.
+- **`presentation/portal/AcceptInviteScreen.tsx`** (חדש) — הזנת קוד שיתוף + אימות + הצטרפות.
+- **בדיקות:** `portal.test.ts` +12 tests (models, profileSync, childRepo types). **308 tests סה"כ.**
+
 ## חלק 1 — גדלי לוח + צבעי Fitzgerald — 2026-06-24
 
 ### 1A — גדלי לוח (FR-015)

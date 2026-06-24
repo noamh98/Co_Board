@@ -84,6 +84,18 @@ export const ROLE_CAN_EDIT: Record<Role, boolean> = {
   staff: false,
 };
 
+/** העדפות משתמש לפרופיל ילד — FR-001, 2B. */
+export interface ProfilePreferences {
+  /** גודל גריד מועדף (ברירת מחדל: הגריד הנוכחי). */
+  preferredGridSize?: GridSize;
+  /** קול ברירת מחדל לפרופיל. */
+  defaultVoice?: 'child' | 'male' | 'female';
+  /** רמת עומס ויזואלי — minimal/standard/rich. */
+  visualLoadLevel?: 'minimal' | 'standard' | 'rich';
+  /** מזהי מילים פעילות (מסנן activeWordIds). */
+  activeWordIds?: string[];
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -95,4 +107,8 @@ export interface Profile {
   locked: boolean;
   /** ארכוב במקום מחיקה — מעבר/מחיקת פרופיל שומרים גיבוי (PRD §4.5 edge case). */
   archived?: boolean;
+  /** העדפות לפרופיל הילד — FR-001. */
+  preferences?: ProfilePreferences;
+  /** מזהה ילד בענן — Firestore children/{childId} — 2B. */
+  childId?: string;
 }

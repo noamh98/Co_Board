@@ -29,6 +29,11 @@ import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
 import { PrivacyToggle } from './presentation/settings/PrivacyToggle';
 import { LoginPanel } from './presentation/auth/LoginPanel';
+import { RegisterPanel } from './presentation/auth/RegisterPanel';
+import { PendingApprovalScreen } from './presentation/auth/PendingApprovalScreen';
+import { RejectedScreen } from './presentation/auth/RejectedScreen';
+import { AdminApprovalPanel } from './presentation/auth/AdminApprovalPanel';
+import { ChildrenDashboard } from './presentation/portal/ChildrenDashboard';
 import { UsageDashboard } from './presentation/analytics/UsageDashboard';
 import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
@@ -72,6 +77,15 @@ import { LocalStubProvider } from './services/sync/syncProvider';
 import { FirebaseProvider } from './services/sync/firebaseProvider';
 import { authService, type AuthUser } from './services/sync/authService';
 import {
+  signInWithGoogle,
+  sendVerificationEmail,
+  getUserStatus,
+  createUserRecord,
+  getAdminClaim,
+  onFirebaseAuthChange,
+  signOutFirebase,
+} from './services/sync/firebaseAuth';
+import {
   type ModelingSession,
   createModelingSession,
   toggleHighlight,
@@ -110,6 +124,9 @@ export function App() {
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
+  const [showRegister, setShowRegister] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
 
   const ttsRef = useRef<TtsLike | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -176,9 +193,42 @@ export function App() {
       if (alive) setAuthUser(u);
     });
 
+    // Firebase auth listener: מרענן emailVerified + status + admin claim
+    let unsubFirebase: (() => void) | undefined;
+    if (import.meta.env.VITE_FIREBASE_API_KEY) {
+      unsubFirebase = onFirebaseAuthChange((firebaseUser) => {
+        if (!alive) return;
+        if (!firebaseUser) {
+          authService.setAuthUser(null);
+          return;
+        }
+        // בנה AuthUser מורחב
+        const base: AuthUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          emailVerified: firebaseUser.emailVerified,
+          displayName: firebaseUser.displayName ?? undefined,
+        };
+        authService.setAuthUser(base);
+        // טען status + admin claim async
+        void (async () => {
+          const [status, isAdmin] = await Promise.all([
+            getUserStatus(firebaseUser.uid),
+            getAdminClaim(),
+          ]);
+          if (!alive) return;
+          authService.mergeAuthFields({
+            status: status ?? undefined,
+            claims: isAdmin ? { admin: true } : undefined,
+          });
+        })();
+      });
+    }
+
     return () => {
       alive = false;
       unsubAuth();
+      unsubFirebase?.();
     };
   }, []);
 
@@ -381,8 +431,46 @@ export function App() {
   };
 
   const onSignOut = (): void => {
+    if (import.meta.env.VITE_FIREBASE_API_KEY) {
+      void signOutFirebase().catch(() => {});
+    }
     const provider = syncEnabled ? new FirebaseProvider() : new LocalStubProvider();
     void authService.signOut(provider);
+  };
+
+  const onGoogleSignIn = async (): Promise<void> => {
+    const result = await signInWithGoogle();
+    if (!result.uid) return; // redirect mode — reload handles it
+    const status = await getUserStatus(result.uid);
+    if (!status) {
+      await createUserRecord(result.uid, result.displayName ?? '', result.email);
+    }
+    const isAdmin = await getAdminClaim();
+    authService.setAuthUser({
+      uid: result.uid,
+      email: result.email,
+      displayName: result.displayName,
+      emailVerified: true,
+      status: status ?? 'pending',
+      claims: isAdmin ? { admin: true } : undefined,
+    });
+  };
+
+  const onRegister = async (
+    email: string,
+    password: string,
+    displayName: string,
+  ): Promise<void> => {
+    const provider = new FirebaseProvider();
+    const user = await authService.signUp(provider, email, password);
+    await sendVerificationEmail();
+    await createUserRecord(user.uid, displayName, email);
+    authService.mergeAuthFields({
+      displayName,
+      emailVerified: false,
+      status: 'pending',
+    });
+    setShowRegister(false);
   };
 
   const adult = canManageProfiles(mode);
@@ -436,6 +524,8 @@ export function App() {
               onOpenPhraseBank={onOpenPhraseBank}
               onOpenWordFinder={() => setWordFinderOpen(true)}
               onSignOut={authUser ? onSignOut : undefined}
+              onOpenPortal={authUser ? () => setPortalOpen(true) : undefined}
+              onOpenAdmin={authUser?.claims?.admin ? () => setAdminPanelOpen(true) : undefined}
               modelingActive={modelingActive}
               onToggleModeling={onToggleModeling}
             />
@@ -540,17 +630,54 @@ export function App() {
         />
       )}
 
-      {/* LoginPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
+      {/* LoginPanel / RegisterPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
       {settingsOpen && syncEnabled && !authUser && (
-        <LoginPanel
-          onSignIn={async (email, password) => {
-            const provider = new FirebaseProvider();
-            await authService.signIn(provider, email, password);
-          }}
-          onSignUp={async (email, password) => {
-            const provider = new FirebaseProvider();
-            await authService.signUp(provider, email, password);
-          }}
+        showRegister ? (
+          <RegisterPanel
+            onRegister={onRegister}
+            onGoogleSignIn={onGoogleSignIn}
+            onBackToLogin={() => setShowRegister(false)}
+          />
+        ) : (
+          <LoginPanel
+            onSignIn={async (email, password) => {
+              const provider = new FirebaseProvider();
+              await authService.signIn(provider, email, password);
+            }}
+            onGoogleSignIn={onGoogleSignIn}
+            onGoToRegister={() => setShowRegister(true)}
+          />
+        )
+      )}
+
+      {/* מסכי מצב Auth — חוסמים תוכן כשמחובר אך לא מאושר */}
+      {authUser && authUser.status === 'pending' && (
+        <PendingApprovalScreen
+          email={authUser.email}
+          displayName={authUser.displayName}
+          emailVerified={authUser.emailVerified}
+          onSignOut={onSignOut}
+          onResendVerification={sendVerificationEmail}
+        />
+      )}
+
+      {authUser && authUser.status === 'rejected' && (
+        <RejectedScreen
+          email={authUser.email}
+          onSignOut={onSignOut}
+        />
+      )}
+
+      {/* פאנל אדמין */}
+      {adminPanelOpen && (
+        <AdminApprovalPanel onClose={() => setAdminPanelOpen(false)} />
+      )}
+
+      {/* פורטל ילדים — רק כשמאושר + מחובר */}
+      {portalOpen && authUser?.uid && (
+        <ChildrenDashboard
+          uid={authUser.uid}
+          onClose={() => setPortalOpen(false)}
         />
       )}
 
