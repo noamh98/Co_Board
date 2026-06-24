@@ -40,6 +40,7 @@ export class LocalStubStorageProvider implements StorageProvider {
   }
 
   async delete(path: string): Promise<void> {
+    if (!this._store.has(path)) throw new Error(`LocalStubStorageProvider: not found: ${path}`);
     this._store.delete(path);
   }
 
