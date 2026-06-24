@@ -147,8 +147,27 @@
 
 ---
 
-## חלק 5 — שדרוג עיצוב מסך ההגדרות (UI/UX redesign)
-> נוסף לבקשת המשתמש: ממשק הכניסה/ההגדרות נראה ישן ולא מודרני. סוכן: Plan(Opus)→builder(Sonnet)→reviewer(Opus), משפר רץ במקביל (דגש נגישות/RTL). **READ-heavy על UI בלבד — לא לשנות לוגיקת domain/services.**
+## חלק 5 — שדרוג UI/UX + רספונסיביות מלאה (⚠️ עדיפות גבוהה — לבצע מיד אחרי חלק 1)
+> משוב מהמשתמש (2026-06-24, מסמארטפון OnePlus): "הממשק לא נוח, לא נראה טוב, לא מעוצב טוב, לא רספונסיבי. חשוב שיתאים גם לסמארטפון, מחשב, טאבלט." → הבעיה **רוחבית (כל האפליקציה)**, לא רק ההגדרות. מקודם לעדיפות גבוהה. סוכן: Plan(Opus)→builder(Sonnet)→reviewer(Opus), משפר רץ במקביל (דגש נגישות/RTL/responsive). **presentation/CSS בלבד — לא לשנות לוגיקת domain/services.**
+
+### 5A — רספונסיביות כלל-אפליקציה (חדש, קריטי)
+**מצב קיים (אבחון):** הרבה מידות קשיחות ב-inline styles (`minWidth: 320`, padding/font בפיקסלים), אין breakpoints מוגדרים, אין טיפול ב-viewport מובייל / safe-area (notch), הלוח והברים לא נבדקו בצרות מסך. תוצאה: מובייל (OnePlus) נראה לא מותאם.
+**יעד — תמיכה ב-3 קבוצות מכשירים:**
+- **Phone** (<600px): פריסה אנכית, ברים compact, פאנלים = full-screen/bottom-sheet, גופן/מטרות מותאמי-מגע.
+- **Tablet** (600–1024px): פריסה מאוזנת, מודאלים ממורכזים.
+- **Desktop** (>1024px): רוחב מקסימלי, sidebar למקטעים, hover states.
+**מימוש (החלטות מומלצות):**
+1. **`<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`** ב-`index.html` (אם חסר) + `env(safe-area-inset-*)` ל-notch/gesture-bar (OnePlus).
+2. **יחידות נזילות:** `clamp()`/`min()`/`%`/`vw`/`dvh` במקום px קשיח; `100dvh` (לא `100vh`) למסכים מלאים במובייל (סרגל דפדפן).
+3. **Breakpoints מרכזיים** ב-`index.css` (CSS custom media / `@media`): `--bp-phone:600px`, `--bp-tablet:1024px`.
+4. **גריד הלוח** (`BoardView`): `grid-template-columns` נזיל לפי `cols`; תאים שומרים aspect-ratio + מטרת-מגע מינ' (~44–48px) עם scroll מבוקר במקום כיווץ מתחת למינ' (כבר יש `cellSizeStatus` מחלק 1A — לחבר ל-CSS).
+5. **AdultBar/NavBar/SentenceBar:** wrap/overflow חיננית במובייל (אייקונים בלבד + overflow-menu במסך צר).
+6. **כל המודאלים/פאנלים:** `width: min(460px, 100vw - 32px)`; במובייל → bottom-sheet עם safe-area padding.
+**בדיקה (test matrix):** ידני + responsive — 360×800 (phone), 768×1024 (tablet), 1440×900 (desktop), כולל landscape. בדיקת אין-overflow-אופקי ומטרות-מגע ≥44px.
+**תוצרים:** `index.html` (viewport), `index.css` (tokens+breakpoints+נזיל), refactor `BoardView`/`AdultBar`/`NavBar`/`SentenceBar`/מודאלים ל-CSS classes נזילות, בדיקות, HANDOFF (אינווריאנט "RTL מלא בכל מסך" → להרחיב ל-"RTL + responsive בכל מסך/מכשיר").
+
+### 5B — שדרוג עיצוב מסך ההגדרות (UI/UX redesign)
+> נוסף לבקשת המשתמש: ממשק הכניסה/ההגדרות נראה ישן ולא מודרני. נשען על tokens+רכיבים מ-5A.
 
 ### מצב קיים (אבחון)
 - `presentation/settings/AccessSettingsPanel.tsx` — **inline styles** בכל מקום (אין מחלקות CSS); מודאל לבן יחיד שמערבב 3 נושאים שונים (גישה מוטורית + קול + rate/pitch) בלי קיבוץ.
