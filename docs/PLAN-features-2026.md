@@ -144,3 +144,29 @@
 - [Communication Boards: Colorful Considerations — PrAACtical AAC](https://praacticalaac.org/strategy/communication-boards-colorful-considerations/)
 - [AAC Color Conventions — Smarty Symbols](https://smartysymbols.com/aac-color-conventions/)
 - [Goossens', Crain & Elder color coding (OCALI PDF)](https://atinternetmodules.org/storage/ocali-ims-sites/ocali-ims-atim/documents/goosen_color_coding.pdf)
+
+---
+
+## חלק 5 — שדרוג עיצוב מסך ההגדרות (UI/UX redesign)
+> נוסף לבקשת המשתמש: ממשק הכניסה/ההגדרות נראה ישן ולא מודרני. סוכן: Plan(Opus)→builder(Sonnet)→reviewer(Opus), משפר רץ במקביל (דגש נגישות/RTL). **READ-heavy על UI בלבד — לא לשנות לוגיקת domain/services.**
+
+### מצב קיים (אבחון)
+- `presentation/settings/AccessSettingsPanel.tsx` — **inline styles** בכל מקום (אין מחלקות CSS); מודאל לבן יחיד שמערבב 3 נושאים שונים (גישה מוטורית + קול + rate/pitch) בלי קיבוץ.
+- קלטים גולמיים: `<input type="checkbox">` ו-`<input type="range">` ללא עיצוב — נראה כמו טופס דפדפן ברירת-מחדל.
+- כניסה דרך כפתור "הגדרות" ב-`presentation/components/AdultBar.tsx` — טקסט בלבד, ללא אייקון/אפקט.
+- אין design tokens, אין Dark Mode/ניגודיות גבוהה (למרות ש-PRD §6.2/§4.7 דורשים), אין מצב full-screen sheet במובייל.
+
+### יעד (החלטות מומלצות — בוצעו ללא שאלה, לפי הנחיית המשתמש)
+1. **Design tokens** ב-`index.css` (CSS variables): צבעים (רקע/שטח/טקסט/accent), רדיוסים, צללים, מרווחים (scale 4/8/12/16/24), טיפוגרפיה (גדלים+משקלים). בסיס לכל ה-UI העתידי.
+2. **רכיבי UI לשימוש חוזר** (`presentation/ui/`): `Toggle` (switch מודרני במקום checkbox), `Slider` (עם value-bubble), `Card`, `SectionHeader`, `Modal`/`Sheet`, `Button` (variants). מחליפים את ה-inline styles.
+3. **ארגון מחדש של ההגדרות** למקטעים/טאבים עם אייקונים: **גישה מוטורית** · **קול ו-TTS** · **תצוגה** (ערכת נושא/Dark Mode/ניגודיות/גודל גופן/פונט דיסלקסיה — PRD §6.2) · **פרטיות וסנכרון** · **פרופיל**. הקטנת עומס קוגניטיבי (PRD §6.1).
+4. **כניסה משופרת:** כפתור "הגדרות" ב-AdultBar עם אייקון גלגל-שיניים + מצב hover/focus ברור.
+5. **רספונסיביות:** במובייל — bottom-sheet/full-screen; בדסקטופ — מודאל ממורכז עם sidebar מקטעים.
+6. **Dark Mode + ניגודיות גבוהה** (PRD §4.7) דרך ה-tokens + `prefers-color-scheme` + toggle ידני.
+7. **אנימציות עדינות** (fade/slide על פתיחה) — ללא הסחה לילד; מכבדות `prefers-reduced-motion`.
+
+### אינווריאנטים
+- **RTL מלא** בכל המקטעים. **WCAG 2.1 AA** (ניגודיות, focus visible, target ≥~1.5 ס"מ, ניווט מקלדת, aria roles/labels). **ללא שינוי לוגיקה** — רק presentation. ביצועים: פתיחה <200ms.
+
+### תוצרים
+`index.css` (tokens+מחלקות), `presentation/ui/*` (רכיבים), refactor של `AccessSettingsPanel.tsx` למקטעים, עדכון `AdultBar.tsx` (אייקון), בדיקות widget לרכיבים החדשים + בדיקת ניגודיות, עדכון HANDOFF (changelog) + `app/README.md` (מבנה presentation/ui). **DoD כולל דחיפה ל-main + דיפלוי לפיירבייס** (ראה למעלה).
