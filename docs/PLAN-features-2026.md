@@ -42,6 +42,7 @@
 
 ## חלק 1 — גדלי לוח + צבעי Fitzgerald ✅ בוצע ונמזג ל-main (2026-06-24)
 > עצמאי מהבאקנד; quick win. סוכן: Plan(Opus)→builder(Sonnet)→reviewer(Opus). משפר רץ במקביל.
+> **בסיום החלק:** מזג ל-`main` ← דחוף (`git push origin main`) ← פרוס לפיירבייס (CI מפעיל deploy אוטומטית; rules נפרד: `firebase deploy --only firestore:rules,storage` אם שונו).
 
 ### 1A — גדלי לוח (FR-015) — *הרחבה, לא חדש*
 **קיים:** `GridSizePicker.tsx` כבר תומך rows×cols נפרד (2–8), לא-ריבועי, עם guard `ViolationError` (ליבה לא נופלת). `domain/adaptivity.applyCellSize` → `boardEditor.resizeBoard`.
@@ -83,6 +84,7 @@
 ## חלק 2 — תשתית חשבונות, פורטל ואישור אדמין (סעיפים 3+4) ⏭ דולג — branch נפרד, לא נמזג
 > תלוי-באקנד. Firebase Auth כבר קיים (M6). סוכן: Plan(Opus)→builder(Sonnet)→reviewer(Opus). יבוצע אחרי חלק 1 (או במקביל ב-worktree נפרד).
 > **הערה:** בוצע בנפרד על `claude/accounts-parent-child-portal-dmxme7`; לא נמזג ל-main. חלק 3 יושם ללא תלות בחלק 2 (profileId במקום childId).
+> **בסיום החלק:** מזג ל-`main` ← דחוף (`git push origin main`) ← פרוס לפיירבייס (Firestore rules + Hosting: `firebase deploy --only firestore:rules,hosting`).
 
 ### 2A — התחברות + הרשמה + אישור אדמין (סעיף 4, FR-022/Auth)
 **קיים:** `services/sync/authService.ts` (signIn/signUp/signOut/onAuthChange), `LoginPanel.tsx`, Firestore rules (uid-only).
@@ -109,6 +111,7 @@
 ## חלק 3 — תמונות אישיות + פרטיות בין משתמשים (סעיף 5, FR-005/006) ✅ בוצע ונמזג ל-main (2026-06-24)
 > תלוי בחלק 2 (חשבונות). סוכן: builder(Sonnet)→reviewer(Opus).
 > **תוצאה בפועל:** יושם ללא תלות בחלק 2 — `profileId` שמש כ-`childId`; Storage path: `profiles/{profileId}/media/{mediaId}`.
+> **בסיום החלק:** מזג ל-`main` ← דחוף (`git push origin main`) ← פרוס לפיירבייס (Storage rules: `firebase deploy --only storage,hosting`).
 **קיים:** `services/image/imageService.ts` (crop/removeBackground/webp), העלאה/מצלמה ב-`CellEditor`, אחסון מקומי ב-IndexedDB (`symbolRepo`).
 **להוסיף:**
 - **צילום/העלאת תמונות אישיות** (בני משפחה וכו') כסוג תוכן לתא — כבר חלקית קיים; לוודא זרימת מצלמה+גלריה מלאה.
@@ -120,6 +123,7 @@
 ---
 
 ## חלק 4 (סעיף 6) — הצעות לשיפור נוסף ⏳ לא התחיל
+> **בסיום החלק:** מזג ל-`main` ← דחוף (`git push origin main`) ← פרוס לפיירבייס (Hosting + rules לפי מה שהשתנה).
 מועמדים (לבחירת המשתמש בהמשך; חלקם כבר ב-Roadmap Phase 2/3 ב-PRD):
 1. **Auto-Nikud + מורפולוגיה עברית מלאה** (זכר/נקבה, יחיד/רבים, הומוגרפים) — שדרוג TTS (PRD §4.3).
 2. **חבילת QA עברית מלאה** (PRD נספח C) כשער CI.
@@ -159,6 +163,7 @@
 ---
 
 ## חלק 5 — שדרוג UI/UX + רספונסיביות מלאה ⏳ לא התחיל (⚠️ עדיפות גבוהה)
+> **בסיום החלק:** מזג ל-`main` ← דחוף (`git push origin main`) ← פרוס לפיירבייס (`firebase deploy --only hosting`).
 > משוב מהמשתמש (2026-06-24, מסמארטפון OnePlus): "הממשק לא נוח, לא נראה טוב, לא מעוצב טוב, לא רספונסיבי. חשוב שיתאים גם לסמארטפון, מחשב, טאבלט." → הבעיה **רוחבית (כל האפליקציה)**, לא רק ההגדרות. מקודם לעדיפות גבוהה. סוכן: Plan(Opus)→builder(Sonnet)→reviewer(Opus), משפר רץ במקביל (דגש נגישות/RTL/responsive). **presentation/CSS בלבד — לא לשנות לוגיקת domain/services.**
 
 ### 5A — רספונסיביות כלל-אפליקציה (חדש, קריטי)
