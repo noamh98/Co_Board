@@ -16,6 +16,7 @@ const KEY_TTS_RATE = 'ttsRate';
 const KEY_TTS_PITCH = 'ttsPitch';
 const KEY_TTS_PROVIDER = 'ttsProvider';
 const KEY_TTS_API_KEY = 'ttsApiKey';
+const KEY_SYNC_PHOTOS = 'syncPhotos';
 
 const DEFAULT_TTS_RATE = 1.0;
 const DEFAULT_TTS_PITCH = 1.0;
@@ -94,6 +95,15 @@ export async function setTtsApiKey(key: string | null): Promise<void> {
   } else {
     await writeValue(KEY_TTS_API_KEY, key);
   }
+}
+
+/** האם לסנכרן תמונות אישיות לענן (ברירת מחדל: false — מקומי בלבד). */
+export async function getSyncPhotos(): Promise<boolean> {
+  const raw = await readValue(KEY_SYNC_PHOTOS);
+  return raw === 'true';
+}
+export async function setSyncPhotos(enabled: boolean): Promise<void> {
+  await writeValue(KEY_SYNC_PHOTOS, String(enabled));
 }
 
 export function createSettingsRepo(): SettingsRepo {

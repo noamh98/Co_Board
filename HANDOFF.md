@@ -1,8 +1,8 @@
 # HANDOFF — אפליקציית AAC עברית ("לוח תקשורת")
 
 > מקור-האמת הראשון לכל סשן. קרא אותי תחילה; אל תגזור את המערכת מחדש מהקוד אם המסמך מספיק.
-> **שלב נוכחי:** M22 בוצע — TTS היברידי (Google Neural2 + cache IndexedDB) + סמלי ניווט. 244 tests, precache 163.
-> **הבא בתור:** UI להגדרת מפתח Google TTS · אימות ויזואלי לסמלים. היסטוריה מלאה: `docs/CHANGELOG.md`.
+> **שלב נוכחי:** חלק 3 — תמונות אישיות + פרטיות (FR-005/006) הושלמו. DB_VERSION=10, store `media`. 308+ tests.
+> **הבא בתור:** Firebase deploy (storage.rules) · UI להגדרת מפתח Google TTS. היסטוריה מלאה: `docs/CHANGELOG.md`.
 
 ## Purpose
 אפליקציית תקשורת תומכת וחליפית (AAC) עברית-ראשונה לילדים עם קשיי תקשורת (דגש אוטיזם), לקלינאי תקשורת והורים.
@@ -12,8 +12,8 @@
 PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), RTL מלא. 4 שכבות (פירוט: `ARCHITECTURE.md`):
 - **Presentation** `app/src/presentation/` + `App.tsx` — UI, מצבי ילד/מבוגר, builder.
 - **Domain** `app/src/domain/` — models · fitzgerald · layout (Motor Planning) · access (RBAC) · navigationStack · boardLibrary · boardEditor · adaptivity · sync.
-- **Services** `app/src/services/` — tts/ (היברידי) · nikud/ (Nakdan+cache) · image/ · symbols/ · sync/ · analytics/ · obf/ · wordFinder/.
-- **Data** `app/src/data/` — db (IndexedDB, idb, DB_VERSION=9) · *Repo · bootstrap (seed/פרופילים).
+- **Services** `app/src/services/` — tts/ (היברידי) · nikud/ (Nakdan+cache) · image/ · symbols/ · sync/ (crypto+storageProvider+mediaSync) · analytics/ · obf/ · wordFinder/.
+- **Data** `app/src/data/` — db (IndexedDB, idb, DB_VERSION=10) · *Repo (כולל mediaRepo) · bootstrap (seed/פרופילים).
 
 זרימה: UI → Domain → Services → Data(local) → (sync) Cloud.
 
@@ -73,6 +73,7 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 | `*.docx` (שורש) | 4 מסמכי המחקר המקוריים |
 
 ## Session changelog (אחרונים — מלא ב-`docs/CHANGELOG.md`)
+- **2026-06-24 (חלק 3 — תמונות אישיות + פרטיות)** — `data/mediaRepo.ts` (IndexedDB store 'media', DB_VERSION 9→10); `services/sync/storageProvider.ts` (StorageProvider interface + LocalStub + Firebase); `services/sync/mediaSync.ts` (uploadMedia/downloadMedia/deleteMediaFromStorage); `services/sync/crypto.ts` (deriveMediaKey/encryptBlob/decryptBlob PBKDF2+AES-GCM); `firebase/storage.rules`; `MediaPrivacyPanel.tsx`; `settingsRepo.ts` (syncPhotos); `CellEditor.tsx` + `BuilderView.tsx` (mediaSyncConfig). 308+ tests.
 - **2026-06-24 (חלק 1 — גדלים + Fitzgerald)** — 1A: GridSizePicker (פריסטים 2×2–8×8, טווח 2–12, guard מטרה מינ' 44/57px); `QuickStartWizard` עם בחירת גודל גריד; `adaptivity.ts` (GRID_MIN/MAX, estimateCellPx, cellSizeStatus). 1B: Fitzgerald type ← 3 קטגוריות חדשות (conjunction/adverb/determiner); `FITZGERALD` map + `categoryForLabel`; legend ב-AccessSettingsPanel; הצעה אוטומטית ב-CellEditor. 291 tests.
 - **2026-06-21 (M22)** — TTS היברידי (ADR-0003): Google Neural2 he-IL + cache IndexedDB (DB_VERSION 9, store `audioCache`); `hybridTtsService` עם fallback אופליין תמידי. 244 tests.
 - **2026-06-21 (M20–M21)** — סמל ARASAAC לכל מילה (~136, מקומי/offline) + סמלי ניווט; ניקוד מאומת. precache 148→163.

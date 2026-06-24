@@ -1,0 +1,70 @@
+// firebase/storage.rules — Firebase Storage security rules (חלק 3).
+// פרטיות: תמונות אישיות נגישות רק ל-uids מורשים לפרופיל הילד.
+// COPPA/GDPR/חוק הגנת הפרטיות: הפרדה בין פרופילים; אין גישת cross-profile.
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ========================
+    // תמונות אישיות (חלק 3)
+    // ========================
+    // Path: profiles/{profileId}/media/{mediaId}
+    // גישה: uid בעל גישה לפרופיל בלבד (Firestore check).
+    match /profiles/{profileId}/media/{mediaId} {
+      // קריאה: uid מחובר + יש לו גישה לפרופיל ב-Firestore.
+      allow read: if request.auth != null
+        && hasProfileAccess(profileId, request.auth.uid);
+
+      // כתיבה: uid מחובר + גישה לפרופיל + גודל ≤ 10MB + תוכן מוצפן (octet-stream).
+      allow write: if request.auth != null
+        && hasProfileAccess(profileId, request.auth.uid)
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'application/octet-stream';
+
+      // מחיקה: uid מחובר + גישה לפרופיל.
+      allow delete: if request.auth != null
+        && hasProfileAccess(profileId, request.auth.uid);
+    }
+
+    // ==============================
+    // תמונות לפי childId (לעתיד)
+    // ==============================
+    // Path: children/{childId}/media/{mediaId}
+    // גישה: uid עם גישה ל-childAccess[childId] ב-Firestore.
+    match /children/{childId}/media/{mediaId} {
+      allow read: if request.auth != null
+        && hasChildAccess(childId, request.auth.uid);
+
+      allow write: if request.auth != null
+        && hasChildAccess(childId, request.auth.uid)
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'application/octet-stream';
+
+      allow delete: if request.auth != null
+        && hasChildAccess(childId, request.auth.uid);
+    }
+
+    // אסור לכל שאר הנתיבים כברירת מחדל.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// בדיקת גישה לפרופיל דרך Firestore: users/{uid}/profiles/{profileId} קיים,
+// או שה-uid הוא הבעלים של הפרופיל.
+function hasProfileAccess(profileId, uid) {
+  return firestore.exists(
+    /databases/(default)/documents/profileAccess/$(profileId)/members/$(uid)
+  ) || firestore.get(
+    /databases/(default)/documents/profiles/$(profileId)
+  ).data.ownerId == uid;
+}
+
+// בדיקת גישה ל-child דרך Firestore (חלק 2): childAccess/{childId}/members/{uid}.
+function hasChildAccess(childId, uid) {
+  return firestore.exists(
+    /databases/(default)/documents/childAccess/$(childId)/members/$(uid)
+  );
+}

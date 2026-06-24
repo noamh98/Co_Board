@@ -1,5 +1,37 @@
 # CHANGELOG — היסטוריית מיילסטונים
 
+## חלק 3 — תמונות אישיות + פרטיות (FR-005/006) — 2026-06-24
+
+### 3A — תשתית אחסון מדיה
+- **`data/db.ts`** — DB_VERSION 9→10; store `media` (keyPath: 'id', index by-profile). מיגרציה אדיטיבית.
+- **`data/mediaRepo.ts`** (חדש) — `MediaEntry` (id/cellId/profileId/mimeType/blob/encrypted/source/createdAt/syncedAt/downloadUrl/archived); CRUD: saveMedia/getMedia/listByProfile/deleteMedia (=archived flag, לא הסרה — אינווריאנט).
+
+### 3B — הצפנה client-side
+- **`services/sync/crypto.ts`** — נוספו: `deriveMediaKey(uid,salt)` PBKDF2 100k iterations; `encryptBlob(blob,uid)→Blob` פורמט [salt(16)+iv(12)+ciphertext]; `decryptBlob(encrypted,uid,mimeType)→Blob|null`. מפתח לא עולה לענן לעולם.
+
+### 3C — Storage provider
+- **`services/sync/storageProvider.ts`** (חדש) — `StorageProvider` interface (upload/download/delete/isAvailable); `LocalStubStorageProvider` לבדיקות (Map בזיכרון); `FirebaseStorageProvider` (firebase/storage SDK; path: `profiles/{profileId}/media/{mediaId}`).
+- **`services/sync/mediaSync.ts`** (חדש) — `uploadMedia(uid,entry,storageProvider,repo)`: encrypt→upload→עדכון syncedAt+downloadUrl; `downloadMedia(uid,profileId,mediaId,mimeType,…)`: download→decrypt→שמירה מקומית; `deleteMediaFromStorage`: מוחק מ-Storage בלבד.
+
+### 3D — Firebase Storage rules
+- **`firebase/storage.rules`** (חדש) — read/write ל-`profiles/{profileId}/media/{mediaId}` רק ל-uids עם גישה לפרופיל; גודל ≤ 10MB; contentType='application/octet-stream' בלבד. תמיכה עתידית ב-`children/{childId}` (childAccess check).
+
+### 3E — UI פרטיות
+- **`presentation/settings/MediaPrivacyPanel.tsx`** (חדש) — Toggle "סנכרן תמונות לענן" (syncPhotos); הסבר הצפנה; כפתור "מחק תמונות מהענן". RTL מלא, WCAG 2.1 AA. מוצג בהגדרות כש-settingsOpen.
+- **`data/settingsRepo.ts`** — `getSyncPhotos()/setSyncPhotos()` (ברירת מחדל: false).
+
+### 3F — חיבור CellEditor + App.tsx
+- **`presentation/builder/CellEditor.tsx`** — `MediaSyncConfig` interface + prop; blobRef שומר blob מעובד; `handleImageFile` מעביר source (camera/gallery); handleSave → שמירה ב-mediaRepo + uploadMedia ברקע אם syncPhotos && authUserId.
+- **`presentation/builder/BuilderView.tsx`** — עובר mediaSyncConfig ל-CellEditor.
+- **`App.tsx`** — syncPhotos state (נטען מ-settingsRepo); mediaSyncConfig מועבר ל-BuilderView; MediaPrivacyPanel בהגדרות; onDeletePhotosFromCloud.
+
+### בדיקות (חלק 3)
+- **`data/mediaRepo.test.ts`** — 14 בדיקות: CRUD, listByProfile (סינון/הפרדה), deleteMedia (archived flag), source types.
+- **`services/sync/storageProvider.test.ts`** — 7 בדיקות: LocalStubStorageProvider (upload/download/delete/error cases).
+- **`services/sync/mediaSync.test.ts`** — 7 בדיקות: uploadMedia (URL, syncedAt, הצפנה), downloadMedia (decrypt, null on fail), deleteMediaFromStorage, אינווריאנט offline-first.
+- **`data/migration.test.ts`** — +2 בדיקות: מיגרציה v9→v10 (store media, אינדקס by-profile, נתונים קיימים שורדים).
+- **סה"כ:** ≥308 tests.
+
 > ההיסטוריה המלאה הוצאה מ-`HANDOFF.md` (פרוטוקול handoff: שומרים את HANDOFF רזה,
 > פירוט עמוק כאן). 3–5 השינויים האחרונים נשארים ב-`HANDOFF.md §Session changelog`.
 > לכל מיילסטון יש גם מסמך פירוט ב-`docs/m*.md`.

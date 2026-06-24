@@ -8,6 +8,7 @@ import {
   STORE_PROFILES,
   STORE_SETTINGS,
   STORE_SYMBOLS,
+  STORE_MEDIA,
   STORE_OUTBOX,
   STORE_VERSIONS,
   STORE_USAGE,
@@ -208,5 +209,61 @@ describe('מיגרציית DB v7→v8 — תיקון mimeType הקלטות (P3)'
     const db = await getDb();
     const entry = await db.get(STORE_SYMBOLS, 'cam-1');
     expect(entry?.mimeType).toBe('image/webp');
+  });
+});
+
+describe('מיגרציית DB v9→v10 — הוספת store media (חלק 3)', () => {
+  function makeV9(): Promise<import('idb').IDBPDatabase> {
+    return openDB(DB_NAME, 9, {
+      upgrade(db) {
+        db.createObjectStore(STORE_NIKUD, { keyPath: 'text' });
+        db.createObjectStore(STORE_BOARDS, { keyPath: 'id' });
+        db.createObjectStore(STORE_PROFILES, { keyPath: 'id' });
+        db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+        db.createObjectStore(STORE_SYMBOLS, { keyPath: 'id' });
+        db.createObjectStore(STORE_OUTBOX, { keyPath: 'id' });
+        db.createObjectStore(STORE_VERSIONS, { keyPath: 'key' });
+        const usage = db.createObjectStore(STORE_USAGE, { keyPath: 'id' });
+        usage.createIndex('by-profile', 'profileId', { unique: false });
+        usage.createIndex('by-timestamp', 'timestamp', { unique: false });
+        db.createObjectStore(STORE_SYMBOL_CACHE, { keyPath: 'arasaacId' });
+        const phrases = db.createObjectStore(STORE_PHRASES, { keyPath: 'id' });
+        phrases.createIndex('by-profile', 'profileId', { unique: false });
+        db.createObjectStore('audioCache', { keyPath: 'cacheKey' });
+      },
+    });
+  }
+
+  it('נתוני v9 שורדים שדרוג ל-v10, ונוסף store media עם אינדקס by-profile', async () => {
+    const v9 = await makeV9();
+    await v9.put(STORE_BOARDS, { id: 'board-v9', name: 'לוח v9', archived: false });
+    v9.close();
+    resetDbForTests();
+
+    const db = await getDb();
+    const names = Array.from(db.objectStoreNames);
+
+    // כל ה-stores הישנים שרדו
+    expect(names).toContain(STORE_NIKUD);
+    expect(names).toContain(STORE_BOARDS);
+    expect(names).toContain(STORE_SYMBOLS);
+
+    // store חדש נוסף
+    expect(names).toContain(STORE_MEDIA);
+
+    // הרשומה הישנה עדיין קיימת
+    const board = await db.get(STORE_BOARDS, 'board-v9');
+    expect(board).toMatchObject({ name: 'לוח v9', archived: false });
+  });
+
+  it('store media כולל אינדקס by-profile', async () => {
+    const v9 = await makeV9();
+    v9.close();
+    resetDbForTests();
+
+    const db = await getDb();
+    const tx = db.transaction(STORE_MEDIA, 'readonly');
+    const indexNames = Array.from(tx.store.indexNames);
+    expect(indexNames).toContain('by-profile');
   });
 });

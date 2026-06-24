@@ -4,10 +4,22 @@ import { FITZGERALD, categoryForLabel } from '../../domain/fitzgerald';
 import { addCell } from '../../domain/boardEditor';
 import { ViolationError } from '../../domain/boardEditor';
 import { createSymbolRepo } from '../../data/symbolRepo';
+import { createMediaRepo, type MediaMimeType, type MediaSource as MediaEntrySource } from '../../data/mediaRepo';
 import { cropImage, removeBackground, compressToWebP } from '../../services/image/imageService';
 import type { NikudService } from '../../services/nikud/nikudService';
+import { uploadMedia } from '../../services/sync/mediaSync';
+import { LocalStubStorageProvider, FirebaseStorageProvider } from '../../services/sync/storageProvider';
 import { HiddenToggle } from './HiddenToggle';
 import { SymbolPicker } from './SymbolPicker';
+
+/** הגדרות סנכרון תמונות — מועברות מ-App.tsx דרך BuilderView (אופציונלי). */
+export interface MediaSyncConfig {
+  profileId: string;
+  syncPhotos: boolean;
+  authUserId?: string;
+  /** אם true — משתמש ב-Firebase Storage; אחרת LocalStub (בדיקות/offline). */
+  useFirebase?: boolean;
+}
 
 export interface CellEditorProps {
   cell: Cell | null;
@@ -16,6 +28,7 @@ export interface CellEditorProps {
   nikudService: NikudService | null;
   onSave: (board: Board) => void;
   onCancel: () => void;
+  mediaSyncConfig?: MediaSyncConfig;
 }
 
 const ACTION_LABELS: Record<CellAction['type'], string> = {
@@ -36,7 +49,7 @@ function blobToDataUri(blob: Blob): Promise<string> {
   });
 }
 
-export function CellEditor({ cell, placement, board, nikudService, onSave, onCancel }: CellEditorProps) {
+export function CellEditor({ cell, placement, board, nikudService, onSave, onCancel, mediaSyncConfig }: CellEditorProps) {
   const [label, setLabel] = useState(cell?.label ?? '');
   const [nikud, setNikud] = useState(cell?.nikud ?? '');
   const [fitzgerald, setFitzgerald] = useState<Fitzgerald | undefined>(cell?.fitzgerald);
@@ -56,6 +69,9 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  /** blob מעובד (WebP) לשמירה ב-mediaRepo — מאופס בכל בחירת תמונה חדשה. */
+  const blobRef = useRef<Blob | null>(null);
+  const mediaSourceRef = useRef<MediaEntrySource>('gallery');
 
   const handleLabelChange = (val: string) => {
     setLabel(val);
@@ -77,25 +93,28 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
     }
   };
 
-  const handleImageFile = async (file: File) => {
+  const handleImageFile = async (file: File, source: MediaEntrySource = 'gallery') => {
     const preview = URL.createObjectURL(file);
     setImagePreview(preview);
     try {
       const cropped = await cropImage(file, { x: 0, y: 0, width: file.size, height: file.size });
       const noBg = await removeBackground(cropped);
       const webp = await compressToWebP(noBg);
+      blobRef.current = webp;
+      mediaSourceRef.current = source;
       const uri = await blobToDataUri(webp);
       setImageUri(uri);
     } catch {
-      // Fallback: read file directly
+      blobRef.current = file;
+      mediaSourceRef.current = source;
       const uri = await blobToDataUri(file);
       setImageUri(uri);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, source: MediaEntrySource = 'gallery') => {
     const file = e.target.files?.[0];
-    if (file) void handleImageFile(file);
+    if (file) void handleImageFile(file, source);
   };
 
   const startRecording = async () => {
@@ -146,8 +165,10 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
       return;
     }
 
+    const cellId = cell?.id ?? `cell-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
     const updatedCell: Cell = {
-      id: cell?.id ?? `cell-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: cellId,
       label: trimmedLabel,
       ...(nikud ? { nikud } : {}),
       ...(fitzgerald ? { fitzgerald } : {}),
@@ -159,15 +180,52 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
     };
 
     try {
+      let newBoard: Board;
       if (cell === null && placement !== null) {
-        const newBoard = addCell(board, updatedCell, { ...placement, cellId: updatedCell.id });
-        onSave(newBoard);
+        newBoard = addCell(board, updatedCell, { ...placement, cellId: updatedCell.id });
       } else if (cell !== null) {
-        const newBoard: Board = {
+        newBoard = {
           ...board,
           cells: { ...board.cells, [updatedCell.id]: updatedCell },
         };
-        onSave(newBoard);
+      } else {
+        return;
+      }
+      onSave(newBoard);
+
+      // שמירת תמונה אישית ב-mediaRepo + סנכרון ברקע (לא חוסם UI).
+      if (blobRef.current && mediaSyncConfig) {
+        const blob = blobRef.current;
+        const source = mediaSourceRef.current;
+        const { profileId, syncPhotos, authUserId, useFirebase } = mediaSyncConfig;
+        void (async () => {
+          const mediaId = `media-${cellId}-${Date.now()}`;
+          const mimeType: MediaMimeType = blob.type.startsWith('image/') ? blob.type as MediaMimeType : 'image/webp';
+          const repo = createMediaRepo();
+          const entry = {
+            id: mediaId,
+            cellId,
+            profileId,
+            mimeType,
+            blob,
+            encrypted: false,
+            source,
+            createdAt: Date.now(),
+          };
+          await repo.saveMedia(entry);
+
+          if (syncPhotos && authUserId) {
+            const storageProvider = useFirebase
+              ? new FirebaseStorageProvider()
+              : new LocalStubStorageProvider();
+            try {
+              await uploadMedia(authUserId, entry, storageProvider, repo);
+            } catch {
+              // העלאה נכשלה — הנתון המקומי שמור; יסונכרן בהזדמנות הבאה.
+            }
+          }
+        })();
+        blobRef.current = null;
       }
     } catch (err) {
       if (err instanceof ViolationError) {
@@ -421,7 +479,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleFileChange}
+                onChange={(e) => handleFileChange(e, 'gallery')}
                 style={{ display: 'none' }}
               />
             </label>
@@ -443,7 +501,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                 type="file"
                 accept="image/*"
                 capture="environment"
-                onChange={handleFileChange}
+                onChange={(e) => handleFileChange(e, 'camera')}
                 style={{ display: 'none' }}
               />
             </label>
