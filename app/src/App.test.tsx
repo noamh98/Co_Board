@@ -73,8 +73,9 @@ describe('App — מצב נעול, קוד מטפל ומעבר פרופיל (M1)'
       'פרופיל',
     )) as HTMLSelectElement;
     // פרופיל חדש פותח wizard — מילוי שלב 1, 2, 3
+    // E3: ה-Wizard נטען lazily (React.lazy) → ממתינים לטעינת ה-chunk לפני אינטראקציה.
     fireEvent.click(screen.getByRole('button', { name: 'פרופיל חדש' }));
-    fireEvent.change(screen.getByLabelText('שם הפרופיל'), {
+    fireEvent.change(await screen.findByLabelText('שם הפרופיל'), {
       target: { value: 'דנה' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'הבא' }));
