@@ -27,10 +27,13 @@ export const approveUser = onCall(
       throw new HttpsError('invalid-argument', 'uid ו-status נדרשים');
     }
 
-    // עדכן custom claims
-    const claims = status === 'approved'
-      ? { approved: true }
-      : { approved: false };
+    // עדכן custom claims — מיזוג עם claims קיימים כדי לא לדרוס (למשל admin).
+    const existingUser = await getAuth().getUser(uid);
+    const existingClaims = existingUser.customClaims ?? {};
+    const claims = {
+      ...existingClaims,
+      approved: status === 'approved',
+    };
     await getAuth().setCustomUserClaims(uid, claims);
 
     // עדכן Firestore

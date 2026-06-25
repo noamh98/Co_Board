@@ -63,6 +63,7 @@ describe('settingsRepo — accessSettings (FR-020)', () => {
       activateOnRelease: true,
       doubleTapPrevention: true,
       dwellPreviewMs: 250,
+      highContrast: false,
     };
     await s.saveAccessSettings(custom);
     expect(await s.getAccessSettings()).toEqual(custom);

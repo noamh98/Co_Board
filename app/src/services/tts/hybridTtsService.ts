@@ -18,6 +18,9 @@ export class HybridTtsService implements TtsLike {
     const trimmed = text.trim();
     if (!trimmed) return { spoken: false, reason: 'empty' };
 
+    // A6: עצור השמעה קודמת (אודיו + Web Speech) לפני התחלת חדשה.
+    this.cancel();
+
     const voiceId = this.resolveVoiceId(opts);
     const rate = opts.rate ?? 1;
     const pitch = opts.pitch ?? 1;

@@ -165,7 +165,7 @@ describe('speakCell', () => {
   it('הקלטה קיימת → Audio.play נקרא; speak לא נקרא', async () => {
     const mockPlay = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(globalThis, 'Audio').mockImplementation(
-      () => ({ play: mockPlay } as unknown as HTMLAudioElement),
+      () => ({ play: mockPlay, pause: vi.fn(), src: '' } as unknown as HTMLAudioElement),
     );
 
     const tts = makeTts();

@@ -108,14 +108,22 @@
     --cl-ink:         #ECF1F8;
     --cl-muted:       #94A4B8;
     --cl-border:      #2A3340;
-    --cl-primary:     #2E9377;
-    --cl-primary-dk:  #1F6B56;
+    --cl-primary:     #19805F;   /* F2: כהה דיו ל-4.5:1 עם טקסט לבן */
+    --cl-primary-dk:  #12624A;
     --cl-primary-lt:  #162B20;
     --cl-on-primary:  #FFFFFF;
     --cl-overlay:     rgba(10, 16, 24, 0.6);
     --cl-chip:        #212B37;
     --cl-chip-border: #374556;
     --cl-scan-ring:   #7AD4EE;
+    /* F2: tokens שנשמטו ממצב כהה — אחרת צ'יפים/סטטוס בהירים על רקע כהה */
+    --cl-accent:      #5FC0E0;
+    --cl-success:     #4FB58E;
+    --cl-success-bg:  #15301F;
+    --cl-warn:        #E0A23C;
+    --cl-error:       #F0837E;
+    --cl-error-bg:    #3A1F1E;
+    --cl-danger:      #F0837E;
     --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
     --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
     --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
@@ -123,7 +131,7 @@
     --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
     --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
     --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
-    --muted: #94A4B8; --primary: #2E9377;
+    --muted: #94A4B8; --primary: #19805F;
   }
 }
 
@@ -135,14 +143,22 @@
   --cl-ink:         #ECF1F8;
   --cl-muted:       #94A4B8;
   --cl-border:      #2A3340;
-  --cl-primary:     #2E9377;
-  --cl-primary-dk:  #1F6B56;
+  --cl-primary:     #19805F;   /* F2: כהה דיו ל-4.5:1 עם טקסט לבן */
+  --cl-primary-dk:  #12624A;
   --cl-primary-lt:  #162B20;
   --cl-on-primary:  #FFFFFF;
   --cl-overlay:     rgba(10, 16, 24, 0.6);
   --cl-chip:        #212B37;
   --cl-chip-border: #374556;
   --cl-scan-ring:   #7AD4EE;
+  /* F2: tokens שנשמטו ממצב כהה — אחרת צ'יפים/סטטוס בהירים על רקע כהה */
+  --cl-accent:      #5FC0E0;
+  --cl-success:     #4FB58E;
+  --cl-success-bg:  #15301F;
+  --cl-warn:        #E0A23C;
+  --cl-error:       #F0837E;
+  --cl-error-bg:    #3A1F1E;
+  --cl-danger:      #F0837E;
   --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
   --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
   --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
@@ -150,7 +166,48 @@
   --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
   --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
   --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
-  --muted: #94A4B8; --primary: #2E9377;
+  --muted: #94A4B8; --primary: #19805F;
+}
+
+/* F4: ערכת ניגודיות גבוהה — שחור/לבן + גבולות חזקים. גווני Fitzgerald נשמרים בתאים. */
+.high-contrast {
+  --cl-bg:          #ffffff;
+  --cl-surface:     #ffffff;
+  --cl-surface-alt: #ffffff;
+  --cl-ink:         #000000;
+  --cl-muted:       #1a1a1a;
+  --cl-border:      #000000;
+  --cl-primary:     #0a3a2a;
+  --cl-primary-dk:  #062018;
+  --cl-primary-lt:  #d6efde;
+  --cl-on-primary:  #ffffff;
+  --cl-accent:      #004a66;
+  --cl-success:     #0a5a3a;
+  --cl-success-bg:  #ffffff;
+  --cl-warn:        #7a3d00;
+  --cl-error:       #8a0000;
+  --cl-error-bg:    #ffffff;
+  --cl-danger:      #8a0000;
+  --cl-chip:        #ffffff;
+  --cl-chip-border: #000000;
+  --cl-overlay:     rgba(0, 0, 0, 0.7);
+  --bg: #ffffff; --surface: #ffffff; --ink: #000000; --muted: #1a1a1a; --primary: #0a3a2a;
+}
+.high-contrast .cell,
+.high-contrast .adultbar__btn {
+  border-width: 2px;
+  border-color: #000000;
+}
+
+/* F4: forced-colors (Windows High Contrast) — שמירת קוד-הצבע הסמנטי של Fitzgerald בתאים */
+@media (forced-colors: active) {
+  .cell {
+    forced-color-adjust: none; /* אל תמחק את גוון Fitzgerald — הוא נושא משמעות */
+    border: 2px solid CanvasText;
+  }
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
 }
 
 /* ── 3. BASE ──────────────────────────────────────────────────────── */
@@ -179,32 +236,21 @@ body {
   padding-left: var(--safe-l);
   padding-right: var(--safe-r);
 }
-.app__header {
+/* F3: landmark <main> — שומר על מבנה ה-flex הקודם (board בעל flex:1 גדל בתוכו). */
+.app__main {
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--cl-surface);
-  border-bottom: 1px solid var(--cl-border);
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
-.app__title {
-  font-size: var(--tx-lg);
-  margin: 0;
-  color: var(--cl-primary);
-  font-weight: 700;
-}
+/* F6: .app__header / .app__title הוסרו — CSS מת (BrandBar החליף את ה-header). */
 .app__badge {
   font-size: var(--tx-xs);
   color: var(--cl-muted);
 }
 .app__badge--warn { color: var(--cl-warn); }
-.app__profile {
-  font-size: var(--tx-sm);
-  font-weight: 600;
-  color: var(--cl-ink);
-}
+/* F6: .app__profile הוסר — CSS מת. */
 
 /* ── BRAND BAR (Claude Design 2026) ──────────────────────────────── */
 .brandbar {
@@ -305,6 +351,22 @@ body {
 .brandbar__menu-icon { font-size: 18px; }
 .brandbar__menu-item--danger { color: var(--cl-danger); font-weight: 700; }
 .brandbar__menu-item--danger:hover { background: rgba(217, 83, 79, 0.1); }
+.brandbar__menu-auth {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--sp-2) var(--sp-4); background: var(--cl-surface-alt);
+  border-radius: var(--r-sm); margin: var(--sp-1) var(--sp-2);
+}
+.brandbar__menu-auth-name { font-size: 14px; font-weight: 700; color: var(--cl-ink); }
+.brandbar__menu-auth-email { font-size: 12px; color: var(--cl-muted); }
+.brandbar__menu-section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--cl-muted); padding: var(--sp-1) var(--sp-4) 0;
+}
+.brandbar__menu-item--profile { gap: var(--sp-2); }
+.brandbar__menu-item--profile.brandbar__menu-item--active { font-weight: 700; color: var(--cl-primary); }
+.brandbar__menu-profile-dot { font-size: 14px; color: var(--cl-primary); }
+.brandbar__menu-item--new { color: var(--cl-primary); font-weight: 600; }
+.brandbar__menu-item--signin { color: var(--cl-accent); font-weight: 600; }
 
 .brandbar__center {
   flex: 1;
@@ -460,7 +522,7 @@ body {
 .pin__input:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55); /* F5: focus ring חזק יותר */
 }
 .adultbar__btn,
 .pin__btn {
@@ -742,7 +804,9 @@ body {
     border-color 0.35s ease;  /* visual feedback < 100ms (PRD §8.1) */
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  color: var(--cl-ink);
+  /* F1: צבע הטקסט עוקב אחר --cell-ink (text המכויל של Fitzgerald) ולא אחר ערכת הנושא —
+     מבטיח ניגודיות AA על הפסטל בשני המצבים (היה לבן על פסטל בהיר במצב כהה). */
+  color: var(--cell-ink, var(--cl-ink));
 }
 /* מיכל לבן מעוגל לאייקון — הפיקטוגרמה בולטת מעל גוון האריח */
 .cell__icon {
@@ -772,7 +836,8 @@ body {
   letter-spacing: -0.2px;
   text-align: center;
   width: 100%;
-  color: var(--cl-ink);
+  /* F1: עוקב אחר ה-ink המכויל של התא (לא var(--cl-ink) שמתהפך ללבן במצב כהה). */
+  color: var(--cell-ink, var(--cl-ink));
 }
 .cell:hover {
   transform: translateY(-2px);
@@ -996,19 +1061,19 @@ body {
 .ui-toggle__thumb {
   position: absolute;
   top: 3px;
-  left: 3px;               /* physical left = OFF */
+  inset-inline-start: 3px;  /* F6: לוגי — OFF בצד ההתחלה (ימין ב-RTL) */
   width: 22px;
   height: 22px;
   background: var(--cl-on-primary);
   border-radius: 50%;
   box-shadow: var(--sh-sm);
-  transition: left var(--ease);
+  transition: inset-inline-start var(--ease);
 }
 .ui-toggle__input:checked + .ui-toggle__track {
   background: var(--cl-primary);
 }
 .ui-toggle__input:checked + .ui-toggle__track .ui-toggle__thumb {
-  left: calc(100% - 22px - 3px); /* physical right = ON */
+  inset-inline-start: calc(100% - 22px - 3px); /* F6: לוגי — ON בצד הסיום */
 }
 .ui-toggle__input:focus-visible + .ui-toggle__track {
   outline: 3px solid var(--cl-primary);
@@ -1171,7 +1236,7 @@ body {
 .voice-select:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55); /* F5: focus ring חזק יותר */
 }
 .voice-select-label {
   display: block;
@@ -1256,7 +1321,7 @@ body {
 .login-panel__input:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55); /* F5: focus ring חזק יותר */
 }
 .login-panel__error { margin: 0; font-size: var(--tx-sm); color: var(--cl-error); }
 .login-panel__actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
@@ -1329,6 +1394,30 @@ body {
 .auth-screen__notice p { margin: 0; font-size: var(--tx-sm); color: var(--cl-ink); }
 .auth-screen__link { color: var(--cl-primary); font-weight: 700; }
 .auth-screen__card .login-panel__btn { margin-top: var(--sp-2); }
+
+/* ── login overlay ─────────────────────────────────────────────────── */
+.login-overlay {
+  position: fixed; inset: 0; z-index: var(--z-modal);
+  display: flex; align-items: center; justify-content: center; padding: var(--sp-5);
+}
+.login-overlay__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(3px);
+}
+.login-overlay__card {
+  position: relative; z-index: 1;
+  width: min(440px, 100%); max-height: 90dvh; overflow-y: auto;
+  background: var(--cl-surface); border: 1px solid var(--cl-border);
+  border-radius: var(--r-lg); padding: var(--sp-8) var(--sp-6) var(--sp-6);
+  box-shadow: var(--sh-lg);
+}
+.login-overlay__close {
+  position: absolute; top: var(--sp-3); left: var(--sp-3);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: var(--cl-chip); cursor: pointer;
+  font-size: 14px; color: var(--cl-muted); display: flex; align-items: center; justify-content: center;
+}
+.login-overlay__close:hover { background: var(--cl-border); color: var(--cl-ink); }
 
 /* ── 18c. ADMIN / PANEL OVERLAY (Claude Design) ──────────────────── */
 .panel-overlay {
@@ -1690,7 +1779,7 @@ body {
 .wizard__input:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55); /* F5: focus ring חזק יותר */
 }
 .wizard__error   { color: var(--cl-danger); margin: var(--sp-2) 0 0; font-size: var(--tx-sm); }
 .wizard__hint    { color: var(--cl-muted); margin: 0 0 var(--sp-3); font-size: var(--tx-sm); }
@@ -1710,7 +1799,7 @@ body {
   border-radius: var(--r-md);
   background: var(--cl-surface);
   cursor: pointer;
-  text-align: right;
+  text-align: start; /* F6: לוגי במקום right */
   transition: border-color var(--ease);
 }
 .wizard__template-card--selected {
@@ -1800,4 +1889,59 @@ body {
 :focus-visible {
   outline: 3px solid var(--cl-primary);
   outline-offset: 2px;
+}
+
+/* ── 25b. SR-ONLY (F3) — תוכן לקוראי-מסך בלבד ──────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── 26. ERROR BOUNDARY (D2) — מסך נפילה RTL ──────────────────────── */
+.error-boundary {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--cl-bg, #fff);
+  z-index: 1000;
+}
+.error-boundary__card {
+  max-width: 420px;
+  text-align: center;
+  background: var(--cl-surface, #fff);
+  border: 1px solid var(--cl-border, #ccc);
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+.error-boundary__title {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+  color: var(--cl-ink, #1a1a1a);
+}
+.error-boundary__text {
+  margin: 0 0 20px;
+  color: var(--cl-muted, #555);
+  line-height: 1.5;
+}
+.error-boundary__btn {
+  min-height: 48px;
+  padding: 0 28px;
+  border: none;
+  border-radius: 14px;
+  background: var(--cl-primary, #2563eb);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
 }

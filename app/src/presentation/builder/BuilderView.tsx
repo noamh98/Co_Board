@@ -26,12 +26,21 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
   const [editingCell, setEditingCell] = useState<{ cell: Cell | null; placement: CellPlacement | null } | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [draggedCellId, setDraggedCellId] = useState<string | null>(null);
+  // G1: מצב undo/redo מנוטר ב-state — מתעדכן מיד, לא נקרא מ-ref בזמן render.
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   const repo = useRef(createBoardRepo());
+
+  const syncUndoState = () => {
+    setCanUndo(undoStackRef.current.canUndo());
+    setCanRedo(undoStackRef.current.canRedo());
+  };
 
   const applyBoard = async (newBoard: Board) => {
     undoStackRef.current.push(newBoard);
     setCurrentBoard(newBoard);
+    syncUndoState();
     onBoardChange(newBoard);
     await repo.current.save(newBoard);
   };
@@ -40,6 +49,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
     const prev = undoStackRef.current.undo();
     if (prev) {
       setCurrentBoard(prev);
+      syncUndoState();
       onBoardChange(prev);
       await repo.current.save(prev);
     }
@@ -49,25 +59,32 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
     const next = undoStackRef.current.redo();
     if (next) {
       setCurrentBoard(next);
+      syncUndoState();
       onBoardChange(next);
       await repo.current.save(next);
     }
   };
 
+  // G1: refs ל-undo/redo כדי שה-effect ירשם פעם אחת ([] deps), לא בכל render.
+  const undoRef = useRef(handleUndo);
+  undoRef.current = handleUndo;
+  const redoRef = useRef(handleRedo);
+  redoRef.current = handleRedo;
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        void handleUndo();
+        void undoRef.current();
       }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
         e.preventDefault();
-        void handleRedo();
+        void redoRef.current();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, []);
 
   const toggleSelect = (cellId: string) => {
     setSelectedCells((prev) => {
@@ -204,7 +221,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
         <button
           type="button"
           className="adultbar__btn"
-          disabled={!undoStackRef.current.canUndo()}
+          disabled={!canUndo}
           onClick={() => void handleUndo()}
           style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
         >
@@ -213,7 +230,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
         <button
           type="button"
           className="adultbar__btn"
-          disabled={!undoStackRef.current.canRedo()}
+          disabled={!canRedo}
           onClick={() => void handleRedo()}
           style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
         >
@@ -325,6 +342,16 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
                 {cell && p ? (
                   <div
                     className="cell"
+                    // F5: אריח תפוס נגיש למקלדת (היה div onClick בלבד).
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`ערוך תא ${cell.label}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setEditingCell({ cell, placement: p });
+                      }
+                    }}
                     draggable
                     onDragStart={() => setDraggedCellId(p.cellId)}
                     onDragEnd={() => setDraggedCellId(null)}

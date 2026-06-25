@@ -22,7 +22,14 @@ export type CellAction =
   | { type: 'back' }
   | { type: 'home' }
   | { type: 'clear' } // נקה הכל
-  | { type: 'deleteWord' }; // מחק מילה אחרונה
+  | { type: 'deleteWord' } // מחק מילה אחרונה
+  // ── I5 — פעולות תא מורחבות (אדיטיבי) ──
+  | { type: 'playAudio'; audioId?: string } // ניגון הקלטה (A4)
+  | { type: 'playVideo'; url: string }
+  | { type: 'openLink'; url: string }
+  | { type: 'setVolume'; volume: number }
+  | { type: 'insertPrediction' } // הוספת מילת ניבוי (I2)
+  | { type: 'modifyWord'; op: 'pluralize' | 'definite' | 'feminine' | 'masculine' }; // הטיה (I1)
 
 /** תא בודד בלוח. */
 export interface Cell {
@@ -39,13 +46,43 @@ export interface Cell {
   fitzgerald?: Fitzgerald;
   /** מזהה סמל מספריית סמלים (ARASAAC וכו'). */
   symbolId?: string;
+  /** מזהה הקלטת קול ב-symbolRepo (source='recording'). נפרד מ-symbolId (A4). */
+  audioId?: string;
   /** URI לתמונה אישית (מצלמה/גלריה). */
   imageUri?: string;
   /** הסתרה ללא מחיקה — לחשיפה הדרגתית (PRD §4.1, FR-014). */
   hidden?: boolean;
   /** מילת ליבה — כפופה לאינווריאנט עקביות המיקום (Motor Planning). */
   isCore?: boolean;
+  /** מאפיינים מורפולוגיים להטיות חכמות (I1). אדיטיבי, אופציונלי. */
+  morphology?: CellMorphology;
+  /** רמת חשיפה לאוצר מילים צומח (I4). undefined = רמה 0 (תמיד גלוי). */
+  level?: number;
   action: CellAction;
+}
+
+/** חלק דיבר (POS) למנוע המורפולוגיה (I1). */
+export type PartOfSpeech =
+  | 'noun'
+  | 'verb'
+  | 'adjective'
+  | 'pronoun'
+  | 'preposition'
+  | 'adverb'
+  | 'number'
+  | 'other';
+
+/** מאפיינים מורפולוגיים של מילה/תא (I1) — כולם אופציונליים. */
+export interface CellMorphology {
+  pos?: PartOfSpeech;
+  gender?: 'm' | 'f';
+  number?: 'singular' | 'plural' | 'dual';
+  person?: 1 | 2 | 3;
+  tense?: 'past' | 'present' | 'future' | 'imperative';
+  /** שורש (אופציונלי, לעתיד). */
+  root?: string;
+  /** צורת הבסיס לפני הטיה (אם שונה מ-label). */
+  base?: string;
 }
 
 export interface GridSize {

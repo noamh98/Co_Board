@@ -24,6 +24,35 @@ describe('useDwellActivation', () => {
     expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
+  it('רעד (תזוזות קטנות) אינו מאפס את הטיימר — ההפעלה עדיין מתרחשת', () => {
+    const onActivate = vi.fn();
+    const { result } = renderHook(() =>
+      useDwellActivation(onActivate, { ...DEFAULT_ACCESS_SETTINGS, dwellTimeMs: 1000 }),
+    );
+    act(() => result.current.onPointerEnter({ clientX: 100, clientY: 100 }));
+    // רעד מתמשך — תזוזות קטנות כל 100ms (היה מאפס בכל פעם → לעולם לא מפעיל)
+    for (let t = 0; t < 1000; t += 100) {
+      act(() => vi.advanceTimersByTime(100));
+      act(() =>
+        result.current.onPointerMove({ clientX: 100 + (t % 6), clientY: 100 - (t % 5) }),
+      );
+    }
+    act(() => vi.advanceTimersByTime(50));
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it('תזוזה גדולה (יציאה מכוונת) מבטלת את ההפעלה', () => {
+    const onActivate = vi.fn();
+    const { result } = renderHook(() =>
+      useDwellActivation(onActivate, { ...DEFAULT_ACCESS_SETTINGS, dwellTimeMs: 1000 }),
+    );
+    act(() => result.current.onPointerEnter({ clientX: 100, clientY: 100 }));
+    act(() => vi.advanceTimersByTime(400));
+    act(() => result.current.onPointerMove({ clientX: 200, clientY: 200 }));
+    act(() => vi.advanceTimersByTime(1000));
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
   it('מבטל אם עוזבים לפני הזמן', () => {
     const onActivate = vi.fn();
     const { result } = renderHook(() =>

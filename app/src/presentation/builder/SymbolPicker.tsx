@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { searchAndCache, fetchAndCacheBlob, type SymbolResult, SymbolOfflineError } from '../../services/symbols/symbolSearchService';
+import { useFocusTrap } from '../ui/useFocusTrap';
 
 interface SymbolPickerProps {
   onSelect: (imageUri: string, arasaacId: number) => void;
@@ -12,6 +13,7 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>(onClose);
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -71,7 +73,12 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
+        ref={dialogRef}
         dir="rtl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="בחירת סמל ARASAAC"
+        tabIndex={-1}
         style={{
           background: 'var(--cl-surface)',
           borderRadius: 16,

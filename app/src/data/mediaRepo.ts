@@ -29,6 +29,20 @@ export interface MediaRepo {
   deleteMedia(id: string): Promise<void>;
 }
 
+/**
+ * D3: תקרת מדיה — מסיר לצמיתות רשומות מאורכבות (archived) ישנות מעבר ל-maxArchived.
+ * מונע צמיחה בלתי-מוגבלת של blobs אחרי מחיקות רכות חוזרות. רשומות פעילות לא נוגעות.
+ */
+export async function pruneArchivedMedia(maxArchived = 50): Promise<void> {
+  const db = await getDb();
+  const all = (await db.getAll(STORE_MEDIA)) as MediaEntry[];
+  const archived = all
+    .filter((e) => e.archived)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  if (archived.length <= maxArchived) return;
+  await Promise.all(archived.slice(maxArchived).map((e) => db.delete(STORE_MEDIA, e.id)));
+}
+
 export function createMediaRepo(): MediaRepo {
   return {
     async saveMedia(entry) {

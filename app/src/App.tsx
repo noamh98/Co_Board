@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Cell } from './domain/models';
 import {
   type AppMode,
@@ -18,7 +18,6 @@ import {
   DEFAULT_ACCESS_SETTINGS,
 } from './domain/accessSettings';
 import { BoardView } from './presentation/components/BoardView';
-import { BuilderView } from './presentation/builder/BuilderView';
 import { SentenceBar } from './presentation/components/SentenceBar';
 import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
@@ -32,17 +31,13 @@ import { LoginPanel } from './presentation/auth/LoginPanel';
 import { RegisterPanel } from './presentation/auth/RegisterPanel';
 import { PendingApprovalScreen } from './presentation/auth/PendingApprovalScreen';
 import { RejectedScreen } from './presentation/auth/RejectedScreen';
-import { AdminApprovalPanel } from './presentation/auth/AdminApprovalPanel';
-import { ChildrenDashboard } from './presentation/portal/ChildrenDashboard';
-import { UsageDashboard } from './presentation/analytics/UsageDashboard';
 import { analyticsService } from './services/analytics/analyticsService';
 import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
 import { getSyncPhotos, setSyncPhotos, getDarkMode, setDarkMode as persistDarkMode } from './data/settingsRepo';
-import { createMediaRepo } from './data/mediaRepo';
+import { createMediaRepo, pruneArchivedMedia } from './data/mediaRepo';
 import { deleteMediaFromStorage } from './services/sync/mediaSync';
 import { FirebaseStorageProvider } from './services/sync/storageProvider';
-import { QuickStartWizard } from './presentation/wizard/QuickStartWizard';
 import { PhraseBankPanel } from './presentation/phraseBank/PhraseBankPanel';
 import { WordFinderPanel } from './presentation/wordFinder/WordFinderPanel';
 import { createPhrase } from './domain/phraseBank';
@@ -95,6 +90,23 @@ import {
   toggleHighlight,
 } from './domain/modelingSession';
 
+// E3: פאנלי מבוגר כבדים נטענים lazily (code-splitting) — לא בבנדל הראשוני של מסך הילד.
+const BuilderView = lazy(() =>
+  import('./presentation/builder/BuilderView').then((m) => ({ default: m.BuilderView })),
+);
+const UsageDashboard = lazy(() =>
+  import('./presentation/analytics/UsageDashboard').then((m) => ({ default: m.UsageDashboard })),
+);
+const AdminApprovalPanel = lazy(() =>
+  import('./presentation/auth/AdminApprovalPanel').then((m) => ({ default: m.AdminApprovalPanel })),
+);
+const QuickStartWizard = lazy(() =>
+  import('./presentation/wizard/QuickStartWizard').then((m) => ({ default: m.QuickStartWizard })),
+);
+const ChildrenDashboard = lazy(() =>
+  import('./presentation/portal/ChildrenDashboard').then((m) => ({ default: m.ChildrenDashboard })),
+);
+
 /** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. */
 function vocalize(c: Cell): string {
   return c.vocalization ?? c.nikud ?? c.label;
@@ -130,6 +142,7 @@ export function App() {
   const [ttsPitch, setTtsPitch] = useState(1.0);
   const [syncPhotos, setSyncPhotosState] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [portalOpen, setPortalOpen] = useState(false);
   const [darkMode, setDarkModeState] = useState(false);
@@ -139,8 +152,11 @@ export function App() {
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
   const syncEngineRef = useRef<SyncEngine | null>(null);
-  /** sessionId חי כל הפעלה — לא נשמר, לא מקושר ל-uid */
-  const sessionIdRef = useRef<string>(crypto.randomUUID());
+  /** sessionId חי כל הפעלה — לא נשמר, לא מקושר ל-uid. אתחול עצל (D3: לא randomUUID בכל render). */
+  const sessionIdRef = useRef<string>('');
+  if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+  /** טיימר ה-toast "נשמר!" — נשמר לניקוי במצב unmount (D3). */
+  const saveToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // ref מסנכרן עם syncEnabled state כדי שקרוב syncEngine תמיד יראה ערך נוכחי
   const syncEnabledRef = useRef(false);
 
@@ -149,12 +165,22 @@ export function App() {
     syncEnabledRef.current = syncEnabled;
   }, [syncEnabled]);
 
+  // D3: ניקוי טיימר ה-toast ב-unmount.
+  useEffect(
+    () => () => {
+      if (saveToastTimerRef.current) clearTimeout(saveToastTimerRef.current);
+    },
+    [],
+  );
+
   // אתחול: seed, PIN, קונטקסט פעיל, TTS, NikudService, auth listener
   useEffect(() => {
     const DAY_MS = 24 * 60 * 60 * 1000;
-    void clearEvents(Date.now() - 90 * DAY_MS);
-    void pruneCache(30);
-    void pruneAudioCache(500);
+    // D3: .catch לכל prune — מונע unhandled rejection אם IDB לא זמין.
+    void clearEvents(Date.now() - 90 * DAY_MS).catch(() => {});
+    void pruneCache(30).catch(() => {});
+    void pruneAudioCache(500).catch(() => {});
+    void pruneArchivedMedia(50).catch(() => {});
 
     let alive = true;
     void (async () => {
@@ -181,10 +207,13 @@ export function App() {
     })();
 
     const tts = createBrowserTts();
+    // A3: אתחול סינכרוני מיידי — לחיצה ראשונה תמיד מדברת, גם לפני שטוען apiKey.
+    ttsRef.current = tts;
     void (async () => {
       const apiKey = await getTtsApiKey();
       const provider = apiKey ? new GoogleTtsProvider(apiKey) : null;
-      ttsRef.current = tts ? createHybridTts(tts, provider) : null;
+      // שדרוג ל-hybrid (כולל ספק ענן) ברגע שהמפתח נטען.
+      if (alive && tts) ttsRef.current = createHybridTts(tts, provider);
     })();
     if (!tts) {
       setHasHeVoice(false);
@@ -254,6 +283,12 @@ export function App() {
     syncEngineRef.current = engine;
     const unsub = engine.onStatusChange(setSyncStatus);
 
+    // C1: חזרת רשת → סנכרון אוטומטי (עריכות אופליין מפסיקות להישאר תקועות עד reload).
+    const onOnline = (): void => {
+      void engine.runSync();
+    };
+    window.addEventListener('online', onOnline);
+
     if (syncEnabled && authUser) {
       void engine.runSync();
     } else {
@@ -262,6 +297,7 @@ export function App() {
 
     return () => {
       unsub();
+      window.removeEventListener('online', onOnline);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncEnabled, authUser?.uid]);
@@ -330,6 +366,15 @@ export function App() {
     }
   }, [darkMode]);
 
+  // F4: ערכת ניגודיות גבוהה — class על <html> (כמו dark-mode), נשלט מהגדרות הגישה.
+  useEffect(() => {
+    if (accessSettings.highContrast) {
+      document.documentElement.classList.add('high-contrast');
+    } else {
+      document.documentElement.classList.remove('high-contrast');
+    }
+  }, [accessSettings.highContrast]);
+
   const onDeletePhotosFromCloud = async (): Promise<void> => {
     if (!ctx || !authUser) return;
     const repo = createMediaRepo();
@@ -366,48 +411,52 @@ export function App() {
     });
   };
 
-  const onCell = (cell: Cell): void => {
-    if (modelingActive && mode === 'adult') {
-      setModelingSession((prev) =>
-        prev
-          ? toggleHighlight(prev, cell.id)
-          : toggleHighlight(createModelingSession(), cell.id),
-      );
-      return;
-    }
-
-    const action = cell.action;
-
-    if (action.type === 'speak') {
-      setSentence((s) => [...s, cell]);
-      void speakCell(cell, symbolRepoRef.current, ttsRef.current, speakOpts());
-      if (ctx && currentBoard) {
-        analyticsService.trackCellPress(
-          ctx.activeProfile.id,
-          currentBoard.id,
-          cell,
-          sessionIdRef.current,
+  // E1: onCell יציב (useCallback) — לחיצה לא מרנדרת מחדש את כל הלוח (memo).
+  const onCell = useCallback(
+    (cell: Cell): void => {
+      if (modelingActive && mode === 'adult') {
+        setModelingSession((prev) =>
+          prev
+            ? toggleHighlight(prev, cell.id)
+            : toggleHighlight(createModelingSession(), cell.id),
         );
+        return;
       }
-      if (!cell.nikud && nikudRef.current) {
-        void nikudRef.current.getNikud(cell.label);
+
+      const action = cell.action;
+
+      if (action.type === 'speak') {
+        setSentence((s) => [...s, cell]);
+        void speakCell(cell, symbolRepoRef.current, ttsRef.current, {
+          voiceURI: selectedVoiceURI,
+          rate: ttsRate,
+          pitch: ttsPitch,
+        });
+        if (ctx && currentBoard) {
+          analyticsService.trackCellPress(
+            ctx.activeProfile.id,
+            currentBoard.id,
+            cell,
+            sessionIdRef.current,
+          );
+        }
+        // E2: ה-prefetch של הניקוד הוסר — BoardView מחשב ניקוד מרוכז ברמת הלוח.
+      } else if (action.type === 'navigate') {
+        setNavStack((prev) => (prev ? navPush(prev, action.targetBoardId) : prev));
+      } else if (action.type === 'back') {
+        setNavStack((prev) => (prev ? navPop(prev) : prev));
+      } else if (action.type === 'home') {
+        if (ctx) {
+          setNavStack(navHome(ctx.activeProfile.homeBoardId));
+        }
+      } else if (action.type === 'deleteWord') {
+        setSentence((s) => s.slice(0, -1));
+      } else if (action.type === 'clear') {
+        setSentence([]);
       }
-    } else if (action.type === 'navigate') {
-      setNavStack((prev) =>
-        prev ? navPush(prev, action.targetBoardId) : prev,
-      );
-    } else if (action.type === 'back') {
-      setNavStack((prev) => (prev ? navPop(prev) : prev));
-    } else if (action.type === 'home') {
-      if (ctx) {
-        setNavStack(navHome(ctx.activeProfile.homeBoardId));
-      }
-    } else if (action.type === 'deleteWord') {
-      setSentence((s) => s.slice(0, -1));
-    } else if (action.type === 'clear') {
-      setSentence([]);
-    }
-  };
+    },
+    [modelingActive, mode, ctx, currentBoard, selectedVoiceURI, ttsRate, ttsPitch],
+  );
 
   const speakSentence = (): void => {
     if (sentence.length > 0) speak(sentence.map(vocalize).join(' '));
@@ -454,10 +503,14 @@ export function App() {
   const onSaveSentence = (): void => {
     if (!ctx || sentence.length === 0) return;
     const entry = createPhrase(ctx.activeProfile.id, sentence);
-    void savePhrase(entry).then(() => {
-      setSaveToast(true);
-      setTimeout(() => setSaveToast(false), 1500);
-    });
+    void savePhrase(entry)
+      .then(() => {
+        setSaveToast(true);
+        // D3: שמור את ה-timer לניקוי ב-unmount (מונע setState אחרי הסרה).
+        if (saveToastTimerRef.current) clearTimeout(saveToastTimerRef.current);
+        saveToastTimerRef.current = setTimeout(() => setSaveToast(false), 1500);
+      })
+      .catch(() => {});
   };
 
   const onDeletePhrase = (id: string): void => {
@@ -526,17 +579,17 @@ export function App() {
         profileName={ctx?.activeProfile.name}
         onOpenAdult={adult ? () => setSettingsOpen(true) : () => setPinPrompt(true)}
         onSignOut={adult && authUser ? onSignOut : undefined}
+        onSignIn={syncEnabled && !authUser ? () => setLoginOpen(true) : undefined}
+        isAdult={adult}
+        profiles={adult && ctx ? ctx.profiles : undefined}
+        activeProfileId={ctx?.activeProfile.id}
+        onSwitch={adult ? onSwitch : undefined}
+        onOpenWizard={adult ? () => setWizardOpen(true) : undefined}
+        authEmail={authUser?.email}
+        authDisplayName={authUser?.displayName}
         status={
           <>
             {adult && <SyncStatus status={syncStatus} />}
-            {adult && uidBadge && (
-              <span
-                className="app__badge app__badge--user"
-                aria-label="משתמש מחובר"
-              >
-                {uidBadge}
-              </span>
-            )}
             <span
               className={
                 hasHeVoice === false
@@ -590,6 +643,7 @@ export function App() {
         )}
       </div>
 
+      <main className="app__main">
       <SentenceBar
         words={sentence.map((c) => c.label)}
         onSpeak={speakSentence}
@@ -625,6 +679,7 @@ export function App() {
       )}
 
       {builderMode && ctx && currentBoard ? (
+        <Suspense fallback={<div className="app__loading" role="status">טוען…</div>}>
         <BuilderView
           board={currentBoard}
           mediaSyncConfig={ctx ? {
@@ -643,10 +698,13 @@ export function App() {
                   }
                 : prev,
             );
+            // C1: טריגר סנכרון (debounced) אחרי עריכת לוח — אחרת השינוי יושב לא-מסונכרן.
+            syncEngineRef.current?.scheduleSync();
           }}
           onExitBuilder={() => setBuilderMode(false)}
           nikudService={nikudRef.current}
         />
+        </Suspense>
       ) : ctx && currentBoard ? (
         <BoardView
           board={currentBoard}
@@ -659,6 +717,7 @@ export function App() {
           טוען…
         </div>
       )}
+      </main>
 
       {settingsOpen && (
         <AccessSettingsPanel
@@ -682,24 +741,38 @@ export function App() {
         />
       )}
 
-      {/* LoginPanel / RegisterPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
-      {settingsOpen && syncEnabled && !authUser && (
-        showRegister ? (
-          <RegisterPanel
-            onRegister={onRegister}
-            onGoogleSignIn={onGoogleSignIn}
-            onBackToLogin={() => setShowRegister(false)}
-          />
-        ) : (
-          <LoginPanel
-            onSignIn={async (email, password) => {
-              const provider = new FirebaseProvider();
-              await authService.signIn(provider, email, password);
-            }}
-            onGoogleSignIn={onGoogleSignIn}
-            onGoToRegister={() => setShowRegister(true)}
-          />
-        )
+      {/* מסך כניסה — overlay עצמאי, נפתח מאווטר או מהגדרות */}
+      {(loginOpen || (settingsOpen && syncEnabled && !authUser)) && !authUser && (
+        <div className="login-overlay" role="dialog" aria-modal="true" aria-label="כניסה לחשבון" dir="rtl">
+          <div className="login-overlay__backdrop" onClick={() => { setLoginOpen(false); }} aria-hidden="true" />
+          <div className="login-overlay__card">
+            <button
+              type="button"
+              className="login-overlay__close"
+              aria-label="סגור"
+              onClick={() => { setLoginOpen(false); setShowRegister(false); }}
+            >
+              ✕
+            </button>
+            {showRegister ? (
+              <RegisterPanel
+                onRegister={async (...args) => { await onRegister(...args); setLoginOpen(false); }}
+                onGoogleSignIn={async () => { await onGoogleSignIn(); setLoginOpen(false); }}
+                onBackToLogin={() => setShowRegister(false)}
+              />
+            ) : (
+              <LoginPanel
+                onSignIn={async (email, password) => {
+                  const provider = new FirebaseProvider();
+                  await authService.signIn(provider, email, password);
+                  setLoginOpen(false);
+                }}
+                onGoogleSignIn={async () => { await onGoogleSignIn(); setLoginOpen(false); }}
+                onGoToRegister={() => setShowRegister(true)}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       {/* מסכי מצב Auth — חוסמים תוכן כשמחובר אך לא מאושר */}
@@ -722,15 +795,19 @@ export function App() {
 
       {/* פאנל אדמין */}
       {adminPanelOpen && (
-        <AdminApprovalPanel onClose={() => setAdminPanelOpen(false)} />
+        <Suspense fallback={null}>
+          <AdminApprovalPanel onClose={() => setAdminPanelOpen(false)} />
+        </Suspense>
       )}
 
       {/* פורטל ילדים — רק כשמאושר + מחובר */}
       {portalOpen && authUser?.uid && (
-        <ChildrenDashboard
-          uid={authUser.uid}
-          onClose={() => setPortalOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <ChildrenDashboard
+            uid={authUser.uid}
+            onClose={() => setPortalOpen(false)}
+          />
+        </Suspense>
       )}
 
       {backupOpen && (
@@ -748,17 +825,21 @@ export function App() {
       )}
 
       {analyticsOpen && ctx && (
-        <UsageDashboard
-          profileId={ctx.activeProfile.id}
-          onClose={() => setAnalyticsOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <UsageDashboard
+            profileId={ctx.activeProfile.id}
+            onClose={() => setAnalyticsOpen(false)}
+          />
+        </Suspense>
       )}
 
       {wizardOpen && (
-        <QuickStartWizard
-          onComplete={onWizardComplete}
-          onClose={() => setWizardOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <QuickStartWizard
+            onComplete={onWizardComplete}
+            onClose={() => setWizardOpen(false)}
+          />
+        </Suspense>
       )}
 
       {phraseBankOpen && (
