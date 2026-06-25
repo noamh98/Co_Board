@@ -18,6 +18,7 @@ const KEY_TTS_PROVIDER = 'ttsProvider';
 const KEY_TTS_API_KEY = 'ttsApiKey';
 const KEY_SYNC_PHOTOS = 'syncPhotos';
 const KEY_DARK_MODE = 'darkMode';
+const KEY_LAST_SYNC_AT = 'lastSyncAt';
 
 const DEFAULT_TTS_RATE = 1.0;
 const DEFAULT_TTS_PITCH = 1.0;
@@ -105,6 +106,14 @@ export async function getSyncPhotos(): Promise<boolean> {
 }
 export async function setSyncPhotos(enabled: boolean): Promise<void> {
   await writeValue(KEY_SYNC_PHOTOS, String(enabled));
+}
+
+/** חותמת הסנכרון המוצלח האחרון (epoch ms). 0 אם מעולם לא סונכרן (C2 — pull אינקרמנטלי). */
+export async function getLastSyncAt(): Promise<number> {
+  return readNumber(KEY_LAST_SYNC_AT, 0);
+}
+export async function setLastSyncAt(n: number): Promise<void> {
+  await writeValue(KEY_LAST_SYNC_AT, String(n));
 }
 
 /** מצב לילה ידני (ברירת מחדל: false — עוקב אחר הגדרות מערכת). */
