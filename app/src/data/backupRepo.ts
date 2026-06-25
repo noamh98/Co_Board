@@ -24,6 +24,9 @@ export interface VersionSnapshot {
   data: unknown;
 }
 
+/** תקרת גרסאות שמורות לכל ישות — מעבר לזה הישנות נמחקות (D3). */
+const MAX_VERSIONS_PER_ENTITY = 20;
+
 function createBackupRepo() {
   async function exportBackup(deviceId: string): Promise<BackupData> {
     const db = await getDb();
@@ -69,6 +72,18 @@ function createBackupRepo() {
     const db = await getDb();
     const key = `${snap.entityType}_${snap.entityId}_${snap.version}`;
     await db.put(STORE_VERSIONS, { ...snap, key });
+
+    // D3: תקרת שמירה — שומר רק את MAX_VERSIONS_PER_ENTITY הגרסאות האחרונות לכל ישות
+    // (גרסאות נוצרות בכל conflict LWW → צמיחה בלתי-מוגבלת ללא תקרה).
+    const all = (await db.getAll(STORE_VERSIONS)) as VersionSnapshot[];
+    const forEntity = all
+      .filter((v) => v.entityType === snap.entityType && v.entityId === snap.entityId)
+      .sort((a, b) => b.version - a.version);
+    if (forEntity.length > MAX_VERSIONS_PER_ENTITY) {
+      await Promise.all(
+        forEntity.slice(MAX_VERSIONS_PER_ENTITY).map((v) => db.delete(STORE_VERSIONS, v.key)),
+      );
+    }
   }
 
   async function listVersions(

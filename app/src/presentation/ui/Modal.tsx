@@ -1,7 +1,8 @@
 // presentation/ui/Modal.tsx — מודאל רספונסיבי: desktop=מרכז, phone=bottom-sheet.
-// WCAG 2.1 AA: role="dialog", aria-modal, focus trap via inert (browser-native).
+// WCAG 2.1/2.2 AA: role="dialog", aria-modal, מלכודת פוקוס + Escape + החזרת פוקוס (D1).
 
 import type { ReactNode, MouseEvent } from 'react';
+import { useFocusTrap } from './useFocusTrap';
 
 interface ModalProps {
   title: string;
@@ -24,13 +25,17 @@ export function Modal({
     if (e.target === e.currentTarget) onClose();
   };
 
+  const dialogRef = useFocusTrap<HTMLDivElement>(onClose);
+
   return (
     <div className="modal-overlay" onClick={handleOverlay}>
       <div
+        ref={dialogRef}
         className={['modal', className].filter(Boolean).join(' ')}
         role="dialog"
         aria-label={ariaLabel ?? title}
         aria-modal="true"
+        tabIndex={-1}
         dir="rtl"
       >
         <div className="modal__header">

@@ -26,7 +26,9 @@ function trackCellPress(
       timestamp: Date.now(),
       sessionId,
     });
-  })();
+  })().catch(() => {
+    // D3: fire-and-forget — כשל אנליטיקה לא יוצר unhandled rejection ולא חוסם TTS.
+  });
 }
 
 async function getTopCells(
