@@ -11,8 +11,25 @@ export function SentenceBar({
   onClear: () => void;
   onSave?: () => void;
 }) {
+  // F6: סדר קריאה הגיוני — [טקסט] → [דבר] → [פעולות עריכה]. הטקסט והדיבור קודמים;
+  // מחק/נקה/שמור אחרונים (היו לפני הטקסט).
   return (
     <div className="sentence" dir="rtl">
+      <div
+        className="sentence__text"
+        data-testid="sentence-text"
+        aria-live="polite"
+      >
+        {words.join(' ')}
+      </div>
+      <button
+        type="button"
+        className="sentence__speak"
+        onClick={onSpeak}
+        aria-label="דבר"
+      >
+        דבר
+      </button>
       <button
         type="button"
         className="sentence__btn"
@@ -39,21 +56,6 @@ export function SentenceBar({
           שמור
         </button>
       )}
-      <div
-        className="sentence__text"
-        data-testid="sentence-text"
-        aria-live="polite"
-      >
-        {words.join(' ')}
-      </div>
-      <button
-        type="button"
-        className="sentence__speak"
-        onClick={onSpeak}
-        aria-label="דבר"
-      >
-        דבר
-      </button>
     </div>
   );
 }

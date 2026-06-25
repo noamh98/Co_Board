@@ -120,6 +120,13 @@ export function AccessSettingsPanel({
             onChange={(v) => set({ doubleTapPrevention: v })}
             label="מניעת מגע כפול (Double-Tap Prevention)"
           />
+          <Toggle
+            id="high-contrast"
+            checked={settings.highContrast ?? false}
+            onChange={(v) => set({ highContrast: v })}
+            label="ניגודיות גבוהה"
+            description="שחור/לבן עם גבולות חזקים — שומר על קוד הצבע של התאים (F4)"
+          />
         </div>
       </section>
 

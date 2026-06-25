@@ -10,6 +10,8 @@ export interface AccessSettings {
   doubleTapPrevention: boolean;
   /** משך אנימציית המילוי המוצגת לפני הפעלת Dwell. */
   dwellPreviewMs: number;
+  /** ערכת ניגודיות גבוהה (F4) — שחור/לבן עם גבולות חזקים, שומר קוד-צבע Fitzgerald. */
+  highContrast?: boolean;
 }
 
 export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
@@ -17,4 +19,5 @@ export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
   activateOnRelease: false,
   doubleTapPrevention: false,
   dwellPreviewMs: 300,
+  highContrast: false,
 };

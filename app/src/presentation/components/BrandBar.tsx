@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 // סרגל מותג עליון (Claude Design 2026): אווטאר + תפריט · ברכה לפי שעה · לוגו.
 // אינו מחליף את ה-AdultBar/PinGate — "הגדרות והורים" מפנה לאותו זרימת מבוגר.
@@ -44,6 +44,40 @@ export function BrandBar({
 }) {
   const [open, setOpen] = useState(false);
   const initials = profileName?.trim().charAt(0) || '◗';
+  const menuRef = useRef<HTMLDivElement>(null);
+  const avatarBtnRef = useRef<HTMLButtonElement>(null);
+
+  // F5: נגישות מקלדת לתפריט — פוקוס לפריט ראשון, Escape סוגר ומחזיר פוקוס לכפתור,
+  // Tab/Shift+Tab במלכודת בתוך התפריט.
+  useEffect(() => {
+    if (!open) return;
+    const menu = menuRef.current;
+    const items = menu
+      ? Array.from(
+          menu.querySelectorAll<HTMLElement>('button:not([disabled]),[href],[tabindex]:not([tabindex="-1"])'),
+        )
+      : [];
+    items[0]?.focus();
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setOpen(false);
+        avatarBtnRef.current?.focus();
+      } else if (e.key === 'Tab' && items.length > 0) {
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [open]);
 
   const Avatar = ({ size }: { size: 'lg' | 'sm' }) => (
     <span
@@ -56,8 +90,11 @@ export function BrandBar({
 
   return (
     <header className="brandbar">
+      {/* F3: כותרת ראשית לקוראי-מסך (BrandBar החליף את ה-<h1> המקורי). */}
+      <h1 className="sr-only">לוח תקשורת — Co_Board</h1>
       <div className="brandbar__avatar-wrap">
         <button
+          ref={avatarBtnRef}
           type="button"
           className="brandbar__avatar-btn"
           aria-label="חשבון והגדרות"
@@ -75,7 +112,7 @@ export function BrandBar({
               onClick={() => setOpen(false)}
               aria-hidden="true"
             />
-            <div className="brandbar__menu" role="menu">
+            <div ref={menuRef} className="brandbar__menu" role="menu">
               {profileName && (
                 <div className="brandbar__menu-head">
                   <Avatar size="sm" />
@@ -123,7 +160,7 @@ export function BrandBar({
       <div className="brandbar__center">
         {profileName && (
           <span className="brandbar__greet">
-            {greetingFor()}, {profileName} 👋
+            {greetingFor()}, {profileName} <span aria-hidden="true">👋</span>
           </span>
         )}
         {status && <span className="brandbar__status">{status}</span>}
