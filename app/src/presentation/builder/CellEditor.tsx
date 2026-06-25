@@ -11,6 +11,7 @@ import { uploadMedia } from '../../services/sync/mediaSync';
 import { LocalStubStorageProvider, FirebaseStorageProvider } from '../../services/sync/storageProvider';
 import { HiddenToggle } from './HiddenToggle';
 import { SymbolPicker } from './SymbolPicker';
+import { useFocusTrap } from '../ui/useFocusTrap';
 
 /** הגדרות סנכרון תמונות — מועברות מ-App.tsx דרך BuilderView (אופציונלי). */
 export interface MediaSyncConfig {
@@ -31,7 +32,9 @@ export interface CellEditorProps {
   mediaSyncConfig?: MediaSyncConfig;
 }
 
-const ACTION_LABELS: Record<CellAction['type'], string> = {
+// I5: רק הפעולות שהעורך חושף (פעולות I5 המורחבות נוצרות תוכניתית, לא דרך הבורר).
+// טיפוס רחב (Record<string,string>) כדי שהרחבת CellAction לא תחייב מפתחות חדשים כאן.
+const ACTION_LABELS: Record<string, string> = {
   speak: 'דבר',
   navigate: 'נווט',
   back: 'חזור',
@@ -49,6 +52,23 @@ function blobToDataUri(blob: Blob): Promise<string> {
   });
 }
 
+/** מימדי תמונה אמיתיים (px) — נחוץ ל-crop נכון (G1: file.size הם בייטים, לא פיקסלים). */
+function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('image load failed'));
+    };
+    img.src = url;
+  });
+}
+
 export function CellEditor({ cell, placement, board, nikudService, onSave, onCancel, mediaSyncConfig }: CellEditorProps) {
   const [label, setLabel] = useState(cell?.label ?? '');
   const [nikud, setNikud] = useState(cell?.nikud ?? '');
@@ -62,7 +82,9 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
   const [imagePreview, setImagePreview] = useState<string | undefined>(cell?.imageUri);
   const [isNikudLoading, setIsNikudLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingSymbolId, setRecordingSymbolId] = useState<string | undefined>(cell?.symbolId);
+  // A4: symbolId (ARASAAC) ו-audioId (הקלטה) מופרדים — לא עוד עומס על שדה אחד.
+  const [symbolId, setSymbolId] = useState<string | undefined>(cell?.symbolId);
+  const [audioId, setAudioId] = useState<string | undefined>(cell?.audioId);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [hidden, setHidden] = useState<boolean>(cell?.hidden ?? false);
   const [symbolPickerOpen, setSymbolPickerOpen] = useState(false);
@@ -97,7 +119,15 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
     const preview = URL.createObjectURL(file);
     setImagePreview(preview);
     try {
-      const cropped = await cropImage(file, { x: 0, y: 0, width: file.size, height: file.size });
+      // G1: גזירה ריבועית ממורכזת לפי מימדי התמונה האמיתיים (היה file.size — בייטים).
+      const { width, height } = await getImageDimensions(file);
+      const side = Math.min(width, height);
+      const cropped = await cropImage(file, {
+        x: Math.floor((width - side) / 2),
+        y: Math.floor((height - side) / 2),
+        width: side,
+        height: side,
+      });
       const noBg = await removeBackground(cropped);
       const webp = await compressToWebP(noBg);
       blobRef.current = webp;
@@ -135,8 +165,9 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
         const uri = await blobToDataUri(blob);
         const id = `rec-${Date.now()}`;
         const repo = createSymbolRepo();
-        await repo.save({ id, uri, mimeType: 'image/webp', source: 'recording', createdAt: Date.now() });
-        setRecordingSymbolId(id);
+        // A4: הקלטת קול נשמרת כ-audio/webm (היה image/webp שגוי) ומזוהה ב-audioId.
+        await repo.save({ id, uri, mimeType: 'audio/webm', source: 'recording', createdAt: Date.now() });
+        setAudioId(id);
       };
       mediaRecorderRef.current = mr;
       mr.start();
@@ -152,6 +183,8 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
     mediaRecorderRef.current = null;
     setIsRecording(false);
   };
+
+  const dialogRef = useFocusTrap<HTMLDivElement>(onCancel);
 
   const buildAction = (): CellAction => {
     if (actionType === 'navigate') return { type: 'navigate', targetBoardId };
@@ -173,7 +206,8 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
       ...(nikud ? { nikud } : {}),
       ...(fitzgerald ? { fitzgerald } : {}),
       ...(imageUri ? { imageUri } : {}),
-      ...(recordingSymbolId ? { symbolId: recordingSymbolId } : cell?.symbolId ? { symbolId: cell.symbolId } : {}),
+      ...(symbolId ? { symbolId } : {}),
+      ...(audioId ? { audioId } : {}),
       ...(cell?.isCore !== undefined ? { isCore: cell.isCore } : {}),
       ...(hidden ? { hidden: true } : {}),
       action: buildAction(),
@@ -250,8 +284,13 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
+        ref={dialogRef}
         className="cell-editor"
         dir="rtl"
+        role="dialog"
+        aria-modal="true"
+        aria-label={cell ? 'עריכת תא' : 'תא חדש'}
+        tabIndex={-1}
         style={{
           background: 'var(--cl-surface)',
           borderRadius: 16,
@@ -272,10 +311,11 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Label */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
+          <label htmlFor="ce-label" style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
             טקסט
           </label>
           <input
+            id="ce-label"
             dir="rtl"
             autoFocus
             value={label}
@@ -293,11 +333,12 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Nikud */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
+          <label htmlFor="ce-nikud" style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
             ניקוד
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
+              id="ce-nikud"
               dir="rtl"
               value={nikud}
               onChange={(e) => setNikud(e.target.value)}
@@ -378,10 +419,11 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Action */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
+          <label htmlFor="ce-action" style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
             פעולה
           </label>
           <select
+            id="ce-action"
             value={actionType}
             onChange={(e) => setActionType(e.target.value as CellAction['type'])}
             style={{
@@ -401,6 +443,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
           {actionType === 'navigate' && (
             <input
               dir="ltr"
+              aria-label="מזהה לוח יעד"
               placeholder="מזהה לוח יעד"
               value={targetBoardId}
               onChange={(e) => setTargetBoardId(e.target.value)}
@@ -532,7 +575,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
             onSelect={(uri, arasaacId) => {
               setImageUri(uri);
               setImagePreview(uri);
-              setRecordingSymbolId(String(arasaacId));
+              setSymbolId(String(arasaacId));
               setSymbolPickerOpen(false);
             }}
             onClose={() => setSymbolPickerOpen(false)}
@@ -585,7 +628,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                   עצור
                 </button>
               )}
-              {recordingSymbolId && (
+              {audioId && (
                 <span style={{ fontSize: '0.85rem', color: 'var(--cl-success)' }}>הקלטה נשמרה</span>
               )}
               {recordingError && (

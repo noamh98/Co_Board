@@ -25,15 +25,7 @@ import {
 import type { SyncProvider, SyncRecord } from './syncProvider';
 import type { Versioned } from '../../domain/sync';
 import { getDeviceId } from './crypto';
-
-const FIREBASE_CONFIG = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
-};
+import { getFirebaseConfig } from '../../data/firebaseEnv';
 
 let _app: FirebaseApp | null = null;
 let _db: Firestore | null = null;
@@ -41,7 +33,8 @@ let _auth: Auth | null = null;
 
 function getFirebaseInstances(): { db: Firestore; auth: Auth } {
   if (!_app) {
-    _app = initializeApp(FIREBASE_CONFIG);
+    // G2: ולידציית env בעת init ראשון (lazy) — שגיאה ברורה אם חסר.
+    _app = initializeApp(getFirebaseConfig());
     _db = getFirestore(_app);
     _auth = getAuth(_app);
   }

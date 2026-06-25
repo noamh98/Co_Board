@@ -1,10 +1,12 @@
 import type { NakdanFetcher } from './nikudService';
 
 // לקוח ל-Nakdan (Dicta) להבאת ניקוד אוטומטי.
-// ⚠️ TODO (סיכון HANDOFF §9.6): לאשר endpoint רשמי + רישוי שימוש לפני production,
-// ולשקול ספק חלופי. הפרסור כאן best-effort ונשען על מבנה התגובה הציבורי הידוע.
-
-const NAKDAN_URL = 'https://nakdan-2-0.loadbalancer.dicta.org.il/api';
+// ⚠️ רישוי (G2): ה-endpoint הציבורי שלהלן אינו מורשה רשמית לפרודקשן. יש להגדיר
+// endpoint מורשה (Dicta API ברישוי) דרך VITE_NAKDAN_ENDPOINT. ללא הגדרה — נעשה
+// שימוש בברירת המחדל לצורכי פיתוח בלבד, וכשל נופל חיננית ל-cache/ללא-ניקוד.
+const DEFAULT_NAKDAN_URL = 'https://nakdan-2-0.loadbalancer.dicta.org.il/api';
+const NAKDAN_URL =
+  (import.meta.env.VITE_NAKDAN_ENDPOINT as string | undefined) || DEFAULT_NAKDAN_URL;
 
 interface NakdanOption {
   w: string;
