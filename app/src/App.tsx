@@ -27,8 +27,7 @@ import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
-import { LoginPanel } from './presentation/auth/LoginPanel';
-import { RegisterPanel } from './presentation/auth/RegisterPanel';
+import { AuthGatePage } from './presentation/auth/AuthGatePage';
 import { PendingApprovalScreen } from './presentation/auth/PendingApprovalScreen';
 import { RejectedScreen } from './presentation/auth/RejectedScreen';
 import { analyticsService } from './services/analytics/analyticsService';
@@ -141,8 +140,7 @@ export function App() {
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
   const [syncPhotos, setSyncPhotosState] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(!import.meta.env.VITE_FIREBASE_API_KEY);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [portalOpen, setPortalOpen] = useState(false);
   const [darkMode, setDarkModeState] = useState(false);
@@ -237,6 +235,7 @@ export function App() {
     if (import.meta.env.VITE_FIREBASE_API_KEY) {
       unsubFirebase = onFirebaseAuthChange((firebaseUser) => {
         if (!alive) return;
+        setAuthChecked(true);
         if (!firebaseUser) {
           authService.setAuthUser(null);
           return;
@@ -564,7 +563,6 @@ export function App() {
       emailVerified: false,
       status: 'pending',
     });
-    setShowRegister(false);
   };
 
   const adult = canManageProfiles(mode);
@@ -573,13 +571,51 @@ export function App() {
   // מחוון uid קצר לתצוגה ב-header
   const uidBadge = authUser ? authUser.email.split('@')[0] : null;
 
+  // ── Auth Gate ──────────────────────────────────────────────────────────
+  if (import.meta.env.VITE_FIREBASE_API_KEY) {
+    if (!authChecked) {
+      return (
+        <div className="app app--loading" dir="rtl" role="status" aria-label="טוען…">
+          <div className="app__loading">טוען…</div>
+        </div>
+      );
+    }
+    if (!authUser) {
+      return (
+        <AuthGatePage
+          onSignIn={async (email, password) => {
+            const provider = new FirebaseProvider();
+            await authService.signIn(provider, email, password);
+          }}
+          onGoogleSignIn={onGoogleSignIn}
+          onRegister={onRegister}
+        />
+      );
+    }
+    if (authUser.status === 'pending') {
+      return (
+        <PendingApprovalScreen
+          email={authUser.email}
+          displayName={authUser.displayName}
+          emailVerified={authUser.emailVerified}
+          onSignOut={onSignOut}
+          onResendVerification={sendVerificationEmail}
+        />
+      );
+    }
+    if (authUser.status === 'rejected') {
+      return (
+        <RejectedScreen email={authUser.email} onSignOut={onSignOut} />
+      );
+    }
+  }
+
   return (
     <div className="app" dir="rtl">
       <BrandBar
         profileName={ctx?.activeProfile.name}
         onOpenAdult={adult ? () => setSettingsOpen(true) : () => setPinPrompt(true)}
         onSignOut={adult && authUser ? onSignOut : undefined}
-        onSignIn={syncEnabled && !authUser ? () => setLoginOpen(true) : undefined}
         isAdult={adult}
         profiles={adult && ctx ? ctx.profiles : undefined}
         activeProfileId={ctx?.activeProfile.id}
@@ -618,7 +654,6 @@ export function App() {
               onOpenWizard={() => setWizardOpen(true)}
               onLock={lock}
               onEditBoard={() => setBuilderMode(true)}
-              onOpenSettings={() => setSettingsOpen(true)}
               onOpenBackup={() => setBackupOpen(true)}
               onOpenAnalytics={() => setAnalyticsOpen(true)}
               onOpenPhraseBank={onOpenPhraseBank}
@@ -738,58 +773,6 @@ export function App() {
           onSyncPhotosChange={onSyncPhotosChange}
           isAuthenticated={!!authUser}
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
-        />
-      )}
-
-      {/* מסך כניסה — overlay עצמאי, נפתח מאווטר או מהגדרות */}
-      {(loginOpen || (settingsOpen && syncEnabled && !authUser)) && !authUser && (
-        <div className="login-overlay" role="dialog" aria-modal="true" aria-label="כניסה לחשבון" dir="rtl">
-          <div className="login-overlay__backdrop" onClick={() => { setLoginOpen(false); }} aria-hidden="true" />
-          <div className="login-overlay__card">
-            <button
-              type="button"
-              className="login-overlay__close"
-              aria-label="סגור"
-              onClick={() => { setLoginOpen(false); setShowRegister(false); }}
-            >
-              ✕
-            </button>
-            {showRegister ? (
-              <RegisterPanel
-                onRegister={async (...args) => { await onRegister(...args); setLoginOpen(false); }}
-                onGoogleSignIn={async () => { await onGoogleSignIn(); setLoginOpen(false); }}
-                onBackToLogin={() => setShowRegister(false)}
-              />
-            ) : (
-              <LoginPanel
-                onSignIn={async (email, password) => {
-                  const provider = new FirebaseProvider();
-                  await authService.signIn(provider, email, password);
-                  setLoginOpen(false);
-                }}
-                onGoogleSignIn={async () => { await onGoogleSignIn(); setLoginOpen(false); }}
-                onGoToRegister={() => setShowRegister(true)}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* מסכי מצב Auth — חוסמים תוכן כשמחובר אך לא מאושר */}
-      {authUser && authUser.status === 'pending' && (
-        <PendingApprovalScreen
-          email={authUser.email}
-          displayName={authUser.displayName}
-          emailVerified={authUser.emailVerified}
-          onSignOut={onSignOut}
-          onResendVerification={sendVerificationEmail}
-        />
-      )}
-
-      {authUser && authUser.status === 'rejected' && (
-        <RejectedScreen
-          email={authUser.email}
-          onSignOut={onSignOut}
         />
       )}
 
