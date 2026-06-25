@@ -253,7 +253,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
         className="cell-editor"
         dir="rtl"
         style={{
-          background: '#fff',
+          background: 'var(--cl-surface)',
           borderRadius: 16,
           padding: 24,
           minWidth: 340,
@@ -272,7 +272,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Label */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
             טקסט
           </label>
           <input
@@ -284,7 +284,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               width: '100%',
               minHeight: 44,
               padding: '0 10px',
-              border: '1px solid #d1d5db',
+              border: '1px solid var(--cl-border)',
               borderRadius: 10,
               fontSize: '1rem',
             }}
@@ -293,7 +293,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Nikud */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
             ניקוד
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -305,7 +305,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                 flex: 1,
                 minHeight: 44,
                 padding: '0 10px',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--cl-border)',
                 borderRadius: 10,
                 fontSize: '1rem',
               }}
@@ -334,10 +334,10 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Fitzgerald color */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 6 }}>
+          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 6 }}>
             קטגוריה (פיצ׳ג׳רלד)
             {fitzgerald && !fitzgeraldManual && (
-              <span style={{ fontSize: '0.78rem', color: '#6b7280', marginRight: 6 }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--cl-muted)', marginRight: 6 }}>
                 (הצעה אוטומטית)
               </span>
             )}
@@ -360,7 +360,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                   style={{
                     background: bg,
                     color: text,
-                    border: selected ? '3px solid #1f2937' : '2px solid rgba(0,0,0,0.12)',
+                    border: selected ? '3px solid var(--cl-primary)' : '2px solid rgba(0,0,0,0.12)',
                     borderRadius: 8,
                     padding: '4px 10px',
                     fontSize: '0.82rem',
@@ -378,7 +378,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Action */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 4 }}>
             פעולה
           </label>
           <select
@@ -388,10 +388,10 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               width: '100%',
               minHeight: 44,
               padding: '0 10px',
-              border: '1px solid #d1d5db',
+              border: '1px solid var(--cl-border)',
               borderRadius: 10,
               fontSize: '1rem',
-              background: '#fff',
+              background: 'var(--cl-surface)',
             }}
           >
             {(Object.keys(ACTION_LABELS) as CellAction['type'][]).map((t) => (
@@ -408,7 +408,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                 width: '100%',
                 minHeight: 44,
                 padding: '0 10px',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--cl-border)',
                 borderRadius: 10,
                 fontSize: '1rem',
                 marginTop: 8,
@@ -419,7 +419,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Image */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 6 }}>
+          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 6 }}>
             תמונה
           </label>
           {imagePreview && (
@@ -432,7 +432,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                   height: 80,
                   objectFit: 'contain',
                   borderRadius: 10,
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid var(--cl-border)',
                   display: 'block',
                 }}
               />
@@ -448,7 +448,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                   height: 22,
                   border: 'none',
                   borderRadius: '50%',
-                  background: '#ef4444',
+                  background: 'var(--cl-danger)',
                   color: '#fff',
                   fontSize: '0.8rem',
                   cursor: 'pointer',
@@ -466,9 +466,9 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               style={{
                 minHeight: 40,
                 padding: '0 12px',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--cl-border)',
                 borderRadius: 10,
-                background: '#f3f4f6',
+                background: 'var(--cl-surface-alt)',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
                 display: 'flex',
@@ -487,9 +487,9 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               style={{
                 minHeight: 40,
                 padding: '0 12px',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--cl-border)',
                 borderRadius: 10,
-                background: '#f3f4f6',
+                background: 'var(--cl-surface-alt)',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
                 display: 'flex',
@@ -511,14 +511,14 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               style={{
                 minHeight: 40,
                 padding: '0 12px',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--cl-border)',
                 borderRadius: 10,
-                background: '#eff6ff',
+                background: 'var(--cl-chip)',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                color: '#1d4ed8',
+                color: 'var(--cl-primary)',
                 fontWeight: 600,
               }}
             >
@@ -541,11 +541,11 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Voice recording */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 6 }}>
+          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 6 }}>
             הקלטת קול
           </label>
           {!navigator.mediaDevices ? (
-            <span style={{ fontSize: '0.9rem', color: '#b45309' }}>הקלטה אינה זמינה</span>
+            <span style={{ fontSize: '0.9rem', color: 'var(--cl-warn)' }}>הקלטה אינה זמינה</span>
           ) : (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {!isRecording ? (
@@ -575,7 +575,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                     padding: '0 14px',
                     border: 'none',
                     borderRadius: 10,
-                    background: '#b91c1c',
+                    background: 'var(--cl-danger)',
                     color: '#fff',
                     fontSize: '0.9rem',
                     fontWeight: 600,
@@ -586,10 +586,10 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
                 </button>
               )}
               {recordingSymbolId && (
-                <span style={{ fontSize: '0.85rem', color: '#16a34a' }}>הקלטה נשמרה</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--cl-success)' }}>הקלטה נשמרה</span>
               )}
               {recordingError && (
-                <span style={{ fontSize: '0.85rem', color: '#b91c1c' }}>{recordingError}</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--cl-danger)' }}>{recordingError}</span>
               )}
             </div>
           )}
@@ -597,7 +597,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
 
         {/* Visibility (FR-014) */}
         <div className="cell-editor__field">
-          <label style={{ fontSize: '0.9rem', color: '#6b7280', display: 'block', marginBottom: 6 }}>
+          <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)', display: 'block', marginBottom: 6 }}>
             חשיפה הדרגתית
           </label>
           <HiddenToggle hidden={hidden} onToggle={setHidden} />
@@ -628,10 +628,10 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
             style={{
               minHeight: 44,
               padding: '0 18px',
-              border: '1px solid #d1d5db',
+              border: '1px solid var(--cl-border)',
               borderRadius: 16,
-              background: '#f3f4f6',
-              color: '#1f2937',
+              background: 'var(--cl-surface-alt)',
+              color: 'var(--cl-ink)',
               fontSize: '1rem',
               cursor: 'pointer',
             }}

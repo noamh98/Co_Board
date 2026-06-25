@@ -71,10 +71,10 @@ export function GridSizePicker({
               padding: '4px 12px',
               borderRadius: 20,
               border: isPresetActive(p)
-                ? '2px solid #1d4ed8'
-                : '1px solid #d1d5db',
-              background: isPresetActive(p) ? '#dbeafe' : '#f3f4f6',
-              color: isPresetActive(p) ? '#1d4ed8' : '#374151',
+                ? '2px solid var(--cl-primary)'
+                : '1px solid var(--cl-border)',
+              background: isPresetActive(p) ? 'var(--cl-primary-lt)' : 'var(--cl-surface-alt)',
+              color: isPresetActive(p) ? 'var(--cl-primary)' : 'var(--cl-ink)',
               fontSize: '0.82rem',
               fontWeight: isPresetActive(p) ? 700 : 400,
               cursor: 'pointer',
@@ -88,7 +88,7 @@ export function GridSizePicker({
 
       {/* Free sliders */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <label style={{ fontSize: '0.9rem', color: '#6b7280' }}>גודל גריד</label>
+        <label style={{ fontSize: '0.9rem', color: 'var(--cl-muted)' }}>גודל גריד</label>
         <select
           aria-label="שורות"
           value={rows}
@@ -126,17 +126,17 @@ export function GridSizePicker({
 
       {/* Warnings */}
       {violationWarning && (
-        <span role="alert" style={{ color: '#b91c1c', fontSize: '0.85rem' }}>
+        <span role="alert" style={{ color: 'var(--cl-danger)', fontSize: '0.85rem' }}>
           {violationWarning}
         </span>
       )}
       {!violationWarning && sizeStatus === 'block' && (
-        <span role="alert" style={{ color: '#b91c1c', fontSize: '0.85rem' }}>
+        <span role="alert" style={{ color: 'var(--cl-danger)', fontSize: '0.85rem' }}>
           גריד {rows}×{cols} יוצר תאים קטנים מדי לשימוש — בחר גריד קטן יותר
         </span>
       )}
       {!violationWarning && sizeStatus === 'warn' && (
-        <span role="status" style={{ color: '#b45309', fontSize: '0.85rem' }}>
+        <span role="status" style={{ color: 'var(--cl-warn)', fontSize: '0.85rem' }}>
           גריד {rows}×{cols} — התאים קטנים; ייתכן שיהיה קשה ללחוץ עליהם
         </span>
       )}
