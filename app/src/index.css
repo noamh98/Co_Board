@@ -888,17 +888,20 @@ body {
 }
 
 /* ── 11. SETTINGS PANEL ───────────────────────────────────────────── */
-.settings-panel { display: flex; flex-direction: column; }
+.settings-panel { display: flex; flex-direction: column; gap: 14px; }
+/* כל סקשן = כרטיס מקובץ בעיצוב Claude Design */
 .settings-section {
-  border-bottom: 1px solid var(--cl-border);
-  padding: var(--sp-4) 0;
+  background: var(--cl-chip);
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  padding: 16px 18px;
+  transition: background 0.35s ease, border-color 0.35s ease;
 }
-.settings-section:last-child { border-bottom: none; }
 .settings-section__header {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-4);
+  gap: 10px;
+  margin-bottom: 12px;
 }
 .settings-section__icon {
   font-size: 1.2rem;
@@ -909,17 +912,15 @@ body {
 .settings-section__title {
   margin: 0;
   font-size: var(--tx-md);
-  font-weight: 600;
+  font-weight: 800;
+  letter-spacing: 0.2px;
   color: var(--cl-ink);
 }
 .settings-section__body {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  padding-inline-start: var(--sp-8);
-}
-@media (max-width: 600px) {
-  .settings-section__body { padding-inline-start: 0; }
+  padding-inline-start: 0;
 }
 
 /* ── 12. UI TOGGLE ───────────────────────────────────────────────── */
