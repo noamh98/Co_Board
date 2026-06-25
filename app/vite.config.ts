@@ -15,8 +15,8 @@ export default defineConfig({
         description: 'אפליקציית AAC עברית — תקשורת תומכת וחליפית',
         lang: 'he',
         dir: 'rtl',
-        theme_color: '#3f6f8f',
-        background_color: '#f7f5f0',
+        theme_color: '#1F7A5C',
+        background_color: '#ECF2FA',
         display: 'standalone',
         orientation: 'any',
         icons: [

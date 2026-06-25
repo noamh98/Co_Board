@@ -23,6 +23,7 @@ import { SentenceBar } from './presentation/components/SentenceBar';
 import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
 import { NavBar } from './presentation/components/NavBar';
+import { BrandBar } from './presentation/components/BrandBar';
 import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import { BackupPanel } from './presentation/settings/BackupPanel';
@@ -521,31 +522,37 @@ export function App() {
 
   return (
     <div className="app" dir="rtl">
-      <header className="app__header">
-        <h1 className="app__title">לוח תקשורת</h1>
-        {ctx && (
-          <span className="app__profile" aria-label="פרופיל פעיל">
-            {ctx.activeProfile.name}
-          </span>
-        )}
-        {adult && <SyncStatus status={syncStatus} />}
-        {adult && uidBadge && (
-          <span className="app__badge app__badge--user" aria-label="משתמש מחובר">
-            {uidBadge}
-          </span>
-        )}
-        <span
-          className={
-            hasHeVoice === false ? 'app__badge app__badge--warn' : 'app__badge'
-          }
-        >
-          {hasHeVoice === null
-            ? 'טוען קול…'
-            : hasHeVoice
-              ? 'קול עברי זמין'
-              : 'אין קול עברי — הקראה בסיסית'}
-        </span>
-      </header>
+      <BrandBar
+        profileName={ctx?.activeProfile.name}
+        onOpenAdult={adult ? () => setSettingsOpen(true) : () => setPinPrompt(true)}
+        onSignOut={adult && authUser ? onSignOut : undefined}
+        status={
+          <>
+            {adult && <SyncStatus status={syncStatus} />}
+            {adult && uidBadge && (
+              <span
+                className="app__badge app__badge--user"
+                aria-label="משתמש מחובר"
+              >
+                {uidBadge}
+              </span>
+            )}
+            <span
+              className={
+                hasHeVoice === false
+                  ? 'app__badge app__badge--warn'
+                  : 'app__badge'
+              }
+            >
+              {hasHeVoice === null
+                ? 'טוען קול…'
+                : hasHeVoice
+                  ? 'קול עברי זמין'
+                  : 'אין קול עברי — הקראה בסיסית'}
+            </span>
+          </>
+        }
+      />
 
       <div className="app__controls">
         {adult ? (

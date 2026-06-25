@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import type { Cell } from '../../domain/models';
 import { globalNikudService } from '../../services/nikud/nikudSingleton';
 import { fitzgeraldStyle } from '../../domain/fitzgerald';
@@ -63,20 +63,23 @@ export function CellButton({
       onPointerLeave={dwell.onPointerLeave}
       onPointerMove={dwell.onPointerMove}
       aria-label={cell.label}
-      style={{
-        color: style.text,
-        ...(cell.fitzgerald ? { borderColor: style.bg } : {}),
-      }}
+      style={
+        cell.fitzgerald
+          ? ({ ['--cell-tint']: style.bg } as CSSProperties)
+          : undefined
+      }
     >
       {imageUri && !imgError && (
-        <img
-          src={imageUri}
-          className="cell__image"
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          onError={() => setImgError(true)}
-        />
+        <span className="cell__icon">
+          <img
+            src={imageUri}
+            className="cell__image"
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        </span>
       )}
       <span className="cell__label">{displayLabel}</span>
     </button>

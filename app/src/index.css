@@ -4,25 +4,41 @@
 
 /* ── 1. DESIGN TOKENS ─────────────────────────────────────────────── */
 :root {
-  /* Color palette */
-  --cl-bg:          #f7f5f0;
-  --cl-surface:     #ffffff;
-  --cl-surface-alt: #f3f4f6;
-  --cl-ink:         #1f2937;
-  --cl-muted:       #6b7280;
-  --cl-border:      #e5e7eb;
-  --cl-primary:     #3f6f8f;
-  --cl-primary-dk:  #2d5a77;
-  --cl-primary-lt:  #dbeafe;
-  --cl-on-primary:  #ffffff;
-  --cl-accent:      #7c3aed;
-  --cl-success:     #16a34a;
-  --cl-success-bg:  #d1fae5;
+  /* Color palette — Claude Design 2026 (ראו mockup/claude-design-2026/) */
+  --cl-bg:          #ECF2FA;
+  --cl-surface:     #FFFFFF;
+  --cl-surface-alt: #F2F6FD;
+  --cl-ink:         #14202E;
+  --cl-muted:       #5A6A7A;
+  --cl-border:      #DBE3EF;
+  --cl-primary:     #1F7A5C;   /* "דבר" / ראשי — ירוק */
+  --cl-primary-dk:  #155F47;   /* צל כפתור "דבר" (speaksh) */
+  --cl-primary-lt:  #D6EFDE;
+  --cl-on-primary:  #FFFFFF;
+  --cl-accent:      #147FA8;   /* טבעת סריקה */
+  --cl-success:     #1F7A5C;
+  --cl-success-bg:  #D6EFDE;
   --cl-warn:        #b45309;
-  --cl-error:       #b91c1c;
-  --cl-error-bg:    #fee2e2;
-  --cl-danger:      #dc2626;
-  --cl-overlay:     rgba(0, 0, 0, 0.45);
+  --cl-error:       #D9534F;
+  --cl-error-bg:    #fdecec;
+  --cl-danger:      #D9534F;
+  --cl-overlay:     rgba(10, 16, 24, 0.5);
+
+  /* Surface accents (חדש — Claude Design) */
+  --cl-chip:        #F2F6FD;   /* רקע chip / סרגל משפט */
+  --cl-chip-border: #CBD9EC;
+  --cl-speak:       var(--cl-primary);
+  --cl-speak-sh:    var(--cl-primary-dk);
+  --cl-scan-ring:   #147FA8;
+  --cl-icon-bg:     #FFFFFF;   /* רקע לבן לאייקון בתוך אריח (גם במצב כהה — ARASAAC) */
+
+  /* Category tints — bg / border (תואם domain/fitzgerald) */
+  --cat-people-bg:   #DCEBFB;  --cat-people-bd:   #6AABF0;
+  --cat-actions-bg:  #D6EFDE;  --cat-actions-bd:  #4FA877;
+  --cat-food-bg:     #FBF1C9;  --cat-food-bd:     #D8AC3E;
+  --cat-feelings-bg: #FBE3D4;  --cat-feelings-bd: #E0935F;
+  --cat-places-bg:   #E6E3FA;  --cat-places-bd:   #8B86D6;
+  --cat-objects-bg:  #D6F0EC;  --cat-objects-bd:  #3FA694;
 
   /* Legacy aliases (backward compat) */
   --bg:      var(--cl-bg);
@@ -86,37 +102,55 @@
 /* ── 2. DARK MODE — auto via OS ───────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not(.light-mode) {
-    --cl-bg:          #0f172a;
-    --cl-surface:     #1e293b;
-    --cl-surface-alt: #334155;
-    --cl-ink:         #f1f5f9;
-    --cl-muted:       #94a3b8;
-    --cl-border:      #334155;
-    --cl-primary:     #60a5fa;
-    --cl-primary-dk:  #93c5fd;
-    --cl-primary-lt:  #1e3a5f;
-    --cl-on-primary:  #0f172a;
-    --cl-overlay:     rgba(0, 0, 0, 0.65);
-    --bg: #0f172a; --surface: #1e293b; --ink: #f1f5f9;
-    --muted: #94a3b8; --primary: #60a5fa;
+    --cl-bg:          #0F151D;
+    --cl-surface:     #18212C;
+    --cl-surface-alt: #212B37;
+    --cl-ink:         #ECF1F8;
+    --cl-muted:       #94A4B8;
+    --cl-border:      #2A3340;
+    --cl-primary:     #2E9377;
+    --cl-primary-dk:  #1F6B56;
+    --cl-primary-lt:  #162B20;
+    --cl-on-primary:  #FFFFFF;
+    --cl-overlay:     rgba(10, 16, 24, 0.6);
+    --cl-chip:        #212B37;
+    --cl-chip-border: #374556;
+    --cl-scan-ring:   #7AD4EE;
+    --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
+    --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
+    --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
+    --cat-feelings-bg: #30221A;  --cat-feelings-bd: #B07A54;
+    --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
+    --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
+    --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
+    --muted: #94A4B8; --primary: #2E9377;
   }
 }
 
 /* Manual dark mode toggle (class on <html>) */
 .dark-mode {
-  --cl-bg:          #0f172a;
-  --cl-surface:     #1e293b;
-  --cl-surface-alt: #334155;
-  --cl-ink:         #f1f5f9;
-  --cl-muted:       #94a3b8;
-  --cl-border:      #334155;
-  --cl-primary:     #60a5fa;
-  --cl-primary-dk:  #93c5fd;
-  --cl-primary-lt:  #1e3a5f;
-  --cl-on-primary:  #0f172a;
-  --cl-overlay:     rgba(0, 0, 0, 0.65);
-  --bg: #0f172a; --surface: #1e293b; --ink: #f1f5f9;
-  --muted: #94a3b8; --primary: #60a5fa;
+  --cl-bg:          #0F151D;
+  --cl-surface:     #18212C;
+  --cl-surface-alt: #212B37;
+  --cl-ink:         #ECF1F8;
+  --cl-muted:       #94A4B8;
+  --cl-border:      #2A3340;
+  --cl-primary:     #2E9377;
+  --cl-primary-dk:  #1F6B56;
+  --cl-primary-lt:  #162B20;
+  --cl-on-primary:  #FFFFFF;
+  --cl-overlay:     rgba(10, 16, 24, 0.6);
+  --cl-chip:        #212B37;
+  --cl-chip-border: #374556;
+  --cl-scan-ring:   #7AD4EE;
+  --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
+  --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
+  --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
+  --cat-feelings-bg: #30221A;  --cat-feelings-bd: #B07A54;
+  --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
+  --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
+  --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
+  --muted: #94A4B8; --primary: #2E9377;
 }
 
 /* ── 3. BASE ──────────────────────────────────────────────────────── */
@@ -126,7 +160,7 @@ body {
   margin: 0;
   background: var(--cl-bg);
   color: var(--cl-ink);
-  font-family: system-ui, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+  font-family: 'Assistant', system-ui, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -171,6 +205,160 @@ body {
   font-weight: 600;
   color: var(--cl-ink);
 }
+
+/* ── BRAND BAR (Claude Design 2026) ──────────────────────────────── */
+.brandbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 10px 18px;
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
+  position: relative;
+  z-index: var(--z-bar);
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.brandbar__avatar-wrap { position: relative; flex-shrink: 0; }
+.brandbar__avatar-btn {
+  border: none;
+  padding: 3px;
+  background: conic-gradient(#6AABF0, #4FA877, #D8AC3E, #E0935F, #6AABF0);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  transition: transform 0.15s ease;
+}
+.brandbar__avatar-btn:hover { transform: scale(1.04); }
+.brandbar__avatar-btn:active { transform: scale(0.93); }
+.brandbar__avatar-btn:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.brandbar__avatar {
+  display: flex;
+  padding: 3px;
+  border-radius: 50%;
+  background: conic-gradient(#6AABF0, #4FA877, #D8AC3E, #E0935F, #6AABF0);
+}
+.brandbar__avatar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #5B9BE0;
+  border: 2.5px solid var(--cl-surface);
+  color: #fff;
+  font-weight: 800;
+}
+.brandbar__avatar--lg, .brandbar__avatar--lg .brandbar__avatar-inner { width: 52px; height: 52px; }
+.brandbar__avatar--lg .brandbar__avatar-inner { font-size: 21px; }
+.brandbar__avatar--sm, .brandbar__avatar--sm .brandbar__avatar-inner { width: 50px; height: 50px; }
+.brandbar__avatar--sm .brandbar__avatar-inner { font-size: 20px; }
+.brandbar__avatar-btn .brandbar__avatar { padding: 0; background: none; }
+
+.brandbar__scrim { position: fixed; inset: 0; z-index: var(--z-overlay); }
+.brandbar__menu {
+  position: absolute;
+  top: 62px;
+  inset-inline-start: 0;
+  width: 288px;
+  max-width: 80vw;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: 20px;
+  box-shadow: var(--sh-lg);
+  padding: 8px;
+  z-index: calc(var(--z-overlay) + 1);
+  animation: brandFade 0.16s ease;
+}
+@keyframes brandFade { from { opacity: 0; } to { opacity: 1; } }
+.brandbar__menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 14px;
+}
+.brandbar__menu-id { display: flex; flex-direction: column; min-width: 0; }
+.brandbar__menu-name { font-size: 18px; font-weight: 800; color: var(--cl-ink); }
+.brandbar__menu-sub { font-size: 13px; color: var(--cl-muted); font-weight: 500; }
+.brandbar__menu-sep { height: 1px; background: var(--cl-border); margin: 4px 6px; }
+.brandbar__menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  color: var(--cl-ink);
+  border-radius: 13px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: start;
+  transition: background var(--ease);
+}
+.brandbar__menu-item:hover { background: var(--cl-chip); }
+.brandbar__menu-item:focus-visible { outline: 2px solid var(--cl-primary); outline-offset: -2px; }
+.brandbar__menu-icon { font-size: 18px; }
+.brandbar__menu-item--danger { color: var(--cl-danger); font-weight: 700; }
+.brandbar__menu-item--danger:hover { background: rgba(217, 83, 79, 0.1); }
+
+.brandbar__center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  overflow: hidden;
+}
+.brandbar__greet {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cl-ink);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brandbar__status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.brandbar__logo { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
+.brandbar__logo-text { display: flex; flex-direction: column; line-height: 1.05; align-items: flex-end; }
+.brandbar__logo-name { font-size: 24px; font-weight: 800; color: var(--cl-ink); letter-spacing: -0.5px; }
+.brandbar__logo-sub { font-size: 12.5px; font-weight: 600; color: var(--cl-muted); }
+.brandbar__logo-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, var(--cl-speak), #2BA88A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(20, 90, 70, 0.25);
+  flex-shrink: 0;
+}
+/* פאן צר: מסתירים את הברכה (כמו בעיצוב) */
+@media (max-width: 600px) {
+  .brandbar { padding: 8px 12px; gap: var(--sp-2); }
+  .brandbar__greet { display: none; }
+  .brandbar__logo-sub { display: none; }
+  .brandbar__logo-name { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brandbar__avatar-btn { transition: none; }
+  .brandbar__avatar-btn:hover, .brandbar__avatar-btn:active { transform: none; }
+  .brandbar__menu { animation: none; }
+}
+
 .app__controls {
   display: flex;
   align-items: center;
@@ -187,17 +375,18 @@ body {
 .app__controls::-webkit-scrollbar { display: none; }
 .app__adultbtn {
   min-height: var(--target-min);
-  padding: 0 var(--sp-4);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--radius);
-  background: var(--cl-surface-alt);
+  padding: 0 var(--sp-5);
+  border: 2px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
   color: var(--cl-ink);
   font-size: var(--tx-base);
+  font-weight: 700;
   cursor: pointer;
-  transition: background var(--ease-fast);
+  transition: background var(--ease), border-color var(--ease);
   white-space: nowrap;
 }
-.app__adultbtn:hover { background: var(--cl-border); }
+.app__adultbtn:hover { background: var(--cl-chip); border-color: var(--cl-chip-border); }
 .app__adultbtn:focus-visible {
   outline: 3px solid var(--cl-primary);
   outline-offset: 2px;
@@ -356,57 +545,81 @@ body {
   top: 0;
   z-index: var(--z-sticky);
   display: flex;
-  align-items: stretch;
-  gap: var(--gap);
-  padding: var(--sp-2) var(--sp-4);
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
   background: var(--cl-surface);
-  border-bottom: 2px solid var(--cl-border);
-  box-shadow: var(--sh-xs);
+  border-bottom: 1px solid var(--cl-border);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
 }
+/* אזור המשפט — chip מעוגל בעיצוב Claude Design */
 .sentence__text {
   flex: 1;
-  min-height: 56px;
+  min-width: 160px;
+  min-height: 60px;
   display: flex;
   align-items: center;
+  gap: var(--sp-2);
   font-size: var(--tx-2xl);
-  font-weight: 600;
-  padding: 0 var(--sp-3);
+  font-weight: 700;
+  padding: 0 var(--sp-4);
+  background: var(--cl-chip);
+  border: 2px solid var(--cl-chip-border);
+  border-radius: 18px;
   overflow-x: auto;
   white-space: nowrap;
   color: var(--cl-ink);
+  transition: background 0.35s ease, border-color 0.35s ease;
 }
-.sentence__speak {
-  min-width: 72px;
-  min-height: var(--target-min);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--cl-primary);
-  color: var(--cl-on-primary);
+.sentence__text:empty::before {
+  content: 'הקש על אריח כדי לבנות משפט…';
+  color: var(--cl-muted);
   font-size: var(--tx-lg);
-  font-weight: 700;
+  font-weight: 500;
+}
+/* כפתור "הקראה" ירוק תלת-מימדי */
+.sentence__speak {
+  height: 60px;
+  min-width: 104px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 18px;
+  background: var(--cl-speak);
+  color: var(--cl-on-primary);
+  font-size: var(--tx-xl);
+  font-weight: 800;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background var(--ease-fast), transform var(--ease-fast);
+  box-shadow: 0 4px 0 var(--cl-speak-sh);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-.sentence__speak:hover { background: var(--cl-primary-dk); }
-.sentence__speak:active { transform: scale(0.97); }
+.sentence__speak:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--cl-speak-sh);
+}
 .sentence__speak:focus-visible {
-  outline: 3px solid var(--cl-accent);
+  outline: 3px solid var(--cl-scan-ring);
   outline-offset: 2px;
 }
+/* כפתורי מחק / נקה — ריבועים מעוגלים */
 .sentence__btn {
-  min-width: 56px;
-  min-height: var(--target-min);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--radius);
-  background: var(--cl-surface-alt);
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-bg);
   color: var(--cl-ink);
   font-size: var(--tx-sm);
+  font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background var(--ease-fast);
+  transition: transform 0.12s ease, background 0.2s ease;
 }
-.sentence__btn:hover { background: var(--cl-border); }
+.sentence__btn:hover { background: var(--cl-chip); }
+.sentence__btn:active { transform: scale(0.93); }
 .sentence__btn:focus-visible {
   outline: 3px solid var(--cl-primary);
   outline-offset: 2px;
@@ -427,11 +640,15 @@ body {
   .sentence__text {
     order: -1;
     flex-basis: 100%;
-    min-height: 44px;
+    min-height: 48px;
     font-size: var(--tx-xl);
   }
-  .sentence__speak { flex: 1; min-width: 0; }
-  .sentence__btn   { flex: 0 0 auto; min-width: 52px; font-size: var(--tx-xs); }
+  .sentence__speak { flex: 1; min-width: 0; height: 54px; }
+  .sentence__btn   { width: 52px; height: 54px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sentence__speak, .sentence__btn { transition: none; }
+  .sentence__speak:active, .sentence__btn:active { transform: none; }
 }
 
 /* ── 7. NAV BAR ──────────────────────────────────────────────────── */
@@ -449,29 +666,39 @@ body {
 .navbar__btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-1);
-  min-height: var(--target-min);
-  padding: 0 var(--sp-4);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--radius);
-  background: var(--cl-surface-alt);
+  gap: var(--sp-2);
+  min-height: 56px;
+  padding: 0 var(--sp-5);
+  border: 2px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
   color: var(--cl-ink);
   font-size: var(--tx-base);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background var(--ease-fast);
+  box-shadow: var(--sh-xs);
+  transition: transform 0.12s ease, background 0.25s ease, border-color 0.25s ease;
 }
-.navbar__btn:disabled { opacity: 0.35; cursor: default; }
-.navbar__btn:not(:disabled):hover { background: var(--cl-border); }
+.navbar__btn-icon { font-size: 1.3em; line-height: 1; }
+.navbar__btn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+.navbar__btn:not(:disabled):hover {
+  background: var(--cl-chip);
+  border-color: var(--cl-chip-border);
+}
+.navbar__btn:not(:disabled):active { transform: scale(0.96); }
 .navbar__btn:focus-visible {
   outline: 3px solid var(--cl-primary);
   outline-offset: 2px;
 }
 @media (max-width: 600px) {
   .navbar { padding: var(--sp-2) var(--sp-3); gap: var(--sp-2); }
-  .navbar__btn { padding: 0 var(--sp-3); font-size: var(--tx-sm); }
+  .navbar__btn { min-height: 48px; padding: 0 var(--sp-4); font-size: var(--tx-sm); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar__btn { transition: none; }
+  .navbar__btn:not(:disabled):active { transform: none; }
 }
 
 /* ── 8. BOARD GRID ───────────────────────────────────────────────── */
@@ -488,7 +715,7 @@ body {
   .board { gap: 6px; padding: var(--sp-2) var(--sp-3); }
 }
 
-/* ── 9. CELL BUTTON ──────────────────────────────────────────────── */
+/* ── 9. CELL BUTTON (Claude Design 2026) ─────────────────────────── */
 .cell {
   width: 100%;
   height: 100%;
@@ -499,51 +726,78 @@ body {
   justify-content: center;
   text-align: center;
   gap: var(--sp-2);
-  padding: var(--sp-2);
-  background: var(--cl-surface);
-  border: 5px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius);
+  padding: 10px 6px;
+  /* רקע = גוון פיצג'רלד (--cell-tint נקבע ע"י CellButton); ברירת מחדל משטח */
+  background: var(--cell-tint, var(--cl-surface));
+  border: 2px solid color-mix(in srgb, var(--cell-tint, var(--cl-border)) 74%, #16243a 22%);
+  border-radius: var(--r-lg);   /* 20px */
   font-size: var(--tx-cell);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: var(--sh-sm);
+  box-shadow: 0 2px 5px rgba(20, 32, 46, 0.06);
   transition:
-    transform 0.06s ease,
-    filter 0.06s ease;  /* visual feedback < 100ms (PRD §8.1) */
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.35s ease,
+    border-color 0.35s ease;  /* visual feedback < 100ms (PRD §8.1) */
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
   color: var(--cl-ink);
 }
-.cell__image {
-  width: 100%;
-  max-height: 66%;
+/* מיכל לבן מעוגל לאייקון — הפיקטוגרמה בולטת מעל גוון האריח */
+.cell__icon {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  max-height: 70%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cl-icon-bg);
+  border-radius: 16px;
+  padding: 6%;
+  box-shadow: inset 0 0 0 1px rgba(20, 32, 46, 0.05);
+}
+.cell__image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
-  border-radius: var(--r-xs);
 }
 .cell__label {
   font-size: var(--tx-cell-lbl);
   font-weight: 700;
   line-height: 1.1;
+  letter-spacing: -0.2px;
   text-align: center;
   width: 100%;
-  color: inherit;
+  color: var(--cl-ink);
+}
+.cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 16px rgba(20, 32, 46, 0.13);
 }
 .cell:active {
-  transform: scale(0.97);
-  filter: brightness(0.95);
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 1px 3px rgba(20, 32, 46, 0.12);
 }
 .cell:focus-visible {
   outline: 3px solid var(--cl-primary);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 .cell--modeling-highlight {
-  outline: 3px solid var(--cl-accent);
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.55);
+  outline: 4px solid var(--cl-scan-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 14px rgba(20, 127, 168, 0.45);
   z-index: 1;
 }
 @media (max-width: 600px) {
-  .cell { min-height: var(--target-sm); gap: var(--sp-1); padding: var(--sp-1); }
+  .cell { min-height: var(--target-sm); gap: var(--sp-1); padding: 6px 4px; }
+  .cell__icon { border-radius: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell, .cell:hover, .cell:active { transition: none; transform: none; }
 }
 
 /* ── 10. MODAL / BOTTOM-SHEET ─────────────────────────────────────── */
@@ -634,17 +888,20 @@ body {
 }
 
 /* ── 11. SETTINGS PANEL ───────────────────────────────────────────── */
-.settings-panel { display: flex; flex-direction: column; }
+.settings-panel { display: flex; flex-direction: column; gap: 14px; }
+/* כל סקשן = כרטיס מקובץ בעיצוב Claude Design */
 .settings-section {
-  border-bottom: 1px solid var(--cl-border);
-  padding: var(--sp-4) 0;
+  background: var(--cl-chip);
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  padding: 16px 18px;
+  transition: background 0.35s ease, border-color 0.35s ease;
 }
-.settings-section:last-child { border-bottom: none; }
 .settings-section__header {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-4);
+  gap: 10px;
+  margin-bottom: 12px;
 }
 .settings-section__icon {
   font-size: 1.2rem;
@@ -655,17 +912,15 @@ body {
 .settings-section__title {
   margin: 0;
   font-size: var(--tx-md);
-  font-weight: 600;
+  font-weight: 800;
+  letter-spacing: 0.2px;
   color: var(--cl-ink);
 }
 .settings-section__body {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  padding-inline-start: var(--sp-8);
-}
-@media (max-width: 600px) {
-  .settings-section__body { padding-inline-start: 0; }
+  padding-inline-start: 0;
 }
 
 /* ── 12. UI TOGGLE ───────────────────────────────────────────────── */
@@ -1123,17 +1378,35 @@ body {
   min-height: 110px;
   padding: var(--sp-3);
   background: var(--cl-surface);
-  border: 3px solid var(--cl-primary);
-  border-radius: var(--radius);
+  border: 2px solid var(--cl-chip-border);
+  border-radius: var(--r-lg);
   cursor: pointer;
   font-weight: 700;
   color: var(--cl-ink);
-  transition: background var(--ease-fast), transform var(--ease-fast);
+  box-shadow: 0 2px 5px rgba(20, 32, 46, 0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.2s ease;
 }
-.catmenu__item:active { transform: scale(0.97); }
-.catmenu__item:focus-visible { outline: 3px solid var(--cl-accent); outline-offset: 2px; }
-.catmenu__img  { width: 60px; height: 60px; object-fit: contain; }
+.catmenu__item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 16px rgba(20, 32, 46, 0.13);
+  border-color: var(--cl-primary);
+}
+.catmenu__item:active { transform: translateY(1px) scale(0.98); }
+.catmenu__item:focus-visible { outline: 3px solid var(--cl-primary); outline-offset: 2px; }
+.catmenu__img  {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  background: var(--cl-icon-bg);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: inset 0 0 0 1px rgba(20, 32, 46, 0.05);
+}
 .catmenu__label { font-size: var(--tx-base); text-align: center; line-height: 1.15; }
+@media (prefers-reduced-motion: reduce) {
+  .catmenu__item { transition: none; }
+  .catmenu__item:hover, .catmenu__item:active { transform: none; }
+}
 @media (max-width: 600px) {
   .catmenu-overlay { padding: 0; align-items: flex-end; }
   .catmenu {

@@ -331,7 +331,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
                       background: style.bg,
                       color: style.text,
                       border: isSelected
-                        ? '3px solid #3f6f8f'
+                        ? '3px solid var(--cl-primary)'
                         : draggedCellId === p.cellId
                           ? '2px dashed #6b7280'
                           : '2px solid rgba(0,0,0,0.12)',

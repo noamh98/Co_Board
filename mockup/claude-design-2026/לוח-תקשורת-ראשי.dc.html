@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;width:100%;font-family:'Assistant',sans-serif;-webkit-font-smoothing:antialiased}
+    button{font-family:inherit}
+    @keyframes cbPop{from{transform:scale(.78);opacity:0}to{transform:scale(1);opacity:1}}
+    @keyframes cbFade{from{opacity:0}to{opacity:1}}
+    @keyframes cbSlide{from{transform:translateX(40px);opacity:.3}to{transform:translateX(0);opacity:1}}
+    .cb-grid::-webkit-scrollbar{width:6px}
+    .cb-grid::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+  </style>
+</helmet>
+<div class="cb-root" dir="rtl" ref="{{ setRoot }}" style="--bg:{{ c.bg }};--surface:{{ c.surface }};--ink:{{ c.ink }};--muted:{{ c.muted }};--line:{{ c.line }};--speak:{{ c.speak }};--speaksh:{{ c.speaksh }};--chip:{{ c.chip }};--chipbd:{{ c.chipbd }};--tilebg:{{ c.tilebg }};--tilebd:{{ c.tilebd }};--iconbg:{{ iconbg }};--cols:{{ cols }};--ticon:{{ ticon }};--tfont:{{ tfont }};--scanring:{{ scanRing }};width:100%;height:100%;min-height:560px;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;overflow:hidden;position:relative;transition:background .35s ease,color .35s ease">
+
+  <!-- ===== BRAND BAR ===== -->
+  <div style="flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;transition:background .35s ease,border-color .35s ease;position:relative;z-index:30">
+
+    <!-- avatar (right in RTL) -->
+    <div style="position:relative;flex-shrink:0">
+      <button onClick="{{ onAvatar }}" aria-label="חשבון והגדרות" aria-haspopup="menu" aria-expanded="{{ avatarOpen }}" style="width:52px;height:52px;border-radius:50%;border:none;padding:3px;background:{{ avatarRing }};cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s ease" style-active="transform:scale(.93)" style-hover="transform:scale(1.04)">
+        <span style="width:100%;height:100%;border-radius:50%;background:{{ avatarHue }};border:2.5px solid var(--surface);display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;font-weight:800">{{ initials }}</span>
+      </button>
+
+      <sc-if value="{{ avatarOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ onCloseAvatar }}" style="position:fixed;inset:0;z-index:40"></div>
+        <div role="menu" style="position:absolute;top:62px;inset-inline-start:0;width:288px;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 48px rgba(0,0,0,.22);padding:8px;z-index:50;animation:cbFade .16s ease">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 12px 14px">
+            <span style="width:50px;height:50px;border-radius:50%;padding:3px;background:{{ avatarRing }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <span style="width:100%;height:100%;border-radius:50%;background:{{ avatarHue }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800">{{ initials }}</span>
+            </span>
+            <div style="display:flex;flex-direction:column;min-width:0">
+              <span style="font-size:18px;font-weight:800;color:var(--ink)">{{ profile }}</span>
+              <span style="font-size:13px;color:var(--muted);font-weight:500">פרופיל פעיל</span>
+            </div>
+          </div>
+          <div style="height:1px;background:var(--line);margin:2px 6px 6px"></div>
+
+          <button onClick="{{ onProfileMenu }}" role="menuitem" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:none;background:transparent;color:var(--ink);border-radius:13px;cursor:pointer;font-size:16px;font-weight:600;text-align:start" style-hover="background:var(--chip)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 19.5c0-3.4 2.9-5.6 6.5-5.6s6.5 2.2 6.5 5.6"/></svg>
+            הפרופיל שלי
+          </button>
+          <button onClick="{{ onSwitchProfile }}" role="menuitem" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:none;background:transparent;color:var(--ink);border-radius:13px;cursor:pointer;font-size:16px;font-weight:600;text-align:start" style-hover="background:var(--chip)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a8 8 0 0 1 13-3l2 2M20 15a8 8 0 0 1-13 3l-2-2"/><path d="M19 4v4h-4M5 20v-4h4"/></svg>
+            החלפת פרופיל
+          </button>
+          <button onClick="{{ onParent }}" role="menuitem" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:none;background:transparent;color:var(--ink);border-radius:13px;cursor:pointer;font-size:16px;font-weight:600;text-align:start" style-hover="background:var(--chip)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            הגדרות והורים
+          </button>
+          <div style="height:1px;background:var(--line);margin:6px 6px"></div>
+          <button onClick="{{ onLogout }}" role="menuitem" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:none;background:transparent;color:#D9534F;border-radius:13px;cursor:pointer;font-size:16px;font-weight:700;text-align:start" style-hover="background:rgba(217,83,79,.1)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/><path d="M10 8 6 12l4 4M6 12h10"/></svg>
+            התנתקות
+          </button>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- greeting -->
+    <sc-if value="{{ showGreet }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;text-align:center;min-width:0;overflow:hidden">
+        <span style="font-size:20px;font-weight:700;color:var(--ink);white-space:nowrap">{{ greet }}, {{ profile }} 👋</span>
+      </div>
+    </sc-if>
+
+    <!-- logo + name (left in RTL) -->
+    <div style="display:flex;align-items:center;gap:11px;flex-shrink:0">
+      <div style="display:flex;flex-direction:column;line-height:1.05;align-items:flex-end">
+        <span style="font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-.5px">Co_Board</span>
+        <span style="font-size:12.5px;font-weight:600;color:var(--muted)">לוח תקשורת</span>
+      </div>
+      <span style="width:46px;height:46px;border-radius:14px;background:linear-gradient(150deg,var(--speak),#2BA88A);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(20,90,70,.25);flex-shrink:0">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h11a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H9l-4 3.5V15a3 3 0 0 1-1-2.2V8a3 3 0 0 1 0-3z"/><circle cx="8" cy="10" r="1" fill="#fff" stroke="none"/><circle cx="11.5" cy="10" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="10" r="1" fill="#fff" stroke="none"/></svg>
+      </span>
+    </div>
+  </div>
+
+  <!-- ===== TOP BAR ===== -->
+  <header style="flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;transition:background .35s ease,border-color .35s ease;box-shadow:0 1px 0 rgba(0,0,0,.02)">
+
+    <!-- back / edit group -->
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onClick="{{ onDelete }}" aria-label="מחק מילה אחרונה" title="מחק מילה אחרונה" style="width:60px;height:60px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:transform .12s ease,background .2s ease" style-active="transform:scale(.93)" style-hover="background:var(--chip)">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 4 12l5 6h11a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1Z"/><path d="m13 9 4 6M17 9l-4 6"/></svg>
+        <span style="font-size:11px;font-weight:600">מחק</span>
+      </button>
+      <button onClick="{{ onClear }}" aria-label="נקה הכל" title="נקה הכל" style="width:60px;height:60px;border:1.5px solid var(--line);background:var(--bg);color:var(--muted);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:transform .12s ease,background .2s ease" style-active="transform:scale(.93)" style-hover="background:var(--chip)">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+        <span style="font-size:11px;font-weight:600">נקה</span>
+      </button>
+    </div>
+
+    <!-- sentence bar -->
+    <div role="log" aria-label="המשפט שנבנה" style="flex:1;min-width:160px;min-height:60px;background:var(--chip);border:2px solid var(--chipbd);border-radius:18px;padding:0 14px;display:flex;align-items:center;gap:8px;overflow-x:auto;overflow-y:hidden;transition:background .35s ease,border-color .35s ease">
+      <sc-if value="{{ hasWords }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ sentence }}" as="w" hint-placeholder-count="3">
+          <button onClick="{{ w.onClick }}" aria-label="הסר {{ w.word }}" style="flex-shrink:0;background:var(--surface);border:1.5px solid var(--tilebd);border-radius:12px;padding:7px 14px;font-size:22px;font-weight:700;color:var(--ink);white-space:nowrap;cursor:pointer;animation:cbPop .18s ease-out;transition:transform .1s ease" style-active="transform:scale(.92)">{{ w.word }}</button>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ noWords }}" hint-placeholder-val="{{ false }}">
+        <span style="color:var(--muted);font-size:18px;font-weight:500">הקש על אריח כדי לבנות משפט…</span>
+      </sc-if>
+    </div>
+
+    <!-- end group: dark toggle + speak -->
+    <div style="display:flex;gap:10px;flex-shrink:0;align-items:center">
+      <button onClick="{{ onToggleDark }}" aria-label="{{ darkLabel }}" title="{{ darkLabel }}" style="width:54px;height:54px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .25s ease,background .2s ease" style-active="transform:scale(.9)" style-hover="background:var(--chip)">
+        {{ darkIcon }}
+      </button>
+      <button onClick="{{ onSpeak }}" aria-label="הקרא את המשפט" title="הקרא את המשפט" style="height:60px;min-width:100px;padding:0 22px;border:none;background:var(--speak);color:#fff;border-radius:18px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:20px;font-weight:800;box-shadow:0 4px 0 var(--speaksh);transition:transform .1s ease,box-shadow .1s ease" style-active="transform:translateY(3px);box-shadow:0 1px 0 var(--speaksh)">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="#fff"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16.5 12a3.5 3.5 0 0 0-2-3.16v6.32A3.5 3.5 0 0 0 16.5 12Z"/><path d="M18.8 6.2a7 7 0 0 1 0 11.6l-1.2-1.6a5 5 0 0 0 0-8.4Z"/></svg>
+        הקראה
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== SYMBOL GRID ===== -->
+  <main class="cb-grid" role="grid" aria-label="לוח סמלים — {{ activeLabel }}" style="flex:1;overflow-y:auto;padding:{{ gridPad }};display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-auto-rows:1fr;gap:{{ gridGap }};align-content:stretch">
+    <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="24">
+      <button onClick="{{ t.onClick }}" aria-label="{{ t.word }}" data-screen-label="אריח {{ t.word }}" style="outline:{{ t.outline }};outline-offset:3px;min-width:80px;min-height:80px;background:var(--tilebg);border:2px solid var(--tilebd);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:10px 6px;user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 5px rgba(20,32,46,.06);transition:transform .12s ease,box-shadow .12s ease,background .35s ease,border-color .35s ease" style-hover="transform:translateY(-2px);box-shadow:0 7px 16px rgba(20,32,46,.13)" style-active="transform:translateY(1px) scale(.98);box-shadow:0 1px 3px rgba(20,32,46,.12)">
+        <span style="width:var(--ticon);height:var(--ticon);background:var(--iconbg);border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:6px;box-shadow:inset 0 0 0 1px rgba(20,32,46,.05)">{{ t.icon }}</span>
+        <span style="font-size:var(--tfont);font-weight:700;color:var(--ink);text-align:center;line-height:1.1;letter-spacing:-.2px">{{ t.word }}</span>
+      </button>
+    </sc-for>
+  </main>
+
+  <!-- ===== SCAN SELECT BAR ===== -->
+  <sc-if value="{{ scanOn }}" hint-placeholder-val="{{ false }}">
+    <div style="flex-shrink:0;padding:10px 16px 0;display:flex;flex-direction:column;align-items:center;gap:6px">
+      <button onClick="{{ onSelectScan }}" aria-label="בחר את האריח המסומן" style="width:100%;max-width:640px;height:72px;border:none;border-radius:18px;background:var(--scanring);color:#fff;font-size:26px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 5px 0 rgba(0,0,0,.18)" style-active="transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 5 5 9-11"/></svg>
+        בחר
+      </button>
+      <span style="font-size:14px;color:var(--muted);font-weight:600">{{ scanHint }}</span>
+    </div>
+  </sc-if>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav role="tablist" aria-label="קטגוריות" style="flex-shrink:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;justify-content:center;gap:{{ navGap }};transition:background .35s ease,border-color .35s ease">
+    <sc-for list="{{ cats }}" as="cat" hint-placeholder-count="6">
+      <button onClick="{{ cat.onClick }}" role="tab" aria-selected="{{ cat.selected }}" aria-label="{{ cat.label }}" style="flex:1;max-width:200px;min-width:56px;height:64px;border:2px solid {{ cat.bd }};background:{{ cat.bg }};color:{{ cat.ink }};border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:transform .12s ease,background .25s ease,border-color .25s ease;box-shadow:{{ cat.shadow }};padding:0 6px" style-active="transform:scale(.96)">
+        <span style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ cat.icon }}</span>
+        <sc-if value="{{ showCatText }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size:20px;font-weight:700;white-space:nowrap">{{ cat.label }}</span>
+        </sc-if>
+      </button>
+    </sc-for>
+  </nav>
+
+  <!-- ===== TOAST ===== -->
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 22px;border-radius:14px;font-size:16px;font-weight:700;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:cbFade .2s ease">{{ toast }}</div>
+  </sc-if>
+
+  <!-- ===== PIN GATE ===== -->
+  <sc-if value="{{ pinOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(10,16,24,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:45;animation:cbFade .2s ease">
+      <div role="dialog" aria-label="קוד הורים" style="width:344px;max-width:90%;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:26px 24px;box-shadow:0 24px 60px rgba(0,0,0,.3)">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:18px">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="var(--speak)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>
+          <span style="font-size:23px;font-weight:800;color:var(--ink)">קוד הורים</span>
+          <span style="font-size:14px;color:var(--muted);font-weight:500">להגנה על הגדרות הילד/ה</span>
+        </div>
+        <div style="display:flex;justify-content:center;gap:14px;margin-bottom:16px">
+          <sc-for list="{{ pinDots }}" as="dot" hint-placeholder-count="4">
+            <span style="width:16px;height:16px;border-radius:50%;border:2px solid {{ dot.bd }};background:{{ dot.bg }};transition:background .15s ease"></span>
+          </sc-for>
+        </div>
+        <sc-if value="{{ pinErr }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;color:#D9534F;font-size:15px;font-weight:700;margin-bottom:10px">קוד שגוי, נסו שוב</div>
+        </sc-if>
+        <div dir="ltr" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <sc-for list="{{ pad }}" as="k" hint-placeholder-count="12">
+            <button onClick="{{ k.onClick }}" aria-label="{{ k.label }}" style="height:58px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;font-size:24px;font-weight:700;cursor:pointer;transition:background .15s ease,transform .1s ease" style-active="transform:scale(.94)" style-hover="background:var(--chip)">{{ k.label }}</button>
+          </sc-for>
+        </div>
+        <button onClick="{{ onPinCancel }}" style="margin-top:16px;width:100%;height:46px;border:none;background:transparent;color:var(--muted);font-size:16px;font-weight:700;cursor:pointer;border-radius:12px" style-hover="background:var(--chip)">ביטול</button>
+        <div style="text-align:center;margin-top:6px;font-size:12.5px;color:var(--muted)">קוד לדוגמה: 1234</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== PARENT / SETTINGS MENU ===== -->
+  <sc-if value="{{ adultOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(10,16,24,.5);backdrop-filter:blur(3px);display:flex;justify-content:flex-start;z-index:40;animation:cbFade .2s ease">
+      <div role="dialog" aria-label="הגדרות והורים" style="width:470px;max-width:94%;height:100%;background:var(--bg);border-inline-start:1px solid var(--line);box-shadow:-12px 0 40px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:cbSlide .28s cubic-bezier(.2,.7,.3,1)">
+
+        <div style="flex-shrink:0;padding:20px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:var(--surface)">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:23px;font-weight:800;color:var(--ink)">הגדרות והורים</span>
+            <span style="font-size:14px;color:var(--muted);font-weight:500">פרופיל פעיל: {{ profile }}</span>
+          </div>
+          <button onClick="{{ onCloseAdult }}" aria-label="סגור" style="width:46px;height:46px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:var(--chip)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:18px">
+
+          <!-- profile -->
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin-bottom:14px">
+            <label style="font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:8px">פרופיל הילד/ה</label>
+            <input type="text" value="{{ profile }}" onInput="{{ onProfile }}" aria-label="שם הפרופיל" style="width:100%;height:50px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:0 14px;font-size:18px;font-weight:700;font-family:inherit">
+          </div>
+
+          <!-- access -->
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:6px 18px 16px;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--muted);padding:14px 0 4px">תצוגה ונגישות</div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;padding:10px 0">
+              <span style="font-size:17px;font-weight:700;color:var(--ink)">גודל אריחים</span>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ sizeOpts }}" as="o" hint-placeholder-count="3">
+                  <button onClick="{{ o.onClick }}" aria-pressed="{{ o.active }}" style="flex:1;height:56px;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.ink }};border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:border-color .18s ease,background .18s ease">
+                    <span style="font-size:16px;font-weight:800">{{ o.label }}</span>
+                    <span style="font-size:11px;opacity:.65">{{ o.sub }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="height:1px;background:var(--line);margin:6px 0"></div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:17px;font-weight:700;color:var(--ink)">מצב כהה</span>
+                <span style="font-size:13px;color:var(--muted)">נוח לעיניים בתאורה חלשה</span>
+              </div>
+              <button onClick="{{ onToggleDark }}" role="switch" aria-checked="{{ tgDark.on }}" aria-label="מצב כהה" style="width:56px;height:32px;border-radius:16px;border:none;background:{{ tgDark.track }};display:flex;align-items:center;justify-content:{{ tgDark.just }};padding:3px;cursor:pointer;transition:background .2s ease;flex-shrink:0">
+                <span style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+              </button>
+            </div>
+
+            <div style="height:1px;background:var(--line);margin:6px 0"></div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:17px;font-weight:700;color:var(--ink)">מצב סריקה (Switch Access)</span>
+                <span style="font-size:13px;color:var(--muted)">סימון עובר אוטומטי + בחירה במתג אחד</span>
+              </div>
+              <button onClick="{{ onToggleScan }}" role="switch" aria-checked="{{ tgScan.on }}" aria-label="מצב סריקה" style="width:56px;height:32px;border-radius:16px;border:none;background:{{ tgScan.track }};display:flex;align-items:center;justify-content:{{ tgScan.just }};padding:3px;cursor:pointer;transition:background .2s ease;flex-shrink:0">
+                <span style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+              </button>
+            </div>
+
+            <sc-if value="{{ scanOn }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--chip);border-radius:14px;padding:12px 14px;margin-top:6px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline">
+                    <span style="font-size:15.5px;font-weight:700;color:var(--ink)">מהירות סריקה</span>
+                    <span style="font-size:14px;font-weight:700;color:var(--speak)">{{ dwellLabel }}</span>
+                  </div>
+                  <input type="range" min="700" max="2600" step="100" value="{{ dwellMs }}" onInput="{{ onDwell }}" aria-label="מהירות סריקה" style="width:100%;accent-color:var(--speak);height:30px;cursor:pointer">
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                  <span style="font-size:15.5px;font-weight:700;color:var(--ink)">הפעלה בשחרור מגע</span>
+                  <button onClick="{{ onToggleRelease }}" role="switch" aria-checked="{{ tgRelease.on }}" aria-label="הפעלה בשחרור מגע" style="width:56px;height:32px;border-radius:16px;border:none;background:{{ tgRelease.track }};display:flex;align-items:center;justify-content:{{ tgRelease.just }};padding:3px;cursor:pointer;transition:background .2s ease;flex-shrink:0">
+                    <span style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+                  </button>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                  <span style="font-size:15.5px;font-weight:700;color:var(--ink)">מניעת מגע כפול</span>
+                  <button onClick="{{ onToggleNoDouble }}" role="switch" aria-checked="{{ tgNoDouble.on }}" aria-label="מניעת מגע כפול" style="width:56px;height:32px;border-radius:16px;border:none;background:{{ tgNoDouble.track }};display:flex;align-items:center;justify-content:{{ tgNoDouble.just }};padding:3px;cursor:pointer;transition:background .2s ease;flex-shrink:0">
+                    <span style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+                  </button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- TTS -->
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:6px 18px 16px;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--muted);padding:14px 0 4px">קול והקראה</div>
+            <div style="display:flex;flex-direction:column;gap:7px;padding:10px 0">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-size:17px;font-weight:700;color:var(--ink)">מהירות דיבור</span>
+                <span style="font-size:14px;font-weight:700;color:var(--speak)">{{ rateLabel }}</span>
+              </div>
+              <input type="range" min="0.6" max="1.3" step="0.02" value="{{ rate }}" onInput="{{ onRate }}" aria-label="מהירות דיבור" style="width:100%;accent-color:var(--speak);height:30px;cursor:pointer">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;padding:10px 0">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-size:17px;font-weight:700;color:var(--ink)">גובה קול</span>
+                <span style="font-size:14px;font-weight:700;color:var(--speak)">{{ pitchLabel }}</span>
+              </div>
+              <input type="range" min="0.7" max="1.4" step="0.02" value="{{ pitch }}" onInput="{{ onPitch }}" aria-label="גובה קול" style="width:100%;accent-color:var(--speak);height:30px;cursor:pointer">
+            </div>
+            <button onClick="{{ onSample }}" style="margin-top:6px;width:100%;height:50px;border:1.5px solid var(--speak);background:transparent;color:var(--speak);border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-active="transform:scale(.98)" style-hover="background:var(--chip)">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16.5 12a3.5 3.5 0 0 0-2-3.16v6.32A3.5 3.5 0 0 0 16.5 12Z"/></svg>
+              נסה את הקול
+            </button>
+          </div>
+
+          <!-- tools -->
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:6px 18px 16px;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--muted);padding:14px 0 10px">כלים</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <sc-for list="{{ tools }}" as="tool" hint-placeholder-count="6">
+                <button onClick="{{ tool.onClick }}" style="display:flex;align-items:center;gap:10px;padding:14px 12px;border:1.5px solid var(--line);background:var(--bg);border-radius:14px;cursor:pointer;color:var(--ink);transition:background .15s ease" style-hover="background:var(--chip)">
+                  <span style="width:26px;height:26px;flex-shrink:0;color:var(--speak)">{{ tool.icon }}</span>
+                  <span style="font-size:15.5px;font-weight:700;text-align:start">{{ tool.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="flex-shrink:0;padding:16px 22px;border-top:1px solid var(--line);background:var(--surface)">
+          <button onClick="{{ onLock }}" style="width:100%;height:56px;border:none;border-radius:16px;background:var(--speak);color:#fff;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px" style-active="transform:scale(.98)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            נעל וחזור ללוח
+          </button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:800}}">
+class Component extends DCLogic {
+  state = { cat: 'actions', sentence: [], dark: false, adultOpen: false, pinOpen: false, pinBuf: '', pinErr: false, tileSize: 'reg', scan: false, scanIdx: 0, dwellMs: 1400, releaseAct: false, noDouble: false, rate: 0.92, pitch: 1.0, profile: 'דנה', toast: '', avatarOpen: false, w: 1180, h: 800 };
+
+  componentDidMount() {
+    try {
+      const g = (k, d) => { const v = localStorage.getItem(k); return v === null ? d : v; };
+      this.setState({
+        dark: g('coboard_dark', '0') === '1',
+        tileSize: g('coboard_tile', 'reg'),
+        scan: g('coboard_scan', '0') === '1',
+        dwellMs: parseInt(g('coboard_dwell', '1400'), 10),
+        releaseAct: g('coboard_release', '0') === '1',
+        noDouble: g('coboard_nodouble', '0') === '1',
+        rate: parseFloat(g('coboard_rate', '0.92')),
+        pitch: parseFloat(g('coboard_pitch', '1')),
+        profile: g('coboard_profile', 'דנה'),
+      }, () => this.syncScan());
+    } catch (e) {}
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
+    this._onKey = (e) => {
+      if (!this.state.scan || this.state.adultOpen || this.state.pinOpen) return;
+      if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); this.selectScan(); }
+    };
+    window.addEventListener('keydown', this._onKey);
+
+    // responsive: observe the root element (ref holes aren't reliable in this runtime)
+    const attach = () => {
+      const el = (this._hostEl && this._hostEl.querySelector)
+        ? this._hostEl.querySelector('.cb-root')
+        : document.querySelector('.cb-root');
+      if (!el) { requestAnimationFrame(attach); return; }
+      this._root = el;
+      this._ro = new ResizeObserver(() => this.measure());
+      this._ro.observe(el);
+      this.measure();
+    };
+    requestAnimationFrame(attach);
+    this._onResize = () => this.measure();
+    window.addEventListener('resize', this._onResize);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._scanTimer);
+    clearTimeout(this._toastT);
+    if (this._onKey) window.removeEventListener('keydown', this._onKey);
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._ro) this._ro.disconnect();
+  }
+
+  setRoot = (el) => {
+    if (el && !this._root) {
+      this._root = el;
+      this._ro = new ResizeObserver(() => this.measure());
+      this._ro.observe(el);
+      this.measure();
+    }
+  };
+
+  measure() {
+    if (!this._root) return;
+    const r = this._root.getBoundingClientRect();
+    if (Math.abs(r.width - this.state.w) > 2 || Math.abs(r.height - this.state.h) > 2) {
+      this.setState({ w: Math.round(r.width), h: Math.round(r.height) });
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (!prevState) { this.syncScan(); return; }
+    if (prevState.scan !== this.state.scan ||
+        prevState.cat !== this.state.cat ||
+        prevState.adultOpen !== this.state.adultOpen ||
+        prevState.pinOpen !== this.state.pinOpen ||
+        prevState.dwellMs !== this.state.dwellMs) {
+      this.syncScan();
+    }
+  }
+
+  syncScan() {
+    clearInterval(this._scanTimer);
+    const active = this.state.scan && !this.state.adultOpen && !this.state.pinOpen;
+    if (!active) return;
+    const n = (this.getVocab()[this.state.cat] || []).length;
+    if (!n) return;
+    this._scanTimer = setInterval(() => {
+      this.setState(st => ({ scanIdx: (st.scanIdx + 1) % n }));
+    }, Math.max(500, this.state.dwellMs));
+  }
+
+  selectScan() {
+    const list = this.getVocab()[this.state.cat] || [];
+    if (!list.length) return;
+    const tile = list[this.state.scanIdx % list.length];
+    if (tile) this.pickWord(tile.word);
+  }
+
+  pickWord(word) {
+    const now = Date.now();
+    if (this.state.noDouble && this._lastPick && now - this._lastPick < 600) return;
+    this._lastPick = now;
+    const plain = word.replace(/[\u0591-\u05C7]/g, '');
+    this.setState(st => ({ sentence: [...st.sentence, plain] }));
+    this.speak(plain);
+  }
+
+  set(k, v, store) {
+    this.setState({ [k]: v });
+    if (store) { try { localStorage.setItem(store, String(v)); } catch (e) {} }
+  }
+
+  handlePad(k) {
+    if (k.t === 'clr') { this.setState({ pinBuf: '', pinErr: false }); return; }
+    if (k.t === 'back') { this.setState(st => ({ pinBuf: st.pinBuf.slice(0, -1), pinErr: false })); return; }
+    this.setState(st => {
+      const buf = (st.pinBuf + k.label).slice(0, 4);
+      if (buf.length === 4) {
+        if (buf === '1234') return { pinBuf: '', pinOpen: false, adultOpen: true, pinErr: false };
+        return { pinBuf: '', pinErr: true };
+      }
+      return { pinBuf: buf, pinErr: false };
+    });
+  }
+
+  showToast(msg) {
+    clearTimeout(this._toastT);
+    this.setState({ toast: msg });
+    this._toastT = setTimeout(() => this.setState({ toast: '' }), 1900);
+  }
+
+  toggleVM(on) {
+    return { on, track: on ? 'var(--speak)' : 'var(--line)', just: on ? 'flex-end' : 'flex-start' };
+  }
+
+  toolIcon(id) {
+    const s = (i) => this.svg(i);
+    if (id === 'edit') return s('<path d="M5 19l1-4L16 5l3 3L9 18z"/><path d="M14 7l3 3" stroke-width="1.2"/>');
+    if (id === 'phrases') return s('<path d="M4 5h16v10H9l-4 4z"/><path d="M8 9h8M8 12h5" stroke-width="1.2"/>');
+    if (id === 'stats') return s('<path d="M4 20V4M4 20h16" stroke-width="1.4"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="16.5" y="5" width="3" height="12"/>');
+    if (id === 'backup') return s('<path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.3A3.8 3.8 0 0 1 18 18z"/><path d="M12 11v6M9.5 13.5 12 11l2.5 2.5" stroke-width="1.2"/>');
+    if (id === 'find') return s('<circle cx="11" cy="11" r="6"/><path d="m20 20-4.3-4.3"/>');
+    if (id === 'modeling') return s('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>');
+  }
+
+  speak(text) {
+    if (!text || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'he-IL';
+      u.rate = this.state.rate || 0.92;
+      u.pitch = this.state.pitch || 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const he = voices.find(v => /he|iw/i.test(v.lang));
+      if (he) u.voice = he;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  // ---- icon helpers ----
+  svg(inner, fill) {
+    return '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="' + (fill || 'none') + '" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block">' + inner + '</svg>';
+  }
+  node(html) {
+    return React.createElement('span', { style: { width: '100%', height: '100%', display: 'block' }, dangerouslySetInnerHTML: { __html: html } });
+  }
+  person(extra) {
+    return this.svg('<circle cx="12" cy="7.5" r="3"/><path d="M6 19c0-3.3 2.7-5.7 6-5.7s6 2.4 6 5.7"/>' + (extra || ''));
+  }
+  // emotion face
+  face(eyes, mouth, extra) {
+    return this.svg('<circle cx="12" cy="12" r="9"/>' + eyes + mouth + (extra || ''));
+  }
+
+  picto(id) {
+    const src = 'https://static.arasaac.org/pictograms/' + id + '/' + id + '_300.png';
+    return React.createElement('img', {
+      src,
+      alt: '',
+      draggable: false,
+      loading: 'lazy',
+      style: { width: '100%', height: '100%', objectFit: 'contain', display: 'block', pointerEvents: 'none' },
+      onError: (e) => { e.currentTarget.style.opacity = '0'; },
+    });
+  }
+
+  getVocab() {
+    if (this._vocab) return this._vocab;
+    // [plain word, ARASAAC id, nikud] — IDs verified from the Co_Board repo symbol map.
+    const data = {
+      people: [
+        ['אני', 6632, 'אֲנִי'], ['אמא', 31148, 'אִמָּא'], ['אבא', 31146, 'אַבָּא'],
+        ['אח', 2423, 'אָח'], ['אחות', 2422, 'אָחוֹת'], ['סבא', 23718, 'סַבָּא'],
+        ['סבתא', 23710, 'סַבְתָּא'], ['תינוק', 6060, 'תִּינוֹק'], ['חבר', 25790, 'חָבֵר'],
+        ['מורה', 6556, 'מוֹרָה'], ['גננת', 2961, 'גַּנֶּנֶת'], ['סייעת', 2476, 'סַיֶּעֶת'],
+        ['רופא', 6561, 'רוֹפֵא'], ['ילד', 7176, 'יֶלֶד'], ['ילדה', 27509, 'יַלְדָּה'],
+        ['אנחנו', 7183, 'אֲנַחְנוּ'], ['הוא', 6480, 'הוּא'], ['היא', 7029, 'הִיא'],
+      ],
+      actions: [
+        ['רוצה', 5441, 'רוֹצֶה'], ['לא רוצה', 6156, 'לֹא רוֹצֶה'], ['עוד', 26913, 'עוֹד'],
+        ['עזרה', 12252, 'עֶזְרָה'], ['כן', 5584, 'כֵּן'], ['לא', 5526, 'לֹא'],
+        ['לאכול', 6456, 'לֶאֱכוֹל'], ['לשתות', 6061, 'לִשְׁתּוֹת'], ['ללכת', 8649, 'לָלֶכֶת'],
+        ['לרוץ', 6465, 'לָרוּץ'], ['לשחק', 23392, 'לְשַׂחֵק'], ['לראות', 6564, 'לִרְאוֹת'],
+        ['לשמוע', 6572, 'לִשְׁמוֹעַ'], ['לישון', 6479, 'לִישׁוֹן'], ['לקרוא', 7141, 'לִקְרוֹא'],
+        ['לצייר', 8088, 'לְצַיֵּר'], ['לבנות', 2713, 'לִבְנוֹת'], ['להתרחץ', 26803, 'לְהִתְרַחֵץ'],
+        ['להתחבק', 34369, 'לְהִתְחַבֵּק'], ['לנוח', 16643, 'לָנוּחַ'], ['להתלבש', 6627, 'לְהִתְלַבֵּשׁ'],
+        ['להתעורר', 8989, 'לְהִתְעוֹרֵר'], ['תן לי', 6968, 'תֵּן לִי'], ['סיים', 2565, 'סִיֵּם'],
+      ],
+      food: [
+        ['מים', 32464, 'מַיִם'], ['חלב', 2445, 'חָלָב'], ['מיץ', 11461, 'מִיץ'],
+        ['לחם', 2494, 'לֶחֶם'], ['בננה', 2530, 'בַּנָנָה'], ['תפוח', 2462, 'תַּפּוּחַ'],
+        ['ענבים', 3247, 'עֲנָבִים'], ['תפוז', 2483, 'תַּפּוּז'], ['שוקולד', 2334, 'שׁוֹקוֹלָד'],
+        ['במבה', 24854, 'בַּמְבָּה'], ['ביסלי', 4694, 'בִּיסְלִי'], ['ארוחה', 8169, 'אֲרוּחָה'],
+        ['ארוחת בוקר', 4626, 'אֲרוּחַת בֹּקֶר'], ['תרופה', 2855, 'תְּרוּפָה'],
+      ],
+      feelings: [
+        ['שמח', 35547, 'שָׂמֵחַ'], ['עצוב', 35545, 'עָצוּב'], ['כועס', 35539, 'כּוֹעֵס'],
+        ['מפחד', 35535, 'מְפַחֵד'], ['נרגש', 39090, 'נִרְגָּשׁ'], ['גאה', 31408, 'גֵּאֶה'],
+        ['מבולבל', 2352, 'מְבֻלְבָּל'], ['עייף', 35537, 'עָיֵף'], ['אוהב', 31760, 'אוֹהֵב'],
+        ['שונא', 8556, 'שׂוֹנֵא'], ['משועמם', 35531, 'מְשׁוּעְמָם'], ['כואב', 30620, 'כּוֹאֵב'],
+        ['בסדר', 35533, 'בְּסֵדֶר'], ['לא בסדר', 37182, 'לֹא בְּסֵדֶר'], ['לבד', 7253, 'לְבַד'],
+        ['ביחד', 7064, 'בְּיַחַד'], ['עוזר', 15992, 'עוֹזֵר'], ['מפריע', 7157, 'מַפְרִיעַ'],
+        ['חם', 2300, 'חַם'], ['קר', 4652, 'קַר'], ['רועש', 24833, 'רוֹעֵשׁ'],
+        ['שקט', 5936, 'שָׁקֵט'], ['אהבה', 8020, 'אַהֲבָה'], ['סליחה', 11625, 'סְלִיחָה'],
+      ],
+      places: [
+        ['בית', 6964, 'בַּיִת'], ['גן', 30608, 'גַּן'], ['בית ספר', 32446, 'בֵּית סֵפֶר'],
+        ['פארק', 2859, 'פַּארְק'], ['ספרייה', 6063, 'סִפְרִיָּה'], ['סופרמרקט', 3389, 'סוּפֶּרְמַרְקֶט'],
+        ['חצר', 33064, 'חָצֵר'], ['אמבטיה', 2272, 'אַמְבַּטְיָה'], ['טיפול', 38928, 'טִיפּוּל'],
+        ['חוץ', 29903, 'חוּץ'], ['פנים', 2684, 'פְּנִים'], ['שירותים', 5921, 'שֵׁרוּתִים'],
+      ],
+      objects: [
+        ['כדור', 3241, 'כַּדּוּר'], ['בובה', 26238, 'בּוּבָּה'], ['ספר', 25191, 'סֵפֶר'],
+        ['פאזל', 2540, 'פַּאזֶל'], ['טלוויזיה', 25498, 'טֶלֶוִיזְיָה'], ['עיפרון', 2440, 'עִפָּרוֹן'],
+        ['צבע', 7075, 'צֶבַע'], ['כיסא', 36193, 'כִּסֵּא'], ['שולחן', 3129, 'שֻׁלְחָן'],
+        ['מחשב', 7190, 'מַחְשֵׁב'], ['רכבת', 2603, 'רַכֶּבֶת'], ['ציור', 11238, 'צִיּוּר'],
+        ['שיר', 24791, 'שִׁיר'],
+      ],
+    };
+    const build = (arr) => arr.map(([plain, id, nikud]) => ({
+      word: nikud, plain, icon: this.picto(id),
+    }));
+    this._vocab = {};
+    Object.keys(data).forEach(k => { this._vocab[k] = build(data[k]); });
+    return this._vocab;
+  }
+
+  getVocabOld() {
+    const s = (i, f) => this.svg(i, f);
+
+    // ---------- PEOPLE ----------
+    const P = (extra) => this.person(extra);
+    const people = [
+      ['אֲנִי', P('<path d="M12 15.5v2.5" stroke-width="1.2"/>')],
+      ['אִמָּא', P('<path d="M9.1 6.4C8.3 8.7 8 10.5 7 12M14.9 6.4c.8 2.3 1.1 4.1 2.1 5.6"/>')],
+      ['אַבָּא', P('<path d="M9.2 5.4c1.7-1 3.9-1 5.6 0"/><path d="M10 9.4h4" stroke-width="1.2"/>')],
+      ['אָח', this.svg('<circle cx="12" cy="8.5" r="2.6"/><path d="M7 19c0-2.9 2.2-4.9 5-4.9s5 2 5 4.9"/>')],
+      ['אָחוֹת', this.svg('<circle cx="12" cy="8.5" r="2.6"/><path d="M7 19c0-2.9 2.2-4.9 5-4.9s5 2 5 4.9"/><path d="M9.6 6.8C9 8 8.8 9 8.4 10"/>')],
+      ['סַבָּא', P('<circle cx="9.7" cy="7.4" r="1.5"/><circle cx="14.3" cy="7.4" r="1.5"/><path d="M11.2 7.4h1.6"/>')],
+      ['סַבְתָּא', P('<circle cx="9.7" cy="7.6" r="1.4"/><circle cx="14.3" cy="7.6" r="1.4"/><path d="M11.3 7.6h1.4M12 3.4v1"/>')],
+      ['תִּינוֹק', this.svg('<circle cx="12" cy="9" r="3.2"/><path d="M12 6c1-.7 2.1.4 1.3 1.3"/><path d="M7.5 19c0-2.6 2-4.4 4.5-4.4s4.5 1.8 4.5 4.4"/>')],
+      ['חָבֵר', this.svg('<circle cx="8.3" cy="8.3" r="2.3"/><path d="M4.4 18c0-2.5 1.7-4.1 3.9-4.1"/><circle cx="15.7" cy="8.3" r="2.3"/><path d="M19.6 18c0-2.5-1.7-4.1-3.9-4.1"/><path d="M10.7 14.2h2.6"/>')],
+      ['חֲבֵרָה', this.svg('<circle cx="8.3" cy="8.3" r="2.3"/><path d="M4.4 18c0-2.5 1.7-4.1 3.9-4.1"/><circle cx="15.7" cy="8.3" r="2.3"/><path d="M19.6 18c0-2.5-1.7-4.1-3.9-4.1"/><path d="M6.4 7c-.4 1-.5 1.8-.8 2.6"/>')],
+      ['מוֹרָה', P('<rect x="14.5" y="13" width="6" height="4.5" rx="1"/><path d="M16 15.2h3" stroke-width="1"/>')],
+      ['גַּנֶּנֶת', P('<path d="M8 4.5c1.4 1 6.6 1 8 0"/><path d="M8.6 4.8 9 6.6M15.4 4.8 15 6.6"/>')],
+      ['רוֹפֵא', P('<rect x="9.5" y="14.5" width="5" height="5" rx=".7" fill="var(--surface)"/><path d="M12 15.6v2.8M10.6 17h2.8" stroke-width="1.1"/>')],
+      ['מְטַפֶּלֶת', this.svg('<circle cx="9" cy="8.5" r="2.2"/><path d="M5.2 18c0-2.4 1.7-4 3.8-4"/><circle cx="16" cy="11" r="1.8"/><path d="M12.7 18c0-1.9 1.5-3.2 3.3-3.2s3.3 1.3 3.3 3.2"/>')],
+      ['דּוֹד', P('<path d="M9.3 5.6c1.6-.9 3.8-.9 5.4 0"/>')],
+      ['דּוֹדָה', P('<path d="M9.4 6.6C9 8 8.8 9 8.4 10M14.6 6.6c.4 1.4.6 2.4 1 3.4"/>')],
+      ['מִישֶׁהוּ', this.svg('<circle cx="12" cy="7.5" r="3"/><path d="M6 19c0-3.3 2.7-5.7 6-5.7s6 2.4 6 5.7"/><path d="M12 4.5v.01" stroke-width="2"/>')],
+      ['יֶלֶד', this.svg('<circle cx="12" cy="8" r="2.7"/><path d="M7 19c0-3 2.2-5 5-5s5 2 5 5"/>')],
+      ['יַלְדָּה', this.svg('<circle cx="12" cy="8" r="2.7"/><path d="M7.5 19l1-5M16.5 19l-1-5M9 14h6"/><path d="M9.4 6.4 8.6 9M14.6 6.4l.8 2.6"/>')],
+      ['מִשְׁפָּחָה', this.svg('<circle cx="7.5" cy="8.5" r="2"/><path d="M4.2 17.5c0-2.1 1.5-3.5 3.3-3.5"/><circle cx="16.5" cy="8.5" r="2"/><path d="M19.8 17.5c0-2.1-1.5-3.5-3.3-3.5"/><circle cx="12" cy="11.5" r="1.7"/><path d="M9.2 18.5c0-1.7 1.2-2.9 2.8-2.9s2.8 1.2 2.8 2.9"/>')],
+      ['שָׁכֵן', P('<path d="M16 12.5l3.5-2.5v8h-3.5z" fill="var(--surface)"/>')],
+      ['נַהָג', this.svg('<circle cx="12" cy="8" r="2.6"/><path d="M7 17c0-2.8 2.2-4.7 5-4.7s5 1.9 5 4.7"/><rect x="8" y="15.5" width="8" height="4.5" rx="2" fill="var(--surface)"/><circle cx="12" cy="17.7" r="1.3"/>')],
+      ['כֻּלָּם', this.svg('<circle cx="6.5" cy="9" r="1.8"/><circle cx="12" cy="8" r="1.9"/><circle cx="17.5" cy="9" r="1.8"/><path d="M3.5 17c0-2 1.3-3.2 3-3.2M20.5 17c0-2-1.3-3.2-3-3.2M8.8 17.5c0-2 1.4-3.4 3.2-3.4s3.2 1.4 3.2 3.4"/>')],
+    ];
+
+    // ---------- ACTIONS ----------
+    const actions = [
+      ['רוֹצֶה', s('<path d="M11 12V5.5a1.4 1.4 0 0 1 2.8 0V12"/><path d="M13.8 11V8.4a1.3 1.3 0 0 1 2.6 0V13c0 3.6-2.2 6.5-5.6 6.5-2 0-3.4-.8-4.4-2.4L5 13.5c-.5-1 .6-2 1.6-1.4l1.6 1V7.2a1.3 1.3 0 0 1 2.6 0"/>')],
+      ['לֹא', s('<circle cx="12" cy="12" r="8.5"/><path d="M6.6 6.6 17.4 17.4"/>')],
+      ['כֵּן', s('<circle cx="12" cy="12" r="8.5"/><path d="m8 12.4 2.6 2.8L16 9"/>')],
+      ['עוֹד', s('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M7.5 12h9"/>')],
+      ['נִגְמַר', s('<circle cx="12" cy="12" r="8.5"/><path d="M7.5 12h9"/>')],
+      ['עֶזְרָה', s('<path d="M12 8.5V6a1.4 1.4 0 0 1 2.8 0v6"/><path d="M14.8 11.5V7.6a1.3 1.3 0 0 1 2.6 0V14c0 3.4-2.2 5.8-5.4 5.8-1.9 0-3.3-.8-4.3-2.3l-2.3-3.6c-.5-.9.5-1.9 1.5-1.4l1.6.9V6.3a1.3 1.3 0 0 1 2.6 0v5.2"/><path d="M5 6 3.5 4.5M6.5 4 6 2M9 4.2 9.6 2.3" stroke-width="1.2"/>')],
+      ['אוֹכֵל', s('<path d="M7 4v6.5a2 2 0 0 0 4 0V4M9 10.5V20"/><path d="M16.5 4c-1.4.3-2.3 2.2-2.3 4.6 0 1.8 1 2.9 2.3 3V20"/>')],
+      ['שׁוֹתֶה', s('<path d="M7 8h8l-1 10a2 2 0 0 1-2 1.8H10a2 2 0 0 1-2-1.8L7 8z"/><path d="M15 10.5h2.2a1.8 1.8 0 0 1 0 3.6H14.6"/><path d="M9.5 11.5h4" stroke-width="1.1"/>')],
+      ['הוֹלֵךְ', s('<circle cx="13.5" cy="5" r="1.9"/><path d="M13 8.5 10.7 13l2.6 2.4 1 4.1M10.7 13 7.5 14.5M13.2 11l3.3 1.8"/>')],
+      ['בָּא', s('<path d="M19 12H6"/><path d="m11 7-5 5 5 5"/>')],
+      ['מְשַׂחֵק', s('<circle cx="16" cy="15" r="3.6"/><rect x="4.5" y="12" width="6.5" height="6.5" rx="1.2"/><path d="M9 4l2 3.2M14.5 4l-2 3.2"/>')],
+      ['עוֹצֵר', s('<path d="M8.4 4h7.2L20 8.4v7.2L15.6 20H8.4L4 15.6V8.4L8.4 4z"/><path d="M9.5 9.5h5v5h-5z"/>')],
+      ['נוֹתֵן', s('<path d="M3 13h4l3 2.5c1 .8 5 .5 6-.5l3.5-3c.8-.8-.2-2.1-1.2-1.6l-3 1.5"/><path d="M9.5 13h3.5c1 0 1-1.6 0-1.6h-2.3l-2-1.4c-1-.7-2.5-.6-3.2 0L3 11"/><path d="M14 6.5c0-1 1.6-1 1.6 0 0-1 1.6-1 1.6 0 0 1.4-1.6 2.5-1.6 2.5s-1.6-1.1-1.6-2.5z" fill="currentColor" stroke="none"/>')],
+      ['רוֹאֶה', s('<path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>')],
+      ['שׁוֹמֵעַ', s('<path d="M8 11a4 4 0 1 1 8 0c0 2.2-2 2.6-2.6 4.2-.4 1-.4 2.3-1.8 2.3a1.8 1.8 0 0 1-1.8-1.8"/><path d="M18 6c1.3 1.2 1.3 4.8 0 6M20.5 4c2 2 2 8 0 10" stroke-width="1.2"/>')],
+      ['יָשֵׁן', s('<path d="M20 13.5A8 8 0 1 1 10.5 4 6.3 6.3 0 0 0 20 13.5z"/><path d="M14 5h3l-3 3h3" stroke-width="1.1"/>')],
+      ['רוֹחֵץ', s('<path d="M5 11h14v2a6 6 0 0 1-12 0v-2z"/><path d="M9 11V6.5a2 2 0 0 1 4 0V8"/><path d="M8 19l-1 1.5M12 19l-1 1.5M16 19l-1 1.5" stroke-width="1.2"/>')],
+      ['פּוֹתֵחַ', s('<path d="M4 20V5l9-1.6V20"/><path d="M13 6h6.5v14H13"/><circle cx="10.5" cy="12" r=".9" fill="currentColor" stroke="none"/>')],
+      ['סוֹגֵר', s('<rect x="6" y="3.6" width="12" height="16.8" rx="1.2"/><circle cx="14.5" cy="12" r=".9" fill="currentColor" stroke="none"/>')],
+      ['אוֹהֵב', s('<path d="M12 20s-7-4.4-7-9.6A3.6 3.6 0 0 1 12 7.2 3.6 3.6 0 0 1 19 10.4C19 15.6 12 20 12 20z"/>', 'currentColor')],
+      ['קוֹרֵא', s('<path d="M12 6.5C10 5 7 5 5 6v12c2-1 5-1 7 .5 2-1.5 5-1.5 7-.5V6c-2-1-5-1-7 .5z"/><path d="M12 6.5V19"/>')],
+      ['רָץ', s('<circle cx="15" cy="5" r="1.9"/><path d="M14.5 8.4 11 11l2.5 2 .8 4.5M11 11 7 11.5M9.5 14 6.5 17"/>')],
+      ['יוֹשֵׁב', s('<circle cx="12" cy="5.5" r="2"/><path d="M9 9h6v5h-2v6M11 14v6"/><path d="M9 20v-9"/>')],
+      ['מְחַבֵּק', s('<circle cx="9" cy="8" r="2.2"/><circle cx="15" cy="8" r="2.2"/><path d="M9 11c-2 .5-4 2-4 4.5M15 11c2 .5 4 2 4 4.5M9.5 13h5c1.5 0 1.5 2.5 0 2.5M14.5 13h-5c-1.5 0-1.5 2.5 0 2.5"/>')],
+    ];
+
+    // ---------- FOOD ----------
+    const food = [
+      ['מַיִם', s('<path d="M12 3.5c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/><path d="M9 14a3 3 0 0 0 2 2.6" stroke-width="1.2"/>')],
+      ['חָלָב', s('<path d="M8 8.5 9 5.5h6l1 3v10.5a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z"/><path d="M9 5.5 11 3h2l2 2.5M8 11h8"/>')],
+      ['מִיץ', s('<path d="M7.5 8h9l-1 11a1.5 1.5 0 0 1-1.5 1.4h-4A1.5 1.5 0 0 1 8.5 19z"/><path d="M14.5 8 16 3.5M8 12h8" stroke-width="1.2"/>')],
+      ['לֶחֶם', s('<path d="M4 13c0-3.2 3.6-5 8-5s8 1.8 8 5v.5H4z"/><path d="M4 13.5h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 13.5V19M12 13.5V19M16 13.5V19" stroke-width="1"/>')],
+      ['עוּגָה', s('<path d="M4.5 12.5c0-1.6 1.5-2.5 7.5-2.5s7.5.9 7.5 2.5V19a1 1 0 0 1-1 1H5.5a1 1 0 0 1-1-1z"/><path d="M4.5 14.5c2 1.4 4 1.4 7.5 1.4s5.5 0 7.5-1.4"/><path d="M12 6v4"/><circle cx="12" cy="5" r="1.1" fill="currentColor" stroke="none"/>')],
+      ['תַּפּוּחַ', s('<path d="M12 8.5c-1.5-2-5.5-1.3-5.5 2.5 0 3.2 2.5 7 5.5 7s5.5-3.8 5.5-7c0-3.8-4-4.5-5.5-2.5z"/><path d="M12 8.5V5.5M12 5.5c1-1.5 3-1.5 3.5-.5" stroke-width="1.2"/>')],
+      ['בָּנָנָה', s('<path d="M5 8c.5 6 5.5 10 12 8.5-1.5 2.5-9 3.5-11.5-2.5C4.8 11 5 9 5 8z"/><path d="M5 8c-.3-1 0-2 .6-2.4M17 16.5l1.5 1.2" stroke-width="1.2"/>')],
+      ['עֲנָבִים', s('<circle cx="12" cy="6" r="1.4"/><circle cx="9.5" cy="9" r="1.6"/><circle cx="14.5" cy="9" r="1.6"/><circle cx="12" cy="11" r="1.6"/><circle cx="9.5" cy="13.5" r="1.6"/><circle cx="14.5" cy="13.5" r="1.6"/><circle cx="12" cy="16" r="1.6"/><path d="M12 4.6V3M12 3c1-1 2.5-.6 3 .4" stroke-width="1.1"/>')],
+      ['גְּלִידָה', s('<path d="M8 10a4 4 0 0 1 8 0z"/><path d="M8.2 10.5 12 20l3.8-9.5"/><path d="M9 13.5h6M9.8 16h4.4" stroke-width="1"/>')],
+      ['פִּיצָה', s('<path d="M12 4 20.5 19c.4.8-.3 1.6-1.1 1.3L12 18l-7.4 2.3c-.8.3-1.5-.5-1.1-1.3L12 4z"/><circle cx="10" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="13.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="9.5" r="1" fill="currentColor" stroke="none"/>')],
+      ['עוּגִיָּה', s('<circle cx="12" cy="12" r="8.5"/><circle cx="9.5" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="14" r="1" fill="currentColor" stroke="none"/>')],
+      ['בֵּיצָה', s('<ellipse cx="12" cy="13" rx="7.5" ry="6.5"/><circle cx="12.5" cy="13" r="2.6" fill="currentColor" stroke="none"/>')],
+      ['גְּבִינָה', s('<path d="M3.5 16 17 8.5l3.5 4.5L8.5 20z"/><path d="M3.5 16 17 8.5"/><circle cx="10" cy="15" r="1.1"/><circle cx="14.5" cy="14" r=".9"/>')],
+      ['אֹרֶז', s('<path d="M4.5 11.5h15a8 8 0 0 1-15 0z"/><path d="M6.5 11.5c1-2 3.5-2 5 0 1.5-2 4-2 5 0" stroke-width="1.1"/><path d="M3.5 11.5h17" stroke-width="1.2"/>')],
+      ['עוֹף', s('<path d="M8 13a5 5 0 1 1 6.5 4.8L15 21l-2-1-2 1 .5-3.2A5 5 0 0 1 8 13z"/><path d="m13.5 11 4-4M16 6.5l1.5-1.5 1 1L17 7.5z" stroke-width="1.2"/>')],
+      ['דָּג', s('<path d="M3 12c3.5-4.5 9.5-4.5 13 0-3.5 4.5-9.5 4.5-13 0z"/><path d="M16 12l4.5-3v6z"/><circle cx="8" cy="11" r="1" fill="currentColor" stroke="none"/><path d="M11 9.5c1 1.5 1 3.5 0 5" stroke-width="1"/>')],
+      ['מָרָק', s('<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M3 11h18" stroke-width="1.2"/><path d="M9 7c-.5-1 .5-1.8 0-2.8M12 7c-.5-1 .5-1.8 0-2.8M15 7c-.5-1 .5-1.8 0-2.8" stroke-width="1.1"/>')],
+      ['שׁוֹקוֹלָד', s('<rect x="6" y="4.5" width="12" height="15" rx="1.2"/><path d="M6 9.3h12M6 14h12M12 4.5v15" stroke-width="1.1"/>')],
+      ['תּוּת', s('<path d="M12 9c-3.5 0-6 2-6 5 0 3 3 6 6 6s6-3 6-6c0-3-2.5-5-6-5z"/><path d="M12 9V6M8.5 7c1-1.5 6-1.5 7 0" stroke-width="1.2"/><circle cx="10" cy="13" r=".7" fill="currentColor" stroke="none"/><circle cx="14" cy="13" r=".7" fill="currentColor" stroke="none"/><circle cx="12" cy="16" r=".7" fill="currentColor" stroke="none"/>')],
+      ['גֶּזֶר', s('<path d="M9 9c-1.5 1.5-4.5 8-3.5 9s7.5-2 9-3.5z"/><path d="M14.5 9.5C16 8 17 5.5 18.5 5M14.5 9.5c2-.5 4-.3 5 .5M14.5 9.5c-.5-2-.3-4 .5-5" stroke-width="1.2"/>')],
+      ['פַּסְטָה', s('<path d="M6 19h12l-1-7H7z"/><path d="M8 12c0-4 8-4 8 0" /><path d="M9.5 12V8.5M12 12V7.5M14.5 12V8.5" stroke-width="1.1"/>')],
+      ['יוֹגוּרְט', s('<path d="M7 9h10l-.8 9.5a1.5 1.5 0 0 1-1.5 1.4H9.3a1.5 1.5 0 0 1-1.5-1.4z"/><path d="M6.5 9 7.5 6h9l1 3"/><path d="M11 13c.6.8 1.6.8 2.2 0" stroke-width="1.1"/>')],
+      ['פּוֹפְּקוֹרְן', s('<path d="M8 9h8l-1.2 11H9.2z"/><path d="M8 9 9 20M16 9 15 20M12 9v11" stroke-width="1"/><circle cx="8.5" cy="6.5" r="2"/><circle cx="12" cy="5.5" r="2.2"/><circle cx="15.5" cy="6.5" r="2"/>')],
+      ['סֻכָּרְיָּה', s('<circle cx="12" cy="12" r="4.5"/><path d="M15.2 8.8 19 5M8.8 15.2 5 19" stroke-width="1.4"/><path d="M19 5l1-2.5L17.5 4M5 19l-1 2.5L6.5 20" stroke-width="1.2"/><path d="M9.5 12c1-1.5 4-1.5 5 0" stroke-width="1"/>')],
+    ];
+
+    // ---------- FEELINGS (faces) ----------
+    const f = this.face.bind(this);
+    const eyeDot = '<circle cx="9" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="1.1" fill="currentColor" stroke="none"/>';
+    const eyeHappy = '<path d="M7.6 10.8q1.4-1.6 2.8 0M13.6 10.8q1.4-1.6 2.8 0"/>';
+    const eyeHalf = '<path d="M7.8 10.5h2.4M13.8 10.5h2.4"/>';
+    const eyeWide = '<circle cx="9" cy="10.5" r="1.6"/><circle cx="15" cy="10.5" r="1.6"/>';
+    const eyeClosed = '<path d="M7.6 11q1.4 1.4 2.8 0M13.6 11q1.4 1.4 2.8 0"/>';
+    const browAngry = '<path d="M7.4 8.2 10 9.4M16.6 8.2 14 9.4"/>';
+    const browWorry = '<path d="M7.6 9 10 8.2M16.4 9 14 8.2"/>';
+    const mSmile = '<path d="M8.2 14.2q3.8 3 7.6 0"/>';
+    const mBig = '<path d="M8 13.8q4 4.5 8 0z"/>';
+    const mFrown = '<path d="M8.2 15.6q3.8-3 7.6 0"/>';
+    const mFlat = '<path d="M9 15h6"/>';
+    const mOpen = '<ellipse cx="12" cy="15.2" rx="1.7" ry="2.1"/>';
+    const mWavy = '<path d="M8.3 15q1.3-1.2 2.5 0 1.3 1.2 2.5 0 1.3-1.2 2.4 0"/>';
+
+    const feelings = [
+      ['שָׂמֵחַ', f(eyeHappy, mSmile)],
+      ['עָצוּב', f(eyeDot, mFrown, browWorry)],
+      ['כּוֹעֵס', f(eyeDot, mFrown, browAngry)],
+      ['מְפַחֵד', f(eyeWide, mOpen, browWorry)],
+      ['עָיֵף', f(eyeHalf, mFlat, '<path d="M16.5 5.5h3l-3 3h3" stroke-width="1"/>')],
+      ['נִרְגָּשׁ', f(eyeHappy, mBig, '<path d="M5 7.5l.6 1.2 1.2.2-.9.9.2 1.2-1.1-.6-1.1.6.2-1.2-.9-.9 1.2-.2z" fill="currentColor" stroke="none"/>')],
+      ['מְשׁוּעֲמָם', f(eyeHalf, mWavy)],
+      ['בּוֹכֶה', f(eyeDot, mFrown, '<path d="M9 12.5v2.5M15 12.5v2.5" stroke="#6AABF0"/>')],
+      ['מְבֻלְבָּל', f("<path d='M7.6 10.8q1.4-1.6 2.8 0'/>" + '<circle cx="15" cy="10.5" r="1.1" fill="currentColor" stroke="none"/>', mWavy, browWorry)],
+      ['רָגוּעַ', f(eyeClosed, mSmile)],
+      ['כּוֹאֵב לִי', f('<path d="M7.6 9.8l2.4 2M10 9.8l-2.4 2M14 9.8l2.4 2M16.4 9.8l-2.4 2"/>', mFrown, '<path d="M3 10.5h2M19 10.5h2" stroke-width="1.6"/>')],
+      ['חוֹלֶה', f(eyeHalf, mWavy, '<path d="M14 4.5h6M17 4.5v3" stroke-width="1.2"/>')],
+      ['בַּיְשָׁן', f('<path d="M7.8 11h2.4M13.8 11h2.4"/>', mSmile, '<circle cx="6.5" cy="13.5" r="1.4" fill="none"/><circle cx="17.5" cy="13.5" r="1.4" fill="none"/>')],
+      ['גֵּאֶה', f(eyeClosed, mSmile, '<path d="M9 6l1 1.6 1.8-.3-1 1.6 1 1.6-1.8-.3-1 1.6-1-1.6-1.8.3 1-1.6-1-1.6 1.8.3z" fill="currentColor" stroke="none" transform="translate(2.5 -1) scale(.55)"/>')],
+      ['מֻפְתָּע', f(eyeWide, mOpen)],
+      ['צוֹחֵק', f(eyeClosed, mBig)],
+      ['דּוֹאֵג', f(eyeDot, mWavy, browWorry)],
+      ['אוֹהֵב', f('<path d="M9 11.4c-1-1-2.4.2-1.6 1.2L9 14.2l1.6-1.6c.8-1-.6-2.2-1.6-1.2z" fill="currentColor" stroke="none"/><path d="M15 11.4c-1-1-2.4.2-1.6 1.2L15 14.2l1.6-1.6c.8-1-.6-2.2-1.6-1.2z" fill="currentColor" stroke="none"/>', mSmile)],
+      ['מְתֻסְכָּל', f(eyeHalf, '<path d="M8.5 15h7M9.5 14.2l1 1.6M12 14.2l1 1.6" stroke-width="1.1"/>', browAngry)],
+      ['בּוֹדֵד', f(eyeDot, mFlat, browWorry)],
+      ['נָבוֹךְ', f('<path d="M7.8 11h2.4M13.8 11h2.4"/>', mWavy, '<circle cx="6.5" cy="13.5" r="1.3"/><circle cx="17.5" cy="13.5" r="1.3"/>')],
+      ['סַקְרָן', f("<circle cx='9' cy='10.5' r='1.1' fill='currentColor' stroke='none'/><circle cx='15' cy='10.5' r='1.1' fill='currentColor' stroke='none'/>", mSmile, '<path d="M7.4 9 10 8.4"/>')],
+      ['רָגִישׁ', f(eyeHalf, mSmile, '<path d="M9 12.8v1.4" stroke="#6AABF0" stroke-width="1.1"/>')],
+      ['מְבֻסָּט', f(eyeHappy, mBig)],
+    ];
+
+    // ---------- PLACES ----------
+    const places = [
+      ['בַּיִת', s('<path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/><rect x="10" y="14" width="4" height="5"/>')],
+      ['גַּן', s('<path d="M5 20v-6a7 7 0 0 1 14 0v6"/><path d="M12 7V4M9 5l1.5 2M15 5l-1.5 2"/><circle cx="12" cy="3.6" r="1" fill="currentColor" stroke="none"/>')],
+      ['בֵּית סֵפֶר', s('<path d="M3 9 12 5l9 4-9 4z"/><path d="M7 11v4c0 1 2.2 2 5 2s5-1 5-2v-4"/><path d="M21 9v4"/>')],
+      ['פַּארְק', s('<path d="M9 21v-5M9 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M16 21v-6M16 15c2 0 3-1.4 3-3s-1-3-3-3-3 1.4-3 3 1 3 3 3z"/>')],
+      ['חֲנוּת', s('<path d="M4 9h16l-1 11H5z"/><path d="M4 9 6 4h12l2 5"/><path d="M9 13h6" stroke-width="1.1"/>')],
+      ['מִסְעָדָה', s('<path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v9"/><path d="M16 3c-1.3.3-2.2 2.1-2.2 4.4 0 1.7 1 2.8 2.2 2.9V20"/>')],
+      ['מִטְבָּח', s('<rect x="4" y="9" width="16" height="11" rx="1"/><path d="M4 13h16M8 9V5M16 9V5"/><circle cx="8" cy="16" r="1.1"/>')],
+      ['חֶדֶר', s('<path d="M4 20V8l8-3 8 3v12"/><rect x="9" y="13" width="6" height="7"/>')],
+      ['אַמְבַּטְיָה', s('<path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M6 12V7a2 2 0 0 1 4 0"/><path d="M8 19l-1 2M16 19l1 2" stroke-width="1.1"/>')],
+      ['גִּנָּה', s('<path d="M3 20h18"/><path d="M8 20c0-3-2-4-2-7 0 0 4 1 4 4M8 20c0-2 2-3 2-6"/><circle cx="16" cy="9" r="3"/><path d="M16 12v8"/>')],
+      ['חוֹף', s('<circle cx="8" cy="7" r="2.5"/><path d="M3 20c3-2 5-3 9-3s6 1 9 3"/><path d="M16 16l4-7M14 11l8 1" stroke-width="1.1"/>')],
+      ['בְּרֵכָה', s('<path d="M3 17c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"/><path d="M8 14V6a2 2 0 0 1 4 0M8 10h4" stroke-width="1.1"/>')],
+      ['מִגְרָשׁ', s('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17"/><circle cx="12" cy="12" r="2.2"/>')],
+      ['מִרְפָּאָה', s('<rect x="4" y="6" width="16" height="13" rx="1.5"/><path d="M12 9v7M8.5 12.5h7" stroke-width="1.4"/>')],
+      ['מְכוֹנִית', s('<path d="M3 13l2-5h14l2 5v4H3z"/><path d="M3 13h18"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/>')],
+      ['אוֹטוֹבּוּס', s('<rect x="4" y="5" width="16" height="12" rx="1.5"/><path d="M4 12h16M8 5v7M16 5v7"/><circle cx="8" cy="19" r="1.4"/><circle cx="16" cy="19" r="1.4"/>')],
+      ['סוּפֶּר', s('<path d="M3 5h2l2 9h10l2-7H6"/><circle cx="9" cy="19" r="1.4"/><circle cx="16" cy="19" r="1.4"/>')],
+      ['סַפְרִיָּה', s('<path d="M5 4h4v16H5zM10 4h4v16h-4z"/><path d="M15 5l4 .8-2.5 14.5-3.8-.7"/>')],
+    ];
+
+    // ---------- OBJECTS ----------
+    const objects = [
+      ['כַּדּוּר', s('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5c-3 3-3 14 0 17M12 3.5c3 3 3 14 0 17M3.6 10h16.8M3.6 14h16.8" stroke-width="1.1"/>')],
+      ['בֻּבָּה', s('<circle cx="12" cy="7" r="3.2"/><path d="M7 20c0-4 2.2-7 5-7s5 3 5 7"/><path d="M9.5 6.4 9 4M14.5 6.4 15 4" stroke-width="1.1"/>')],
+      ['סֵפֶר', s('<path d="M12 6.5C10 5 7 5 5 6v12c2-1 5-1 7 .5 2-1.5 5-1.5 7-.5V6c-2-1-5-1-7 .5z"/><path d="M12 6.5V19"/>')],
+      ['קֻבִּיּוֹת', s('<rect x="4" y="11" width="7" height="7" rx="1"/><rect x="13" y="11" width="7" height="7" rx="1"/><rect x="8.5" y="4" width="7" height="7" rx="1"/>')],
+      ['פַּאזֶל', s('<path d="M5 5h6v3a1.5 1.5 0 0 0 3 0V5h5v6h-3a1.5 1.5 0 0 0 0 3h3v5h-6v-3a1.5 1.5 0 0 0-3 0v3H5z"/>')],
+      ['טֵלֵפוֹן', s('<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10.5 18.5h3" stroke-width="1.2"/>')],
+      ['טַאבְּלֶט', s('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M11 17h2" stroke-width="1.2"/>')],
+      ['טֵלֵוִיזְיָה', s('<rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M9 21h6M12 18v3" stroke-width="1.2"/>')],
+      ['בָּלוֹן', s('<path d="M12 15c3 0 5-2.6 5-6s-2-6-5-6-5 2.6-5 6 2 6 5 6z"/><path d="M12 15v2M11 17h2l-1 4z" stroke-width="1.1"/>')],
+      ['דֻּבּוֹן', s('<circle cx="12" cy="13" r="6"/><circle cx="7.5" cy="7.5" r="2.2"/><circle cx="16.5" cy="7.5" r="2.2"/><circle cx="10" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r=".8" fill="currentColor" stroke="none"/><path d="M10.5 15.5q1.5 1 3 0" stroke-width="1.1"/>')],
+      ['עִפָּרוֹן', s('<path d="M5 19l1-4L16 5l3 3L9 18z"/><path d="M14 7l3 3M5 19l4-1" stroke-width="1.1"/>')],
+      ['צְבָעִים', s('<path d="M7 20V8l2-3 2 3v12zM13 20V6l2-2 2 2v14z"/><path d="M7 11h4M13 9h4" stroke-width="1.1"/>')],
+      ['מִסְפָּרַיִם', s('<circle cx="7" cy="7" r="2.4"/><circle cx="7" cy="17" r="2.4"/><path d="M9 8.5 19 17M9 15.5 19 7"/>')],
+      ['כִּסֵּא', s('<path d="M7 4v9h8V4M7 13l-1 7M15 13l1 7M6 16h10" stroke-width="1.4"/>')],
+      ['שֻׁלְחָן', s('<path d="M3 9h18M5 9v11M19 9v11M3 9l2-4h14l2 4"/>')],
+      ['מִטָּה', s('<path d="M3 18v-5h18v5M3 18v2M21 18v2M3 13v-3h10v3"/><circle cx="7.5" cy="11.5" r="1.3"/>')],
+      ['כּוֹס', s('<path d="M7 4h10l-1.2 15a1.5 1.5 0 0 1-1.5 1.4H9.7a1.5 1.5 0 0 1-1.5-1.4z"/><path d="M7.6 10h8.8" stroke-width="1.1"/>')],
+      ['נַעֲלַיִם', s('<path d="M3 15c2 0 3-1 4-1 2 0 3 2 6 2h8v3H3z"/><path d="M3 15v3M7 14l1 2M11 16l.5 2" stroke-width="1.1"/>')],
+    ];
+
+    const wrap = (arr) => arr.map(([word, ic]) => ({ word, icon: this.node(ic) }));
+    this._vocab = {
+      people: wrap(people),
+      actions: wrap(actions),
+      food: wrap(food),
+      feelings: wrap(feelings),
+      places: wrap(places),
+      objects: wrap(objects),
+    };
+    return this._vocab;
+  }
+
+  themeColors() {
+    const cat = this.state.cat;
+    const dark = this.state.dark;
+    const tints = {
+      light: {
+        people:  ['#DCEBFB', '#6AABF0'],
+        actions: ['#D6EFDE', '#4FA877'],
+        food:    ['#FBF1C9', '#D8AC3E'],
+        feelings:['#FBE3D4', '#E0935F'],
+        places:  ['#E6E3FA', '#8B86D6'],
+        objects: ['#D6F0EC', '#3FA694'],
+      },
+      dark: {
+        people:  ['#1B2A3D', '#4F7CB0'],
+        actions: ['#162B20', '#4A9068'],
+        food:    ['#2E2914', '#A98E3F'],
+        feelings:['#30221A', '#B07A54'],
+        places:  ['#231F33', '#6962A8'],
+        objects: ['#142B27', '#3E8E80'],
+      },
+    };
+    const t = tints[dark ? 'dark' : 'light'][cat];
+    if (dark) {
+      return {
+        bg: '#0F151D', surface: '#18212C', ink: '#ECF1F8', muted: '#94A4B8',
+        line: '#2A3340', speak: '#2E9377', speaksh: '#1F6B56',
+        chip: '#212B37', chipbd: '#374556',
+        tilebg: t[0], tilebd: t[1], iconbg: '#FFFFFF',
+      };
+    }
+    return {
+      bg: '#ECF2FA', surface: '#FFFFFF', ink: '#14202E', muted: '#5A6A7A',
+      line: '#DBE3EF', speak: '#1F7A5C', speaksh: '#155F47',
+      chip: '#F2F6FD', chipbd: '#CBD9EC',
+      tilebg: t[0], tilebd: t[1], iconbg: '#FFFFFF',
+    };
+  }
+
+  navIcon(id) {
+    const s = (i) => this.svg(i);
+    if (id === 'people') return s('<circle cx="9" cy="8" r="2.6"/><path d="M3.8 18c0-3 2.3-5 5.2-5"/><circle cx="16" cy="9.5" r="2.2"/><path d="M12.5 18c0-2.6 2-4.3 4.5-4.3s4.5 1.7 4.5 4.3"/>');
+    if (id === 'actions') return s('<path d="M13 3 4 14h6l-1 7 9-11h-6z" fill="currentColor" stroke="none"/>');
+    if (id === 'food') return s('<path d="M6 3v7a2 2 0 0 0 4 0V3M8 10v11"/><path d="M17 3c-1.4.3-2.3 2.3-2.3 4.7 0 1.8 1 3 2.3 3.1V21"/>');
+    if (id === 'feelings') return s('<circle cx="12" cy="12" r="9"/><path d="M8.2 14.2q3.8 3 7.6 0"/><circle cx="9" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="currentColor" stroke="none"/>');
+    if (id === 'places') return s('<path d="M12 21c4-4.5 6-7.6 6-10.4A6 6 0 0 0 6 10.6C6 13.4 8 16.5 12 21z"/><circle cx="12" cy="10.4" r="2.2"/>');
+    if (id === 'objects') return s('<rect x="9" y="9" width="11" height="11" rx="1.4"/><rect x="4" y="4" width="9" height="9" rx="1.4"/>');
+  }
+
+  renderVals() {
+    const vocab = this.getVocab();
+    const c = this.themeColors();
+    const dark = this.state.dark;
+    const cur = this.state.cat;
+
+    const catDefs = [
+      { id: 'people', label: 'אנשים' },
+      { id: 'actions', label: 'פעולות' },
+      { id: 'food', label: 'אוכל' },
+      { id: 'feelings', label: 'רגשות' },
+      { id: 'places', label: 'מקומות' },
+      { id: 'objects', label: 'חפצים' },
+    ];
+
+    const tints = {
+      people:  dark ? ['#1B2A3D', '#4F7CB0'] : ['#DCEBFB', '#6AABF0'],
+      actions: dark ? ['#162B20', '#4A9068'] : ['#D6EFDE', '#4FA877'],
+      food:    dark ? ['#2E2914', '#A98E3F'] : ['#FBF1C9', '#D8AC3E'],
+      feelings:dark ? ['#30221A', '#B07A54'] : ['#FBE3D4', '#E0935F'],
+      places:  dark ? ['#231F33', '#6962A8'] : ['#E6E3FA', '#8B86D6'],
+      objects: dark ? ['#142B27', '#3E8E80'] : ['#D6F0EC', '#3FA694'],
+    };
+
+    const cats = catDefs.map(cd => {
+      const active = cd.id === cur;
+      const tint = tints[cd.id];
+      return {
+        id: cd.id,
+        label: cd.label,
+        selected: active ? 'true' : 'false',
+        icon: this.node(this.navIcon(cd.id)),
+        bg: active ? tint[0] : c.surface,
+        bd: active ? tint[1] : c.line,
+        ink: active ? c.ink : c.muted,
+        shadow: active ? '0 3px 8px rgba(20,32,46,.12)' : 'none',
+        onClick: () => this.setState({ cat: cd.id, scanIdx: 0 }),
+      };
+    });
+
+    const scanOn = this.state.scan;
+    const tiles = (vocab[cur] || []).map((tile, i) => ({
+      word: tile.word,
+      icon: tile.icon,
+      outline: (scanOn && i === this.state.scanIdx) ? '5px solid var(--scanring)' : '0 solid transparent',
+      onClick: () => this.pickWord(tile.word),
+    }));
+
+    const sentence = this.state.sentence.map((w, i) => ({
+      word: w,
+      onClick: () => this.setState(st => ({ sentence: st.sentence.filter((_, idx) => idx !== i) })),
+    }));
+
+    const activeLabel = (catDefs.find(c2 => c2.id === cur) || {}).label;
+
+    const h = new Date().getHours();
+    let greet = 'ערב טוב';
+    if (h >= 5 && h < 12) greet = 'בוקר טוב';
+    else if (h >= 12 && h < 17) greet = 'צהריים טובים';
+    else if (h >= 17 && h < 22) greet = 'ערב טוב';
+    else greet = 'לילה טוב';
+    const initials = (this.state.profile || '').trim().charAt(0) || '◗';
+    const ringColors = dark
+      ? ['#4F7CB0', '#4A9068', '#A98E3F', '#B07A54']
+      : ['#6AABF0', '#4FA877', '#D8AC3E', '#E0935F'];
+    const avatarRing = 'conic-gradient(' + ringColors[0] + ',' + ringColors[1] + ',' + ringColors[2] + ',' + ringColors[3] + ',' + ringColors[0] + ')';
+    const avatarHue = dark ? '#3A6FA8' : '#5B9BE0';
+
+    const sizeMap = { reg: { ticon: '78px', tfont: '23px' }, big: { ticon: '96px', tfont: '26px' }, huge: { ticon: '116px', tfont: '30px' } };
+    const W = this.state.w || 1180;
+    const H = this.state.h || 800;
+    const compact = W < 600 || H < 470;
+    // base columns from available width; tile-size shrinks the count
+    let base;
+    if (W < 430) base = 3;
+    else if (W < 620) base = 4;
+    else if (W < 880) base = 5;
+    else base = 6;
+    const shift = { reg: 0, big: 1, huge: 2 }[this.state.tileSize] || 0;
+    const cols = Math.max(2, base - shift);
+    const szRaw = sizeMap[this.state.tileSize] || sizeMap.reg;
+    // shrink icon/font on small screens so tiles never overflow
+    const iconScale = compact ? 0.66 : (W < 760 ? 0.82 : 1);
+    const sz = {
+      ticon: Math.round(parseInt(szRaw.ticon, 10) * iconScale) + 'px',
+      tfont: Math.max(18, Math.round(parseInt(szRaw.tfont, 10) * (compact ? 0.82 : 1))) + 'px',
+    };
+    const gridPad = compact ? '8px' : '14px';
+    const gridGap = compact ? '8px' : '12px';
+    const sizeOpts = [
+      { k: 'reg', label: 'רגיל', sub: '6 בשורה' },
+      { k: 'big', label: 'גדול', sub: '5 בשורה' },
+      { k: 'huge', label: 'ענק', sub: '4 בשורה' },
+    ].map(o => {
+      const a = this.state.tileSize === o.k;
+      return { label: o.label, sub: o.sub, active: a ? 'true' : 'false',
+        bg: a ? 'var(--chip)' : 'var(--surface)', bd: a ? 'var(--speak)' : 'var(--line)', ink: 'var(--ink)',
+        onClick: () => this.set('tileSize', o.k, 'coboard_tile') };
+    });
+    const pinDots = [0, 1, 2, 3].map(i => { const on = i < this.state.pinBuf.length;
+      return { bg: on ? 'var(--speak)' : 'transparent', bd: on ? 'var(--speak)' : 'var(--line)' }; });
+    const pad = [
+      { label: '1', t: 'd' }, { label: '2', t: 'd' }, { label: '3', t: 'd' },
+      { label: '4', t: 'd' }, { label: '5', t: 'd' }, { label: '6', t: 'd' },
+      { label: '7', t: 'd' }, { label: '8', t: 'd' }, { label: '9', t: 'd' },
+      { label: '⌫', t: 'back' }, { label: '0', t: 'd' }, { label: 'נקה', t: 'clr' },
+    ].map(k => ({ label: k.label, onClick: () => this.handlePad(k) }));
+    const tools = [
+      { id: 'edit', label: 'עריכת לוח' }, { id: 'phrases', label: 'ביטויים שמורים' },
+      { id: 'stats', label: 'סטטיסטיקה' }, { id: 'backup', label: 'גיבוי וסנכרון' },
+      { id: 'find', label: 'מצא מילה' }, { id: 'modeling', label: 'מודלינג' },
+    ].map(t => ({ label: t.label, icon: this.node(this.toolIcon(t.id)),
+      onClick: () => this.showToast('"' + t.label + '" — זמין באפליקציה המלאה') }));
+
+    return {
+      c,
+      cats,
+      tiles,
+      sentence,
+      hasWords: sentence.length > 0,
+      noWords: sentence.length === 0,
+      activeLabel,
+      cols: cols, ticon: sz.ticon, tfont: sz.tfont,
+      setRoot: this.setRoot,
+      gridPad, gridGap, compact,
+      iconbg: c.iconbg,
+      showGreet: W >= 600,
+      showCatText: W >= 680,
+      navGap: compact ? '7px' : '14px',
+      scanRing: dark ? '#7AD4EE' : '#147FA8',
+      scanOn,
+      scanHint: 'מצב סריקה פעיל — הקישו על הכפתור הגדול או על מקש הרווח',
+      sizeOpts, pinDots, pad, tools,
+      greet, initials, avatarRing, avatarHue,
+      avatarOpen: this.state.avatarOpen,
+      profile: this.state.profile,
+      adultOpen: this.state.adultOpen,
+      pinOpen: this.state.pinOpen,
+      pinErr: this.state.pinErr,
+      toast: this.state.toast,
+      hasToast: !!this.state.toast,
+      rate: this.state.rate, pitch: this.state.pitch, dwellMs: this.state.dwellMs,
+      rateLabel: '×' + Number(this.state.rate).toFixed(2),
+      pitchLabel: '×' + Number(this.state.pitch).toFixed(2),
+      dwellLabel: (this.state.dwellMs / 1000).toFixed(1) + ' שנ׳',
+      tgDark: this.toggleVM(dark),
+      tgScan: this.toggleVM(this.state.scan),
+      tgRelease: this.toggleVM(this.state.releaseAct),
+      tgNoDouble: this.toggleVM(this.state.noDouble),
+      dark,
+      darkLabel: dark ? 'מצב בהיר' : 'מצב כהה',
+      darkIcon: this.node(dark
+        ? this.svg('<circle cx="12" cy="12" r="4.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/>')
+        : this.svg('<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>')),
+      onSpeak: () => this.speak(this.state.sentence.join(' ')),
+      onDelete: () => this.setState(st => ({ sentence: st.sentence.slice(0, -1) })),
+      onClear: () => this.setState({ sentence: [] }),
+      onToggleDark: () => this.setState(st => {
+        const nd = !st.dark;
+        try { localStorage.setItem('coboard_dark', nd ? '1' : '0'); } catch (e) {}
+        return { dark: nd };
+      }),
+      onAvatar: () => this.setState(st => ({ avatarOpen: !st.avatarOpen })),
+      onCloseAvatar: () => this.setState({ avatarOpen: false }),
+      onParent: () => this.setState({ avatarOpen: false, pinOpen: true, pinBuf: '', pinErr: false }),
+      onProfileMenu: () => { this.setState({ avatarOpen: false }); this.showToast('פרופיל "' + this.state.profile + '" — זמין באפליקציה המלאה'); },
+      onSwitchProfile: () => { this.setState({ avatarOpen: false }); this.showToast('החלפת פרופיל — זמין באפליקציה המלאה'); },
+      onLogout: () => { this.setState({ avatarOpen: false }); this.showToast('התנתקות — זמין באפליקציה המלאה'); },
+      onPinCancel: () => this.setState({ pinOpen: false, pinBuf: '', pinErr: false }),
+      onCloseAdult: () => this.setState({ adultOpen: false }),
+      onLock: () => this.setState({ adultOpen: false }),
+      onSelectScan: () => this.selectScan(),
+      onSample: () => this.speak('שלום, זאת דוגמה לקול ההקראה'),
+      onProfile: (e) => this.set('profile', e.target.value, 'coboard_profile'),
+      onRate: (e) => this.set('rate', parseFloat(e.target.value), 'coboard_rate'),
+      onPitch: (e) => this.set('pitch', parseFloat(e.target.value), 'coboard_pitch'),
+      onDwell: (e) => this.set('dwellMs', parseInt(e.target.value, 10), 'coboard_dwell'),
+      onToggleScan: () => this.setState(st => { const v = !st.scan; try { localStorage.setItem('coboard_scan', v ? '1' : '0'); } catch (e) {} return { scan: v, scanIdx: 0 }; }),
+      onToggleRelease: () => this.setState(st => { const v = !st.releaseAct; try { localStorage.setItem('coboard_release', v ? '1' : '0'); } catch (e) {} return { releaseAct: v }; }),
+      onToggleNoDouble: () => this.setState(st => { const v = !st.noDouble; try { localStorage.setItem('coboard_nodouble', v ? '1' : '0'); } catch (e) {} return { noDouble: v }; }),
+    };
+  }
+}
+</script>
+</body>
+</html>
