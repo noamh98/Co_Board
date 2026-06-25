@@ -1,4 +1,5 @@
 import { getDb, STORE_BOARDS } from './db';
+import { recordLocalWrite } from './syncMeta';
 import type { Board } from '../domain/models';
 
 // מאגר לוחות מעל IndexedDB (Offline-first). מחיקה = ארכוב (archived=true), לא הסרה —
@@ -27,6 +28,8 @@ export function createBoardRepo(): BoardRepo {
     async save(board) {
       const db = await getDb();
       await db.put(STORE_BOARDS, board);
+      // חיווט outbox (A1): כל שמירת לוח מקדמת version ונכנסת לתור הסנכרון.
+      await recordLocalWrite('board', board.id, board);
     },
     async archive(id) {
       const db = await getDb();

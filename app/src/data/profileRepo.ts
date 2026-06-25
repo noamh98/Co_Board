@@ -1,4 +1,5 @@
 import { getDb, STORE_PROFILES } from './db';
+import { recordLocalWrite } from './syncMeta';
 import type { Profile } from '../domain/models';
 
 // מאגר פרופילי ילד מעל IndexedDB. ריבוי פרופילים על מכשיר אחד (PRD §4.5/FR-001).
@@ -26,6 +27,8 @@ export function createProfileRepo(): ProfileRepo {
     async save(profile) {
       const db = await getDb();
       await db.put(STORE_PROFILES, profile);
+      // חיווט outbox (A1): כל שמירת פרופיל מקדמת version ונכנסת לתור הסנכרון.
+      await recordLocalWrite('profile', profile.id, profile);
     },
     async archive(id) {
       const db = await getDb();

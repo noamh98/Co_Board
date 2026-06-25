@@ -190,16 +190,32 @@ export function waitForVoices(timeoutMs = 1500): Promise<void> {
   });
 }
 
+/** השמעת הקלטה נוכחית — נשמר כדי לעצור אותה לפני ההקלטה/הדיבור הבא (A6). */
+let currentCellAudio: HTMLAudioElement | null = null;
+function stopCurrentCellAudio(): void {
+  if (currentCellAudio) {
+    currentCellAudio.pause();
+    currentCellAudio.src = '';
+    currentCellAudio = null;
+  }
+}
+
 export async function speakCell(
   cell: Cell,
   symbolRepo: SymbolRepo,
   tts: TtsLike | null,
   opts: SpeakOptions = {},
 ): Promise<void> {
-  if (cell.symbolId) {
-    const entry = await symbolRepo.get(cell.symbolId);
+  // A6: עצור השמעה קודמת (הקלטה + דיבור) לפני הבאה — מונע חפיפת אודיו בלחיצות מהירות.
+  stopCurrentCellAudio();
+  tts?.cancel();
+  // A4: הקלטה מאוחסנת ב-audioId; תאימות לאחור — תאים ישנים אחסנו אותה ב-symbolId.
+  const recordingId = cell.audioId ?? cell.symbolId;
+  if (recordingId) {
+    const entry = await symbolRepo.get(recordingId);
     if (entry?.source === 'recording') {
       const audio = new Audio(entry.uri);
+      currentCellAudio = audio;
       try {
         await audio.play();
         return;

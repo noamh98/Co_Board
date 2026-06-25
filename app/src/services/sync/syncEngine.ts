@@ -5,6 +5,8 @@
 import type { SyncProvider } from './syncProvider';
 import { mergeLastWriteWins, type Versioned } from '../../domain/sync';
 import { syncQueue } from '../../data/syncQueue';
+import { getSyncMeta, setSyncMeta } from '../../data/syncMeta';
+import { getLastSyncAt, setLastSyncAt } from '../../data/settingsRepo';
 import { backupRepo } from '../../data/backupRepo';
 import { getDb, STORE_BOARDS, STORE_PROFILES } from '../../data/db';
 import type { Board, Profile } from '../../domain/models';
@@ -17,7 +19,6 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
   let status: SyncStatus = 'idle';
   const listeners: StatusListener[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let lastSyncAt = 0;
 
   function setStatus(s: SyncStatus): void {
     status = s;
@@ -37,6 +38,8 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
   }
 
   async function runSync(): Promise<void> {
+    // guard נגד ריצה כפולה: סנכרון מקבילי עלול לדחוף/למזג פעמיים (A1).
+    if (status === 'syncing') return;
     if (!syncEnabled()) {
       setStatus('disabled');
       return;
@@ -48,7 +51,6 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
     setStatus('syncing');
     try {
       await _doSync();
-      lastSyncAt = Date.now();
       setStatus('idle');
     } catch {
       // כשל = no-op שקט. לא מציג שגיאה למשתמש בזמן שימוש ילד.
@@ -59,8 +61,10 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
   async function _doSync(): Promise<void> {
     const db = await getDb();
 
-    // 1. pull מהענן
-    const remoteRecords = await provider.pull(lastSyncAt);
+    // 1. pull אינקרמנטלי מהענן — מאז הסנכרון המוצלח האחרון (C2, נשמר ב-IDB).
+    const since = await getLastSyncAt();
+    const syncStartedAt = Date.now();
+    const remoteRecords = await provider.pull(since);
 
     // 2. merge כל רשומה remote עם local
     for (const remote of remoteRecords) {
@@ -68,17 +72,25 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
         const localBoard = (await db.get(STORE_BOARDS, remote.entityId)) as
           | Board
           | undefined;
+        const remoteV = remote.versioned as Versioned<Board>;
         if (!localBoard) {
-          await db.put(STORE_BOARDS, remote.versioned.data as Board);
+          await db.put(STORE_BOARDS, remoteV.data);
+          await setSyncMeta('board', remote.entityId, {
+            version: remoteV.version,
+            updatedAt: remoteV.updatedAt,
+            deviceId: remoteV.deviceId,
+          });
           continue;
         }
+        // LWW אמיתי: version/updatedAt מקומיים מ-syncMeta (לא 1/0 קשיחים).
+        const meta = await getSyncMeta('board', remote.entityId);
         const localV: Versioned<Board> = {
           data: localBoard,
-          version: 1,
-          updatedAt: 0,
-          deviceId: provider.getDeviceId(),
+          version: meta?.version ?? 1,
+          updatedAt: meta?.updatedAt ?? 0,
+          deviceId: meta?.deviceId ?? provider.getDeviceId(),
         };
-        const { winner, loser } = mergeLastWriteWins(localV, remote.versioned as Versioned<Board>);
+        const { winner, loser } = mergeLastWriteWins(localV, remoteV);
         if (loser) {
           await backupRepo.saveVersion({
             entityType: 'board',
@@ -89,21 +101,37 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
           });
         }
         await db.put(STORE_BOARDS, winner.data);
+        if (winner === remoteV) {
+          // remote ניצח → עדכן meta מקומי ובטל push מיושן מה-outbox (מונע דריסת ענן חדש).
+          await setSyncMeta('board', remote.entityId, {
+            version: remoteV.version,
+            updatedAt: remoteV.updatedAt,
+            deviceId: remoteV.deviceId,
+          });
+          await syncQueue.ack(`board:${remote.entityId}`);
+        }
       } else if (remote.entityType === 'profile') {
         const localProfile = (await db.get(STORE_PROFILES, remote.entityId)) as
           | Profile
           | undefined;
+        const remoteV = remote.versioned as Versioned<Profile>;
         if (!localProfile) {
-          await db.put(STORE_PROFILES, remote.versioned.data as Profile);
+          await db.put(STORE_PROFILES, remoteV.data);
+          await setSyncMeta('profile', remote.entityId, {
+            version: remoteV.version,
+            updatedAt: remoteV.updatedAt,
+            deviceId: remoteV.deviceId,
+          });
           continue;
         }
+        const meta = await getSyncMeta('profile', remote.entityId);
         const localV: Versioned<Profile> = {
           data: localProfile,
-          version: 1,
-          updatedAt: 0,
-          deviceId: provider.getDeviceId(),
+          version: meta?.version ?? 1,
+          updatedAt: meta?.updatedAt ?? 0,
+          deviceId: meta?.deviceId ?? provider.getDeviceId(),
         };
-        const { winner, loser } = mergeLastWriteWins(localV, remote.versioned as Versioned<Profile>);
+        const { winner, loser } = mergeLastWriteWins(localV, remoteV);
         if (loser) {
           await backupRepo.saveVersion({
             entityType: 'profile',
@@ -114,6 +142,14 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
           });
         }
         await db.put(STORE_PROFILES, winner.data);
+        if (winner === remoteV) {
+          await setSyncMeta('profile', remote.entityId, {
+            version: remoteV.version,
+            updatedAt: remoteV.updatedAt,
+            deviceId: remoteV.deviceId,
+          });
+          await syncQueue.ack(`profile:${remote.entityId}`);
+        }
       }
     }
 
@@ -133,6 +169,9 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
       await provider.push(records);
       await syncQueue.ackAll(pending.map((p) => p.id));
     }
+
+    // C2: שמור את חותמת הסנכרון — pull הבא יהיה אינקרמנטלי (לא מושך הכול שוב).
+    await setLastSyncAt(syncStartedAt);
   }
 
   /** קריאה מ-UI אחרי שמירה מקומית — debounce 3 שניות. */
