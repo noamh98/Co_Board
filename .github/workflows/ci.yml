@@ -6,6 +6,7 @@ on:
   pull_request:
 
 jobs:
+  # H1: typecheck + lint + tests + build — כשל בכל אחד מפיל את ה-PR.
   build:
     runs-on: ubuntu-latest
     defaults:
@@ -19,6 +20,27 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - run: npm run typecheck
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  # H1/B4: בדיקות כללי Firestore על האמולטור (דורש firebase-tools + Java).
+  rules-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npm run test:rules

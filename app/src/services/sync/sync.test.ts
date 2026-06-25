@@ -3,7 +3,9 @@ import { IDBFactory } from 'fake-indexeddb';
 import { LocalStubProvider } from './syncProvider';
 import { createSyncEngine } from './syncEngine';
 import { syncQueue } from '../../data/syncQueue';
-import { resetDbForTests } from '../../data/db';
+import { createBoardRepo } from '../../data/boardRepo';
+import { getDb, STORE_BOARDS, resetDbForTests } from '../../data/db';
+import type { Board } from '../../domain/models';
 
 function resetIdb(): void {
   (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
@@ -114,6 +116,57 @@ describe('SyncEngine — online stub', () => {
 
     const pulled = await provider.pull(0);
     expect(pulled.some((r) => r.entityId === 'b1')).toBe(true);
+    engine.dispose();
+  });
+});
+
+function makeBoard(id: string, name: string): Board {
+  return { id, name, grid: { rows: 1, cols: 1 }, cells: {}, placements: [] };
+}
+
+// A1: חיווט outbox + LWW אמיתי. נכשל על הקוד הישן (save לא עשה enqueue).
+describe('SyncEngine — outbox wiring + LWW (A1)', () => {
+  it('boardRepo.save מכניס ל-outbox ונדחף בסנכרון', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    const provider = new LocalStubProvider('dev-a');
+    const engine = createSyncEngine(provider, () => true);
+
+    await createBoardRepo().save(makeBoard('b1', 'לוח'));
+    expect(await syncQueue.count()).toBe(1); // לפני התיקון: 0 (save לא עשה enqueue)
+
+    await engine.runSync();
+    expect(await syncQueue.count()).toBe(0);
+    const pulled = await provider.pull(0);
+    expect(pulled.some((r) => r.entityId === 'b1')).toBe(true);
+    engine.dispose();
+  });
+
+  it('LWW: remote חדש יותר מנצח, מעדכן מקומי ומבטל push מיושן', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    const provider = new LocalStubProvider('dev-remote');
+    // remote עם updatedAt רחוק בעתיד → תמיד חדש יותר מהשמירה המקומית
+    await provider.push([
+      {
+        entityType: 'board',
+        entityId: 'b1',
+        versioned: {
+          data: makeBoard('b1', 'remote'),
+          version: 9,
+          updatedAt: 9_999_999_999_999,
+          deviceId: 'dev-remote',
+        },
+      },
+    ]);
+    // שמירה מקומית (updatedAt=עכשיו, ישן יותר מ-remote)
+    await createBoardRepo().save(makeBoard('b1', 'local'));
+
+    const engine = createSyncEngine(provider, () => true);
+    await engine.runSync();
+
+    const db = await getDb();
+    const local = (await db.get(STORE_BOARDS, 'b1')) as Board;
+    expect(local.name).toBe('remote'); // remote ניצח
+    expect(await syncQueue.count()).toBe(0); // ה-push המיושן בוטל
     engine.dispose();
   });
 });
