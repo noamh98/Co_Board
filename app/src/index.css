@@ -4,25 +4,40 @@
 
 /* ── 1. DESIGN TOKENS ─────────────────────────────────────────────── */
 :root {
-  /* Color palette */
-  --cl-bg:          #f7f5f0;
-  --cl-surface:     #ffffff;
-  --cl-surface-alt: #f3f4f6;
-  --cl-ink:         #1f2937;
-  --cl-muted:       #6b7280;
-  --cl-border:      #e5e7eb;
-  --cl-primary:     #3f6f8f;
-  --cl-primary-dk:  #2d5a77;
-  --cl-primary-lt:  #dbeafe;
-  --cl-on-primary:  #ffffff;
-  --cl-accent:      #7c3aed;
-  --cl-success:     #16a34a;
-  --cl-success-bg:  #d1fae5;
+  /* Color palette — Claude Design 2026 (ראו mockup/claude-design-2026/) */
+  --cl-bg:          #ECF2FA;
+  --cl-surface:     #FFFFFF;
+  --cl-surface-alt: #F2F6FD;
+  --cl-ink:         #14202E;
+  --cl-muted:       #5A6A7A;
+  --cl-border:      #DBE3EF;
+  --cl-primary:     #1F7A5C;   /* "דבר" / ראשי — ירוק */
+  --cl-primary-dk:  #155F47;   /* צל כפתור "דבר" (speaksh) */
+  --cl-primary-lt:  #D6EFDE;
+  --cl-on-primary:  #FFFFFF;
+  --cl-accent:      #147FA8;   /* טבעת סריקה */
+  --cl-success:     #1F7A5C;
+  --cl-success-bg:  #D6EFDE;
   --cl-warn:        #b45309;
-  --cl-error:       #b91c1c;
-  --cl-error-bg:    #fee2e2;
-  --cl-danger:      #dc2626;
-  --cl-overlay:     rgba(0, 0, 0, 0.45);
+  --cl-error:       #D9534F;
+  --cl-error-bg:    #fdecec;
+  --cl-danger:      #D9534F;
+  --cl-overlay:     rgba(10, 16, 24, 0.5);
+
+  /* Surface accents (חדש — Claude Design) */
+  --cl-chip:        #F2F6FD;   /* רקע chip / סרגל משפט */
+  --cl-chip-border: #CBD9EC;
+  --cl-speak:       var(--cl-primary);
+  --cl-speak-sh:    var(--cl-primary-dk);
+  --cl-scan-ring:   #147FA8;
+
+  /* Category tints — bg / border (תואם domain/fitzgerald) */
+  --cat-people-bg:   #DCEBFB;  --cat-people-bd:   #6AABF0;
+  --cat-actions-bg:  #D6EFDE;  --cat-actions-bd:  #4FA877;
+  --cat-food-bg:     #FBF1C9;  --cat-food-bd:     #D8AC3E;
+  --cat-feelings-bg: #FBE3D4;  --cat-feelings-bd: #E0935F;
+  --cat-places-bg:   #E6E3FA;  --cat-places-bd:   #8B86D6;
+  --cat-objects-bg:  #D6F0EC;  --cat-objects-bd:  #3FA694;
 
   /* Legacy aliases (backward compat) */
   --bg:      var(--cl-bg);
@@ -86,37 +101,55 @@
 /* ── 2. DARK MODE — auto via OS ───────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not(.light-mode) {
-    --cl-bg:          #0f172a;
-    --cl-surface:     #1e293b;
-    --cl-surface-alt: #334155;
-    --cl-ink:         #f1f5f9;
-    --cl-muted:       #94a3b8;
-    --cl-border:      #334155;
-    --cl-primary:     #60a5fa;
-    --cl-primary-dk:  #93c5fd;
-    --cl-primary-lt:  #1e3a5f;
-    --cl-on-primary:  #0f172a;
-    --cl-overlay:     rgba(0, 0, 0, 0.65);
-    --bg: #0f172a; --surface: #1e293b; --ink: #f1f5f9;
-    --muted: #94a3b8; --primary: #60a5fa;
+    --cl-bg:          #0F151D;
+    --cl-surface:     #18212C;
+    --cl-surface-alt: #212B37;
+    --cl-ink:         #ECF1F8;
+    --cl-muted:       #94A4B8;
+    --cl-border:      #2A3340;
+    --cl-primary:     #2E9377;
+    --cl-primary-dk:  #1F6B56;
+    --cl-primary-lt:  #162B20;
+    --cl-on-primary:  #FFFFFF;
+    --cl-overlay:     rgba(10, 16, 24, 0.6);
+    --cl-chip:        #212B37;
+    --cl-chip-border: #374556;
+    --cl-scan-ring:   #7AD4EE;
+    --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
+    --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
+    --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
+    --cat-feelings-bg: #30221A;  --cat-feelings-bd: #B07A54;
+    --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
+    --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
+    --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
+    --muted: #94A4B8; --primary: #2E9377;
   }
 }
 
 /* Manual dark mode toggle (class on <html>) */
 .dark-mode {
-  --cl-bg:          #0f172a;
-  --cl-surface:     #1e293b;
-  --cl-surface-alt: #334155;
-  --cl-ink:         #f1f5f9;
-  --cl-muted:       #94a3b8;
-  --cl-border:      #334155;
-  --cl-primary:     #60a5fa;
-  --cl-primary-dk:  #93c5fd;
-  --cl-primary-lt:  #1e3a5f;
-  --cl-on-primary:  #0f172a;
-  --cl-overlay:     rgba(0, 0, 0, 0.65);
-  --bg: #0f172a; --surface: #1e293b; --ink: #f1f5f9;
-  --muted: #94a3b8; --primary: #60a5fa;
+  --cl-bg:          #0F151D;
+  --cl-surface:     #18212C;
+  --cl-surface-alt: #212B37;
+  --cl-ink:         #ECF1F8;
+  --cl-muted:       #94A4B8;
+  --cl-border:      #2A3340;
+  --cl-primary:     #2E9377;
+  --cl-primary-dk:  #1F6B56;
+  --cl-primary-lt:  #162B20;
+  --cl-on-primary:  #FFFFFF;
+  --cl-overlay:     rgba(10, 16, 24, 0.6);
+  --cl-chip:        #212B37;
+  --cl-chip-border: #374556;
+  --cl-scan-ring:   #7AD4EE;
+  --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
+  --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
+  --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
+  --cat-feelings-bg: #30221A;  --cat-feelings-bd: #B07A54;
+  --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
+  --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
+  --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
+  --muted: #94A4B8; --primary: #2E9377;
 }
 
 /* ── 3. BASE ──────────────────────────────────────────────────────── */
@@ -126,7 +159,7 @@ body {
   margin: 0;
   background: var(--cl-bg);
   color: var(--cl-ink);
-  font-family: system-ui, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+  font-family: 'Assistant', system-ui, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
