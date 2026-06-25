@@ -12,7 +12,6 @@ export function AdultBar({
   onOpenWizard,
   onLock,
   onEditBoard,
-  onOpenSettings,
   onOpenBackup,
   onOpenAnalytics,
   onOpenPhraseBank,
@@ -32,7 +31,6 @@ export function AdultBar({
   onOpenWizard?: () => void;
   onLock: () => void;
   onEditBoard?: () => void;
-  onOpenSettings?: () => void;
   onOpenBackup?: () => void;
   onOpenAnalytics?: () => void;
   onOpenPhraseBank?: () => void;
@@ -102,12 +100,6 @@ export function AdultBar({
 
       {onEditBoard && (
         <Btn icon="✏" onClick={onEditBoard}>ערוך לוח</Btn>
-      )}
-
-      {onOpenSettings && (
-        <Btn icon="⚙" className="adultbar__btn--settings" onClick={onOpenSettings}>
-          הגדרות
-        </Btn>
       )}
 
       {onOpenBackup && (
