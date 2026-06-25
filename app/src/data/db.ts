@@ -10,10 +10,11 @@ import { openDB, type IDBPDatabase } from 'idb';
 //           ל-mimeType='audio/webm' (היה שגוי: 'image/webp').
 // v9 (M18): נוסף audioCache (TTS blobs, hybrid offline-first).
 // v10 (חלק 3): נוסף media (תמונות אישיות, offline-first + סנכרון מוצפן אופציונלי).
+// v11 (B1): נוסף cryptoKeys — מפתח הצפנה non-extractable כ-CryptoKey (לא JWK ב-localStorage).
 // אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 10;
+export const DB_VERSION = 11;
 
 export const STORE_NIKUD = 'nikud';
 export const STORE_BOARDS = 'boards';
@@ -27,6 +28,7 @@ export const STORE_SYMBOL_CACHE = 'symbolCache';
 export const STORE_PHRASES = 'phrases';
 export const STORE_AUDIO_CACHE = 'audioCache';
 export const STORE_MEDIA = 'media';
+export const STORE_KEYS = 'cryptoKeys';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -76,6 +78,10 @@ export function getDb(): Promise<IDBPDatabase> {
         if (!db.objectStoreNames.contains(STORE_MEDIA)) {
           const mediaStore = db.createObjectStore(STORE_MEDIA, { keyPath: 'id' });
           mediaStore.createIndex('by-profile', 'profileId', { unique: false });
+        }
+        // v11 (B1): מפתח הצפנה non-extractable מאוחסן כ-CryptoKey (לא ניתן לייצוא ב-XSS).
+        if (!db.objectStoreNames.contains(STORE_KEYS)) {
+          db.createObjectStore(STORE_KEYS, { keyPath: 'id' });
         }
 
         // v8: תיקון mimeType להקלטות קוליות — היה 'image/webp' בטעות (HANDOFF §4).

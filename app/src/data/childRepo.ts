@@ -3,7 +3,7 @@
 // childAccess: childAccess/{childId}/members/{uid}
 // אינווריאנט: מחיקה = archivedAt (לא הסרה).
 
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import {
   getFirestore,
   doc,
@@ -15,16 +15,9 @@ import {
   getDocs,
   type Firestore,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFirebaseConfig } from './firebaseEnv';
 import type { ProfilePreferences } from '../domain/models';
-
-const FIREBASE_CONFIG = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
-};
 
 export interface ChildRecord {
   childId: string;
@@ -33,7 +26,8 @@ export interface ChildRecord {
   preferences?: ProfilePreferences;
   homeBoardId?: string;
   createdAt: number;
-  archivedAt?: number;
+  /** null = פעיל (נכתב במפורש כדי שהשאילתה archivedAt==null תתפוס ילדים חדשים, A5). */
+  archivedAt?: number | null;
 }
 
 export type ChildAccessRole = 'parent' | 'clinician' | 'staff';
@@ -45,7 +39,7 @@ export interface ChildAccessEntry {
   grantedAt: number;
 }
 
-/** קוד שיתוף גישה לילד. */
+/** קוד שיתוף גישה לילד. חד-פעמי (used) + פג-תוקף (expiresAt). */
 export interface ShareInvite {
   code: string;
   childId: string;
@@ -53,12 +47,17 @@ export interface ShareInvite {
   role: ChildAccessRole;
   createdAt: number;
   expiresAt: number;
+  /** חד-פעמי — מסומן true לאחר מימוש (B3). */
+  used: boolean;
+}
+
+function getApp(): FirebaseApp {
+  // G2: ולידציית env (getFirebaseConfig) — שגיאה ברורה אם חסר משתנה סביבה.
+  return getApps()[0] ?? initializeApp(getFirebaseConfig());
 }
 
 function getDb(): Firestore {
-  const existing = getApps()[0];
-  const app = existing ?? initializeApp(FIREBASE_CONFIG);
-  return getFirestore(app);
+  return getFirestore(getApp());
 }
 
 function childPath(uid: string, childId: string) {
@@ -110,6 +109,8 @@ export async function createChild(
     preferences,
     homeBoardId,
     createdAt: Date.now(),
+    // A5: כתיבה מפורשת של null — אחרת listChildren (where archivedAt==null) מחזיר ריק.
+    archivedAt: null,
   };
   await saveChild(uid, child);
   // הוסף גישה לבעלים (parent)
@@ -148,12 +149,18 @@ export async function getChildAccessEntries(childId: string): Promise<ChildAcces
 
 const TTL_48H = 48 * 60 * 60 * 1000;
 
+/** קוד אקראי חזק (128 ביט, hex) מ-crypto.getRandomValues — לא נחזה (B3, מחליף 6 ספרות Math.random). */
+function generateShareCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function createShareInvite(
   childId: string,
   ownerUid: string,
   role: ChildAccessRole = 'clinician',
 ): Promise<ShareInvite> {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = generateShareCode();
   const invite: ShareInvite = {
     code,
     childId,
@@ -161,7 +168,9 @@ export async function createShareInvite(
     role,
     createdAt: Date.now(),
     expiresAt: Date.now() + TTL_48H,
+    used: false,
   };
+  // read owner-only ב-rules; הקריאה (accept) נעשית דרך Cloud Function בלבד.
   await setDoc(doc(getDb(), 'shareInvites', code), invite);
   return invite;
 }
@@ -170,13 +179,14 @@ export async function acceptShareInvite(
   code: string,
   uid: string,
 ): Promise<ChildRecord | null> {
-  const ref = doc(getDb(), 'shareInvites', code);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('קוד שיתוף לא נמצא');
-  const invite = snap.data() as ShareInvite;
-  if (Date.now() > invite.expiresAt) throw new Error('קוד השיתוף פג תוקף');
-  await grantChildAccess(invite.childId, uid, invite.role);
-  // הצטרף גם ל-children של הבעלים
-  const child = await getChild(invite.ownerUid, invite.childId);
-  return child;
+  // B3: מימוש דרך Cloud Function "acceptInvite" (Admin SDK) — קריאה ישירה ל-shareInvites
+  // חסומה ב-rules (owner-only). השרת מאמת פג-תוקף+חד-פעמיות, מעניק גישה, ומסמן used=true.
+  // uid נלקח בצד השרת מ-context.auth; נשמר בחתימה לתאימות קוראים/בדיקות.
+  void uid;
+  const call = httpsCallable<{ code: string }, ChildRecord | null>(
+    getFunctions(getApp()),
+    'acceptInvite',
+  );
+  const res = await call({ code });
+  return res.data ?? null;
 }

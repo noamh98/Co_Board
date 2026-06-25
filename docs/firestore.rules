@@ -26,6 +26,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/childAccess/$(childId)/members/$(request.auth.uid));
     }
 
+    // בעלות על ילד נקבעת לפי קיום users/{uid}/children/{childId} תחת המשתמש המבקש.
+    // משמש למניעת privilege escalation: רק הבעלים יכול לכתוב ל-childAccess.
+    function ownsChildDoc(childId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/children/$(childId));
+    }
+
     // ── רשומות משתמש ──────────────────────────────────────
     match /users/{uid} {
       // קריאת רשומה עצמית בלבד (לבדיקת status)
@@ -47,26 +54,33 @@ service cloud.firestore {
 
     // ── ילדים (2B) ─────────────────────────────────────────
     match /users/{uid}/children/{childId} {
-      // גישה לבעלים ולמי שרשום ב-childAccess
-      allow read, write: if isOwnUid(uid)
-        || (isApproved() && hasChildAccess(childId));
+      // גישה לבעלים ולמי שרשום ב-childAccess — בשני המקרים נדרש אישור (isApproved).
+      // הבעלים אינו פטור מבדיקת האישור (B4).
+      allow read, write: if isApproved()
+        && (isOwnUid(uid) || hasChildAccess(childId));
     }
 
     // ── גישת ילד (childAccess) ─────────────────────────────
     match /childAccess/{childId}/members/{memberId} {
       allow read: if isSignedIn()
         && (request.auth.uid == memberId || hasChildAccess(childId));
-      // כתיבה: רק בעלים (parent/clinician) — נאכף בצד הלקוח + Cloud Function
+      // כתיבה: רק הבעלים של הילד (מי שמחזיק users/{uid}/children/{childId}).
+      // חבר רגיל (clinician/staff) אינו יכול להוסיף/לשנות חברים — מניעת privilege escalation (B4).
+      // הענקת גישה למוזמן מתבצעת ע"י Cloud Function acceptInvite (Admin SDK, עוקף חוקים).
       allow write: if isApproved()
-        && hasChildAccess(childId);
+        && ownsChildDoc(childId);
     }
 
     // ── קודי שיתוף (shareInvites) ──────────────────────────
+    // קריאה לבעלים בלבד. המוזמן לעולם לא קורא את המסמך ישירות —
+    // המימוש מתבצע דרך Cloud Function acceptInvite (Admin SDK, עוקף חוקים).
     match /shareInvites/{code} {
-      allow read: if isApproved();
+      allow read: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
       allow create: if isApproved()
         && request.resource.data.ownerUid == request.auth.uid;
-      allow delete: if isApproved()
+      // עדכון (used:true) נכתב רק ע"י Cloud Function; הלקוח רשאי רק למחוק קוד שלו.
+      allow delete: if isSignedIn()
         && resource.data.ownerUid == request.auth.uid;
     }
 

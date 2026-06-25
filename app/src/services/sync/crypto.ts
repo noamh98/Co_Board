@@ -1,45 +1,14 @@
-// services/sync/crypto.ts — הצפנת גיבויים לפני שמירה/העלאה (Web Crypto API, offline).
-// מפתח נגזר ממפתח מכשיר (device key) ולא נשמר plain-text.
+// services/sync/crypto.ts — הצפנת גיבויים/מדיה לפני שמירה/העלאה (Web Crypto API, offline).
+// B1: מפתח המכשיר הוא CryptoKey non-extractable מ-data/keyStore (לא JWK ב-localStorage).
+// B2: מדיה מוצפנת ב-CEK אקראי לכל קובץ, עטוף במפתח-המכשיר (לא נגזר מ-uid).
 // PRD §8.3: הצפנה במנוחה (at rest). לא חוסם UI.
 
-const KEY_STORE_NAME = 'sync-device-key';
+import { getDeviceKey } from '../../data/keyStore';
+
 const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
-
-/** מייצר או מחזיר מפתח הצפנה קיים מ-IndexedDB (device-local). */
-async function getOrCreateDeviceKey(): Promise<CryptoKey> {
-  const stored = await loadKey();
-  if (stored) return stored;
-  const key = await crypto.subtle.generateKey(
-    { name: ALGORITHM, length: KEY_LENGTH },
-    true,
-    ['encrypt', 'decrypt'],
-  );
-  await saveKey(key);
-  return key;
-}
-
-async function saveKey(key: CryptoKey): Promise<void> {
-  const exported = await crypto.subtle.exportKey('jwk', key);
-  localStorage.setItem(KEY_STORE_NAME, JSON.stringify(exported));
-}
-
-async function loadKey(): Promise<CryptoKey | null> {
-  const raw = localStorage.getItem(KEY_STORE_NAME);
-  if (!raw) return null;
-  try {
-    const jwk = JSON.parse(raw) as JsonWebKey;
-    return await crypto.subtle.importKey(
-      'jwk',
-      jwk,
-      { name: ALGORITHM, length: KEY_LENGTH },
-      true,
-      ['encrypt', 'decrypt'],
-    );
-  } catch {
-    return null;
-  }
-}
+/** חתימת פורמט מדיה חדש (B2): 'CB02' — מבדיל מהפורמט הישן (salt+iv+ct). */
+const MEDIA_MAGIC = [0x43, 0x42, 0x30, 0x32] as const; // "CB02"
 
 /**
  * מצפין נתון JSON. מחזיר base64 של: IV(12 bytes) + ciphertext.
@@ -49,14 +18,27 @@ export async function encryptData(data: unknown): Promise<string> {
   if (!crypto.subtle) {
     return btoa(JSON.stringify(data));
   }
-  const key = await getOrCreateDeviceKey();
+  const key = await getDeviceKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(JSON.stringify(data));
   const cipher = await crypto.subtle.encrypt({ name: ALGORITHM, iv }, key, encoded);
   const combined = new Uint8Array(iv.byteLength + cipher.byteLength);
   combined.set(iv, 0);
   combined.set(new Uint8Array(cipher), iv.byteLength);
-  return btoa(String.fromCharCode(...combined));
+  return btoa(uint8ToBinary(combined));
+}
+
+/**
+ * ממיר Uint8Array למחרוזת בינארית בצ'אנקים (E3).
+ * String.fromCharCode(...arr) על מערך גדול זורק RangeError (גיבוי גדול) — צ'אנקים פותרים.
+ */
+function uint8ToBinary(bytes: Uint8Array): string {
+  const CHUNK = 0x8000; // 32KB
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return binary;
 }
 
 /**
@@ -68,8 +50,7 @@ export async function decryptData(encrypted: string): Promise<unknown | null> {
     if (!crypto.subtle) {
       return JSON.parse(atob(encrypted)) as unknown;
     }
-    const key = await loadKey();
-    if (!key) return null;
+    const key = await getDeviceKey();
     const combined = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
     const iv = combined.slice(0, 12);
     const cipher = combined.slice(12);
@@ -81,8 +62,9 @@ export async function decryptData(encrypted: string): Promise<unknown | null> {
 }
 
 /**
- * גוזר מפתח AES-GCM 256-bit מ-uid + salt דרך PBKDF2 (100k iterations).
- * המפתח לא עולה לענן לעולם — נגזר מחדש בכל פעם לפי uid+salt.
+ * @deprecated B2 — נשמר אך ורק לפענוח מדיה בפורמט הישן (uid-derived).
+ * חולשה: uid אינו סודי → כל מי שמכירו (כולל אדמין) יכול היה לפענח. הצפנה חדשה
+ * משתמשת ב-CEK אקראי עטוף במפתח-המכשיר (encryptBlob) ואינה נוגעת ב-uid.
  */
 export async function deriveMediaKey(uid: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
@@ -102,24 +84,44 @@ export async function deriveMediaKey(uid: string, salt: Uint8Array<ArrayBuffer>)
 }
 
 /**
- * מצפין Blob ומחזיר Blob: [salt(16)] + [iv(12)] + [ciphertext].
- * מאפשר גזירת מפתח מחדש בפענוח ללא שמירת salt נפרדת.
+ * מצפין Blob (B2). פורמט: ['CB02'(4)] [wrapIv(12)] [wrappedLen(2)] [wrappedCEK] [dataIv(12)] [ciphertext].
+ * CEK אקראי לכל קובץ, עטוף במפתח-המכשיר (non-extractable). uid אינו חומר-מפתח.
+ * הפרמטר uid נשמר לתאימות חתימה בלבד (אינו בשימוש בהצפנה החדשה).
  */
-export async function encryptBlob(blob: Blob, uid: string): Promise<Blob> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveMediaKey(uid, salt);
+export async function encryptBlob(blob: Blob, _uid?: string): Promise<Blob> {
+  const deviceKey = await getDeviceKey();
+  const cek = await crypto.subtle.generateKey(
+    { name: ALGORITHM, length: KEY_LENGTH },
+    true, // חייב להיות ניתן-לעטיפה (wrapKey דורש extractable)
+    ['encrypt', 'decrypt'],
+  );
+  const wrapIv = crypto.getRandomValues(new Uint8Array(12));
+  const wrapped = new Uint8Array(
+    await crypto.subtle.wrapKey('raw', cek, deviceKey, { name: ALGORITHM, iv: wrapIv }),
+  );
+  const dataIv = crypto.getRandomValues(new Uint8Array(12));
   const plaintext = await blob.arrayBuffer();
-  const ciphertext = await crypto.subtle.encrypt({ name: ALGORITHM, iv }, key, plaintext);
-  const combined = new Uint8Array(16 + 12 + ciphertext.byteLength);
-  combined.set(salt, 0);
-  combined.set(iv, 16);
-  combined.set(new Uint8Array(ciphertext), 28);
-  return new Blob([combined], { type: 'application/octet-stream' });
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ name: ALGORITHM, iv: dataIv }, cek, plaintext),
+  );
+
+  const wrappedLen = wrapped.byteLength;
+  const out = new Uint8Array(4 + 12 + 2 + wrappedLen + 12 + ciphertext.byteLength);
+  let o = 0;
+  out.set(MEDIA_MAGIC, o); o += 4;
+  out.set(wrapIv, o); o += 12;
+  out[o] = (wrappedLen >> 8) & 0xff;
+  out[o + 1] = wrappedLen & 0xff;
+  o += 2;
+  out.set(wrapped, o); o += wrappedLen;
+  out.set(dataIv, o); o += 12;
+  out.set(ciphertext, o);
+  return new Blob([out], { type: 'application/octet-stream' });
 }
 
 /**
- * מפענח Blob שהוצפן ע"י encryptBlob.
+ * מפענח Blob שהוצפן ע"י encryptBlob. מזהה אוטומטית פורמט חדש (CB02, עטוף-מכשיר)
+ * מול הפורמט הישן (uid-derived) ומפענח בהתאם — תאימות-לאחור מלאה.
  * מחזיר null אם Web Crypto לא זמין או הפענוח נכשל (fallback בטוח).
  */
 export async function decryptBlob(
@@ -129,8 +131,37 @@ export async function decryptBlob(
 ): Promise<Blob | null> {
   try {
     if (!crypto.subtle) return null;
-    const buffer = await encryptedBlob.arrayBuffer();
-    const data = new Uint8Array(buffer);
+    const data = new Uint8Array(await encryptedBlob.arrayBuffer());
+
+    const isNew =
+      data.length >= 4 &&
+      data[0] === MEDIA_MAGIC[0] &&
+      data[1] === MEDIA_MAGIC[1] &&
+      data[2] === MEDIA_MAGIC[2] &&
+      data[3] === MEDIA_MAGIC[3];
+
+    if (isNew) {
+      let o = 4;
+      const wrapIv = data.slice(o, o + 12); o += 12;
+      const wrappedLen = (data[o] << 8) | data[o + 1]; o += 2;
+      const wrapped = data.slice(o, o + wrappedLen); o += wrappedLen;
+      const dataIv = data.slice(o, o + 12); o += 12;
+      const ciphertext = data.slice(o);
+      const deviceKey = await getDeviceKey();
+      const cek = await crypto.subtle.unwrapKey(
+        'raw',
+        wrapped,
+        deviceKey,
+        { name: ALGORITHM, iv: wrapIv },
+        { name: ALGORITHM, length: KEY_LENGTH },
+        false,
+        ['decrypt'],
+      );
+      const plaintext = await crypto.subtle.decrypt({ name: ALGORITHM, iv: dataIv }, cek, ciphertext);
+      return new Blob([plaintext], { type: mimeType });
+    }
+
+    // פורמט ישן (uid-derived): [salt(16)] [iv(12)] [ciphertext].
     const salt = data.slice(0, 16);
     const iv = data.slice(16, 28);
     const ciphertext = data.slice(28);
