@@ -15,9 +15,9 @@ export function HiddenToggle({
       aria-pressed={hidden}
       onClick={() => onToggle(!hidden)}
       style={{
-        background: hidden ? '#9ca3af' : '#f3f4f6',
-        color: hidden ? '#fff' : '#1f2937',
-        border: '1px solid #d1d5db',
+        background: hidden ? 'var(--cl-muted)' : 'var(--cl-surface-alt)',
+        color: hidden ? '#fff' : 'var(--cl-ink)',
+        border: '1px solid var(--cl-border)',
       }}
     >
       {hidden ? 'מוסתר מהילד — הצג' : 'הסתר מהילד'}

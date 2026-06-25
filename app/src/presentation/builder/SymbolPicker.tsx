@@ -73,7 +73,7 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
       <div
         dir="rtl"
         style={{
-          background: '#fff',
+          background: 'var(--cl-surface)',
           borderRadius: 16,
           padding: 20,
           width: '90%',
@@ -94,7 +94,7 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
               background: 'none',
               fontSize: '1.2rem',
               cursor: 'pointer',
-              color: '#6b7280',
+              color: 'var(--cl-muted)',
               lineHeight: 1,
             }}
             aria-label="סגור"
@@ -113,7 +113,7 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
             width: '100%',
             minHeight: 44,
             padding: '0 10px',
-            border: '1px solid #d1d5db',
+            border: '1px solid var(--cl-border)',
             borderRadius: 10,
             fontSize: '1rem',
             boxSizing: 'border-box',
@@ -121,19 +121,19 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
         />
 
         {loading && (
-          <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', padding: 8 }}>
+          <div style={{ textAlign: 'center', color: 'var(--cl-muted)', fontSize: '0.9rem', padding: 8 }}>
             טוען...
           </div>
         )}
 
         {!loading && error && (
-          <div style={{ textAlign: 'center', color: '#b91c1c', fontSize: '0.9rem', padding: 8 }}>
+          <div style={{ textAlign: 'center', color: 'var(--cl-danger)', fontSize: '0.9rem', padding: 8 }}>
             {error}
           </div>
         )}
 
         {!loading && !error && results.length === 0 && query.trim() && (
-          <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', padding: 8 }}>
+          <div style={{ textAlign: 'center', color: 'var(--cl-muted)', fontSize: '0.9rem', padding: 8 }}>
             אין תוצאות
           </div>
         )}
@@ -154,9 +154,9 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
                 type="button"
                 onClick={() => void handleSelect(r)}
                 style={{
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid var(--cl-border)',
                   borderRadius: 10,
-                  background: '#f9fafb',
+                  background: 'var(--cl-surface-alt)',
                   cursor: 'pointer',
                   padding: 6,
                   display: 'flex',
@@ -171,7 +171,7 @@ export function SymbolPicker({ onSelect, onClose }: SymbolPickerProps) {
                   loading="lazy"
                   style={{ width: 60, height: 60, objectFit: 'contain' }}
                 />
-                <span style={{ fontSize: '0.72rem', color: '#374151', textAlign: 'center', wordBreak: 'break-word' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--cl-ink)', textAlign: 'center', wordBreak: 'break-word' }}>
                   {r.label}
                 </span>
               </button>

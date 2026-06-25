@@ -185,15 +185,15 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           alignItems: 'center',
           gap: 8,
           padding: '8px 14px',
-          background: '#fff',
-          borderBottom: '1px solid #e5e7eb',
+          background: 'var(--cl-surface)',
+          borderBottom: '1px solid var(--cl-border)',
           flexWrap: 'wrap',
         }}
       >
         <button
           type="button"
           className="adultbar__btn"
-          style={{ background: '#6b7280' }}
+          style={{ background: 'var(--cl-primary)', color: 'var(--cl-on-primary)', borderColor: 'var(--cl-primary)' }}
           onClick={onExitBuilder}
         >
           חזור לתצוגת ילד
@@ -206,7 +206,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           className="adultbar__btn"
           disabled={!undoStackRef.current.canUndo()}
           onClick={() => void handleUndo()}
-          style={{ background: '#f3f4f6', color: '#1f2937', border: '1px solid #d1d5db' }}
+          style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
         >
           בטל
         </button>
@@ -215,7 +215,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           className="adultbar__btn"
           disabled={!undoStackRef.current.canRedo()}
           onClick={() => void handleRedo()}
-          style={{ background: '#f3f4f6', color: '#1f2937', border: '1px solid #d1d5db' }}
+          style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
         >
           בצע שנית
         </button>
@@ -223,7 +223,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           type="button"
           className="adultbar__btn"
           onClick={() => setPreviewMode(true)}
-          style={{ background: '#f3f4f6', color: '#1f2937', border: '1px solid #d1d5db' }}
+          style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
         >
           תצוגה מקדימה
         </button>
@@ -238,12 +238,12 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
             alignItems: 'center',
             gap: 8,
             padding: '6px 14px',
-            background: '#f0f9ff',
-            borderBottom: '1px solid #bae6fd',
+            background: 'var(--cl-chip)',
+            borderBottom: '1px solid var(--cl-chip-border)',
             flexWrap: 'wrap',
           }}
         >
-          <span style={{ fontSize: '0.9rem', color: '#0369a1' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--cl-primary)' }}>
             {selectedCells.size} תאים נבחרו
           </span>
           {(Object.keys(FITZGERALD) as Fitzgerald[]).map((key) => {
@@ -272,7 +272,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           <button
             type="button"
             className="adultbar__btn"
-            style={{ background: '#b91c1c' }}
+            style={{ background: 'var(--cl-danger)', color: '#fff', borderColor: 'var(--cl-danger)' }}
             onClick={handleBulkDelete}
           >
             מחק
@@ -283,9 +283,10 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
             style={{
               minHeight: 36,
               padding: '0 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 10,
-              background: '#f3f4f6',
+              border: '1px solid var(--cl-border)',
+              borderRadius: 12,
+              background: 'var(--cl-surface-alt)',
+              color: 'var(--cl-ink)',
               fontSize: '0.9rem',
               cursor: 'pointer',
             }}
@@ -310,7 +311,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
             const key = `${row}-${col}`;
             const p = placementMap.get(key);
             const cell = p ? currentBoard.cells[p.cellId] : undefined;
-            const style = cell?.fitzgerald ? fitzgeraldStyle(cell.fitzgerald) : { bg: '#f3f4f6', text: '#1f2937' };
+            const style = cell?.fitzgerald ? fitzgeraldStyle(cell.fitzgerald) : { bg: 'var(--cl-surface-alt)', text: 'var(--cl-ink)' };
             const isSelected = p ? selectedCells.has(p.cellId) : false;
 
             return (
@@ -333,8 +334,8 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
                       border: isSelected
                         ? '3px solid var(--cl-primary)'
                         : draggedCellId === p.cellId
-                          ? '2px dashed #6b7280'
-                          : '2px solid rgba(0,0,0,0.12)',
+                          ? '2px dashed var(--cl-muted)'
+                          : '2px solid var(--cl-border)',
                       flexDirection: 'column',
                       gap: 4,
                       userSelect: 'none',
@@ -404,10 +405,10 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: '2px dashed #d1d5db',
-                      borderRadius: 'var(--radius)',
+                      border: '2px dashed var(--cl-border)',
+                      borderRadius: 'var(--r-lg)',
                       background: 'transparent',
-                      color: '#9ca3af',
+                      color: 'var(--cl-muted)',
                       fontSize: '0.9rem',
                       cursor: 'pointer',
                     }}
