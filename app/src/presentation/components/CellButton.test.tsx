@@ -15,14 +15,14 @@ describe('CellButton — image rendering (M11)', () => {
   it('תא ללא imageUri וללא מיפוי label — לא מרנדר img', () => {
     // label ללא מיפוי ב-symbolMap (אחרת נופלים לסמל ARASAAC לפי label).
     const cell: Cell = { ...baseCell, label: 'קשקושיתזזז' };
-    const { container } = render(<CellButton cell={cell} onActivate={vi.fn()} />);
+    const { container } = render(<CellButton cell={cell} onCell={vi.fn()} />);
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText('קשקושיתזזז')).toBeInTheDocument();
   });
 
   it('תא עם imageUri — מרנדר img עם src נכון', () => {
     const cell: Cell = { ...baseCell, imageUri: 'https://example.com/img.png' };
-    const { container } = render(<CellButton cell={cell} onActivate={vi.fn()} />);
+    const { container } = render(<CellButton cell={cell} onCell={vi.fn()} />);
     const img = container.querySelector('img');
     expect(img).not.toBeNull();
     expect(img).toHaveAttribute('src', 'https://example.com/img.png');
@@ -31,7 +31,7 @@ describe('CellButton — image rendering (M11)', () => {
 
   it('onError מסתיר img; label נשאר גלוי', () => {
     const cell: Cell = { ...baseCell, imageUri: 'https://example.com/broken.png' };
-    const { container } = render(<CellButton cell={cell} onActivate={vi.fn()} />);
+    const { container } = render(<CellButton cell={cell} onCell={vi.fn()} />);
     const img = container.querySelector('img')!;
     fireEvent.error(img);
     expect(container.querySelector('img')).toBeNull();

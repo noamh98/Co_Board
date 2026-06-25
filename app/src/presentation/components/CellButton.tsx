@@ -1,6 +1,5 @@
-import { useState, useEffect, type CSSProperties } from 'react';
+import { memo, useCallback, useState, type CSSProperties } from 'react';
 import type { Cell } from '../../domain/models';
-import { globalNikudService } from '../../services/nikud/nikudSingleton';
 import { fitzgeraldStyle } from '../../domain/fitzgerald';
 import {
   type AccessSettings,
@@ -25,31 +24,26 @@ function resolveImageUri(cell: Cell): string | undefined {
   return undefined;
 }
 
-export function CellButton({
+// E1: memo — לחיצה (setSentence) לא מרנדרת מחדש תאים שלא השתנו.
+// E2: displayLabel (כולל ניקוד) מחושב ברמת BoardView ומועבר כ-prop — לא קריאת ניקוד לכל תא.
+export const CellButton = memo(function CellButton({
   cell,
-  onActivate,
+  onCell,
   settings = DEFAULT_ACCESS_SETTINGS,
+  displayLabel,
 }: {
   cell: Cell;
-  onActivate: () => void;
+  onCell: (cell: Cell) => void;
   settings?: AccessSettings;
+  displayLabel?: string;
 }) {
   const style = fitzgeraldStyle(cell.fitzgerald);
   const [imgError, setImgError] = useState(false);
   const imageUri = resolveImageUri(cell);
-  const [displayLabel, setDisplayLabel] = useState(cell.nikud ?? cell.label);
 
-  useEffect(() => {
-    setDisplayLabel(cell.nikud ?? cell.label);
-    if (cell.nikud) return;
-    let cancelled = false;
-    globalNikudService.getNikud(cell.label).then((result) => {
-      if (!cancelled && result.source !== 'none') setDisplayLabel(result.nikud);
-    });
-    return () => { cancelled = true; };
-  }, [cell.label, cell.nikud]);
-
-  const guarded = useDoubleTapPrevention(onActivate, settings);
+  // E1: onActivate יציב לכל render (onCell יציב מ-App; cell יציב מהלוח).
+  const handleActivate = useCallback(() => onCell(cell), [onCell, cell]);
+  const guarded = useDoubleTapPrevention(handleActivate, settings);
   const release = useActivateOnRelease(guarded.onClick, settings);
   const dwell = useDwellActivation(guarded.onClick, settings);
 
@@ -65,7 +59,8 @@ export function CellButton({
       aria-label={cell.label}
       style={
         cell.fitzgerald
-          ? ({ ['--cell-tint']: style.bg } as CSSProperties)
+          ? // F1: --cell-ink = צבע הטקסט המכויל של Fitzgerald (ניגודיות AA בשני המצבים).
+            ({ ['--cell-tint']: style.bg, ['--cell-ink']: style.text } as CSSProperties)
           : undefined
       }
     >
@@ -81,7 +76,7 @@ export function CellButton({
           />
         </span>
       )}
-      <span className="cell__label">{displayLabel}</span>
+      <span className="cell__label">{displayLabel ?? cell.nikud ?? cell.label}</span>
     </button>
   );
-}
+});

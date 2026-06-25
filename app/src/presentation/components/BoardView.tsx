@@ -1,8 +1,11 @@
+import { memo, useEffect, useMemo, useState } from 'react';
 import type { Board, Cell } from '../../domain/models';
 import type { AccessSettings } from '../../domain/accessSettings';
+import { globalNikudService } from '../../services/nikud/nikudSingleton';
 import { CellButton } from './CellButton';
 
-export function BoardView({
+// E1: memo — הלוח לא מתרנדר מחדש כשמשתנה state לא-קשור (למשל setSentence).
+export const BoardView = memo(function BoardView({
   board,
   onCell,
   accessSettings,
@@ -13,6 +16,37 @@ export function BoardView({
   accessSettings?: AccessSettings;
   modelingHighlights?: Set<string>;
 }) {
+  const visibleCells = useMemo(
+    () =>
+      board.placements
+        .map((p) => board.cells[p.cellId])
+        .filter((c): c is Cell => !!c && !c.hidden),
+    [board],
+  );
+
+  // E2: ניקוד מחושב פעם אחת ברמת הלוח (deduped לפי label), לא קריאה לכל תא בנפרד.
+  const [nikudMap, setNikudMap] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const labels = Array.from(
+      new Set(visibleCells.filter((c) => !c.nikud).map((c) => c.label)),
+    );
+    if (labels.length === 0) return;
+    void Promise.all(
+      labels.map(async (label) => {
+        const res = await globalNikudService.getNikud(label);
+        return [label, res.source !== 'none' ? res.nikud : label] as const;
+      }),
+    ).then((entries) => {
+      if (!cancelled) setNikudMap((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleCells]);
+
+  const labelFor = (cell: Cell): string => cell.nikud ?? nikudMap[cell.label] ?? cell.label;
+
   return (
     <div
       className="board"
@@ -36,12 +70,13 @@ export function BoardView({
           >
             <CellButton
               cell={cell}
-              onActivate={() => onCell(cell)}
+              onCell={onCell}
               settings={accessSettings}
+              displayLabel={labelFor(cell)}
             />
           </div>
         );
       })}
     </div>
   );
-}
+});

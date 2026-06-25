@@ -32,7 +32,25 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // E3: לא לכלול את ספריית הסמלים ב-precache (אלפי PNG → precache ענק).
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['**/symbols/**'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // הסמלים נשמרים ב-runtime לפי דרישה (CacheFirst) — offline אחרי השימוש הראשון.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }: { url: URL }) => url.pathname.includes('/symbols/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'arasaac-symbols',
+              expiration: {
+                maxEntries: 3000,
+                maxAgeSeconds: 60 * 60 * 24 * 90,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],
