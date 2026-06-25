@@ -1382,6 +1382,62 @@ body {
   .admin-panel__actions { margin-top: var(--sp-2); }
 }
 
+/* ── 18d. PORTAL — ילדים / שיתוף (Claude Design) ─────────────────── */
+.children-dashboard__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-3);
+}
+.children-dashboard__add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  background: var(--cl-chip);
+  border: 1px solid var(--cl-chip-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+}
+.child-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  box-shadow: 0 2px 5px rgba(20, 32, 46, 0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.child-card:hover { transform: translateY(-2px); box-shadow: 0 7px 16px rgba(20, 32, 46, 0.13); }
+.child-card__name { margin: 0; font-size: var(--tx-lg); font-weight: 800; color: var(--cl-ink); }
+.child-card__age { margin: 0; font-size: var(--tx-sm); color: var(--cl-muted); }
+.child-card__actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); flex-wrap: wrap; }
+.panel-overlay__section-title { margin: 0 0 var(--sp-2); font-size: var(--tx-md); font-weight: 800; color: var(--cl-ink); }
+.child-prefs__grid-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--cl-border);
+}
+.child-prefs__grid-row:last-child { border-bottom: none; }
+.share-invite__code { display: flex; flex-direction: column; gap: var(--sp-3); align-items: center; text-align: center; }
+.share-invite__digits {
+  font-size: var(--tx-2xl);
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  color: var(--cl-primary);
+  background: var(--cl-chip);
+  border: 2px dashed var(--cl-chip-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .child-card { transition: none; }
+  .child-card:hover { transform: none; }
+}
+
 /* ── 19. BACKUP PANEL ─────────────────────────────────────────────── */
 .backup-panel {
   position: fixed;
