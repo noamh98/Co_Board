@@ -21,7 +21,18 @@ function translateError(err: unknown): string {
   if (msg.includes('weak-password')) return 'הסיסמה חלשה מדי (לפחות 6 תווים)';
   if (msg.includes('network-request-failed') || msg.includes('offline'))
     return 'אין חיבור לרשת — נסה שנית';
-  return 'שגיאה בכניסה, נסה שנית';
+  if (msg.includes('operation-not-allowed'))
+    return 'כניסה עם Google לא מופעלת — יש להפעיל ב-Firebase Console → Authentication → Sign-in method';
+  if (msg.includes('unauthorized-domain'))
+    return 'הדומיין לא מורשה — יש להוסיף co-board.web.app לרשימת הדומיינים המורשים ב-Firebase Console → Authentication → Settings';
+  if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request'))
+    return 'החלון נסגר לפני השלמת הכניסה — נסה שנית';
+  if (msg.includes('popup-blocked'))
+    return 'הדפדפן חסם את חלון הכניסה — אפשר popup לאתר זה ונסה שנית';
+  // שגיאה לא מזוהה — הצג את הקוד לאבחון
+  const codeMatch = msg.match(/\(auth\/([^)]+)\)/);
+  if (codeMatch) return `שגיאת כניסה: ${codeMatch[1]}`;
+  return `שגיאה בכניסה, נסה שנית`;
 }
 
 export function LoginPanel({ onSignIn, onGoogleSignIn, onGoToRegister, loading = false }: Props) {
