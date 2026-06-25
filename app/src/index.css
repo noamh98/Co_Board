@@ -813,7 +813,7 @@ body {
 }
 .modal {
   background: var(--cl-surface);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   padding: var(--sp-6);
   width: min(480px, 100%);
   max-height: min(85dvh, 680px);
@@ -887,8 +887,50 @@ body {
   }
 }
 
+/* ── DRAWER VARIANT (Claude Design — מגירת הגדרות צדדית) ──────────── */
+.modal-overlay:has(.modal--drawer) {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+}
+.modal--drawer {
+  width: min(470px, 94%);
+  max-height: none;
+  height: 100%;
+  border-radius: 0;
+  border-inline-end: 1px solid var(--cl-border);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.18);
+  padding: 0;
+  animation: drawerSlide 0.28s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.modal--drawer .modal__header {
+  margin-bottom: 0;
+  padding: var(--sp-5) var(--sp-5) var(--sp-3);
+}
+.modal--drawer .modal__body { padding: var(--sp-5); }
+@keyframes drawerSlide {
+  from { transform: translateX(40px); opacity: 0.3; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+/* בפאן צר — המגירה הופכת חזרה ל-bottom-sheet כדי לא לחסום את המסך */
+@media (max-width: 600px) {
+  .modal-overlay:has(.modal--drawer) { align-items: flex-end; justify-content: center; }
+  .modal--drawer {
+    width: 100%;
+    height: auto;
+    max-height: 92dvh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-inline-end: none;
+    animation: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal--drawer { animation: none; }
+}
+
 /* ── 11. SETTINGS PANEL ───────────────────────────────────────────── */
 .settings-panel { display: flex; flex-direction: column; gap: 14px; }
+.settings-panel .modal__body { gap: 14px; }
 /* כל סקשן = כרטיס מקובץ בעיצוב Claude Design */
 .settings-section {
   background: var(--cl-chip);

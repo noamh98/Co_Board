@@ -89,7 +89,7 @@ export function AccessSettingsPanel({
     loginPanel !== undefined;
 
   return (
-    <Modal title="הגדרות גישה" onClose={onClose} aria-label="הגדרות גישה" className="settings-panel">
+    <Modal title="הגדרות גישה" onClose={onClose} aria-label="הגדרות גישה" className="settings-panel modal--drawer">
 
       {/* ── גישה מוטורית ── */}
       <section className="settings-section" aria-labelledby="s-motor">
