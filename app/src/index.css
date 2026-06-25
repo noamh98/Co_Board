@@ -460,7 +460,7 @@ body {
 .pin__input:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(63,111,143,0.2);
+  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
 }
 .adultbar__btn,
 .pin__btn {
@@ -1171,7 +1171,7 @@ body {
 .voice-select:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(63,111,143,0.2);
+  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
 }
 .voice-select-label {
   display: block;
@@ -1256,27 +1256,131 @@ body {
 .login-panel__input:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(63,111,143,0.2);
+  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
 }
 .login-panel__error { margin: 0; font-size: var(--tx-sm); color: var(--cl-error); }
 .login-panel__actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
 .login-panel__btn {
-  min-height: var(--target-sm);
-  padding: 0 var(--sp-4);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--r-md);
-  background: var(--cl-surface-alt);
+  min-height: var(--target-min);
+  padding: 0 var(--sp-5);
+  border: 1.5px solid var(--cl-border);
+  border-radius: 14px;
+  background: var(--cl-surface);
   color: var(--cl-ink);
   font-size: var(--tx-base);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: background var(--ease), border-color var(--ease), transform var(--ease-fast);
 }
+.login-panel__btn:hover:not(:disabled) { background: var(--cl-chip); }
+.login-panel__btn:active:not(:disabled) { transform: scale(0.97); }
+.login-panel__btn:focus-visible { outline: 3px solid var(--cl-primary); outline-offset: 2px; }
 .login-panel__btn--primary {
   background: var(--cl-primary);
   color: var(--cl-on-primary);
   border-color: var(--cl-primary);
 }
+.login-panel__btn--primary:hover:not(:disabled) {
+  background: var(--cl-primary-dk);
+  border-color: var(--cl-primary-dk);
+}
+.login-panel__btn--google { background: var(--cl-surface); border-color: var(--cl-border); }
+.login-panel__btn--danger {
+  background: var(--cl-error-bg);
+  color: var(--cl-error);
+  border-color: var(--cl-error);
+}
 .login-panel__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── 18b. AUTH SCREENS (Claude Design) ───────────────────────────── */
+.auth-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-5);
+  background: var(--cl-bg);
+}
+.auth-screen__card {
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-8) var(--sp-6);
+  box-shadow: var(--sh-lg);
+  text-align: center;
+}
+.auth-screen__title { margin: 0; font-size: var(--tx-2xl); font-weight: 800; color: var(--cl-ink); }
+.auth-screen__sub { margin: 0; font-size: var(--tx-lg); font-weight: 700; color: var(--cl-primary); }
+.auth-screen__body { margin: 0; font-size: var(--tx-base); color: var(--cl-ink); line-height: 1.5; }
+.auth-screen__body--muted { color: var(--cl-muted); }
+.auth-screen__notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  background: var(--cl-chip);
+  border: 1px solid var(--cl-chip-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+}
+.auth-screen__notice p { margin: 0; font-size: var(--tx-sm); color: var(--cl-ink); }
+.auth-screen__link { color: var(--cl-primary); font-weight: 700; }
+.auth-screen__card .login-panel__btn { margin-top: var(--sp-2); }
+
+/* ── 18c. ADMIN / PANEL OVERLAY (Claude Design) ──────────────────── */
+.panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: var(--cl-overlay);
+}
+.panel-overlay__content {
+  width: min(560px, 100%);
+  max-height: 88dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  background: var(--cl-surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-6);
+  box-shadow: var(--sh-xl);
+}
+.panel-overlay__title { margin: 0; font-size: var(--tx-xl); font-weight: 800; color: var(--cl-ink); }
+.panel-overlay__footer {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--cl-border);
+}
+.admin-panel__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.admin-panel__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name actions' 'email actions' 'date actions';
+  align-items: center;
+  gap: 2px var(--sp-4);
+  background: var(--cl-chip);
+  border: 1px solid var(--cl-chip-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+}
+.admin-panel__name  { grid-area: name; font-weight: 800; color: var(--cl-ink); font-size: var(--tx-md); }
+.admin-panel__email { grid-area: email; color: var(--cl-muted); font-size: var(--tx-sm); }
+.admin-panel__date  { grid-area: date; color: var(--cl-muted); font-size: var(--tx-xs); }
+.admin-panel__actions { grid-area: actions; display: flex; gap: var(--sp-2); }
+@media (max-width: 600px) {
+  .admin-panel__item { grid-template-columns: 1fr; grid-template-areas: 'name' 'email' 'date' 'actions'; }
+  .admin-panel__actions { margin-top: var(--sp-2); }
+}
 
 /* ── 19. BACKUP PANEL ─────────────────────────────────────────────── */
 .backup-panel {
@@ -1530,7 +1634,7 @@ body {
 .wizard__input:focus {
   outline: none;
   border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2px rgba(63,111,143,0.2);
+  box-shadow: 0 0 0 2px rgba(31, 122, 92, 0.22);
 }
 .wizard__error   { color: var(--cl-danger); margin: var(--sp-2) 0 0; font-size: var(--tx-sm); }
 .wizard__hint    { color: var(--cl-muted); margin: 0 0 var(--sp-3); font-size: var(--tx-sm); }
