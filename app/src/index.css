@@ -390,57 +390,81 @@ body {
   top: 0;
   z-index: var(--z-sticky);
   display: flex;
-  align-items: stretch;
-  gap: var(--gap);
-  padding: var(--sp-2) var(--sp-4);
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
   background: var(--cl-surface);
-  border-bottom: 2px solid var(--cl-border);
-  box-shadow: var(--sh-xs);
+  border-bottom: 1px solid var(--cl-border);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
 }
+/* אזור המשפט — chip מעוגל בעיצוב Claude Design */
 .sentence__text {
   flex: 1;
-  min-height: 56px;
+  min-width: 160px;
+  min-height: 60px;
   display: flex;
   align-items: center;
+  gap: var(--sp-2);
   font-size: var(--tx-2xl);
-  font-weight: 600;
-  padding: 0 var(--sp-3);
+  font-weight: 700;
+  padding: 0 var(--sp-4);
+  background: var(--cl-chip);
+  border: 2px solid var(--cl-chip-border);
+  border-radius: 18px;
   overflow-x: auto;
   white-space: nowrap;
   color: var(--cl-ink);
+  transition: background 0.35s ease, border-color 0.35s ease;
 }
-.sentence__speak {
-  min-width: 72px;
-  min-height: var(--target-min);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--cl-primary);
-  color: var(--cl-on-primary);
+.sentence__text:empty::before {
+  content: 'הקש על אריח כדי לבנות משפט…';
+  color: var(--cl-muted);
   font-size: var(--tx-lg);
-  font-weight: 700;
+  font-weight: 500;
+}
+/* כפתור "הקראה" ירוק תלת-מימדי */
+.sentence__speak {
+  height: 60px;
+  min-width: 104px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 18px;
+  background: var(--cl-speak);
+  color: var(--cl-on-primary);
+  font-size: var(--tx-xl);
+  font-weight: 800;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background var(--ease-fast), transform var(--ease-fast);
+  box-shadow: 0 4px 0 var(--cl-speak-sh);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-.sentence__speak:hover { background: var(--cl-primary-dk); }
-.sentence__speak:active { transform: scale(0.97); }
+.sentence__speak:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--cl-speak-sh);
+}
 .sentence__speak:focus-visible {
-  outline: 3px solid var(--cl-accent);
+  outline: 3px solid var(--cl-scan-ring);
   outline-offset: 2px;
 }
+/* כפתורי מחק / נקה — ריבועים מעוגלים */
 .sentence__btn {
-  min-width: 56px;
-  min-height: var(--target-min);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--radius);
-  background: var(--cl-surface-alt);
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-bg);
   color: var(--cl-ink);
   font-size: var(--tx-sm);
+  font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background var(--ease-fast);
+  transition: transform 0.12s ease, background 0.2s ease;
 }
-.sentence__btn:hover { background: var(--cl-border); }
+.sentence__btn:hover { background: var(--cl-chip); }
+.sentence__btn:active { transform: scale(0.93); }
 .sentence__btn:focus-visible {
   outline: 3px solid var(--cl-primary);
   outline-offset: 2px;
@@ -461,11 +485,15 @@ body {
   .sentence__text {
     order: -1;
     flex-basis: 100%;
-    min-height: 44px;
+    min-height: 48px;
     font-size: var(--tx-xl);
   }
-  .sentence__speak { flex: 1; min-width: 0; }
-  .sentence__btn   { flex: 0 0 auto; min-width: 52px; font-size: var(--tx-xs); }
+  .sentence__speak { flex: 1; min-width: 0; height: 54px; }
+  .sentence__btn   { width: 52px; height: 54px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sentence__speak, .sentence__btn { transition: none; }
+  .sentence__speak:active, .sentence__btn:active { transform: none; }
 }
 
 /* ── 7. NAV BAR ──────────────────────────────────────────────────── */

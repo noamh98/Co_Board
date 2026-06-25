@@ -15,21 +15,6 @@ export function SentenceBar({
     <div className="sentence" dir="rtl">
       <button
         type="button"
-        className="sentence__speak"
-        onClick={onSpeak}
-        aria-label="דבר"
-      >
-        דבר
-      </button>
-      <div
-        className="sentence__text"
-        data-testid="sentence-text"
-        aria-live="polite"
-      >
-        {words.join(' ')}
-      </div>
-      <button
-        type="button"
         className="sentence__btn"
         onClick={onDelete}
         aria-label="מחק מילה"
@@ -54,6 +39,21 @@ export function SentenceBar({
           שמור
         </button>
       )}
+      <div
+        className="sentence__text"
+        data-testid="sentence-text"
+        aria-live="polite"
+      >
+        {words.join(' ')}
+      </div>
+      <button
+        type="button"
+        className="sentence__speak"
+        onClick={onSpeak}
+        aria-label="דבר"
+      >
+        דבר
+      </button>
     </div>
   );
 }
