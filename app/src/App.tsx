@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Cell } from './domain/models';
 import {
   type AppMode,
@@ -27,7 +27,8 @@ import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
-import { AuthGatePage } from './presentation/auth/AuthGatePage';
+import { LoginPanel } from './presentation/auth/LoginPanel';
+import { RegisterPanel } from './presentation/auth/RegisterPanel';
 import { PendingApprovalScreen } from './presentation/auth/PendingApprovalScreen';
 import { RejectedScreen } from './presentation/auth/RejectedScreen';
 import { analyticsService } from './services/analytics/analyticsService';
@@ -88,6 +89,18 @@ import {
   createModelingSession,
   toggleHighlight,
 } from './domain/modelingSession';
+// ── פאזה I ──
+import { PredictionBar } from './presentation/components/PredictionBar';
+import { SceneView } from './presentation/components/SceneView';
+import { useScanning } from './services/access/useScanning';
+import { predictNext, type NgramModel, emptyModel } from './domain/prediction/predictor';
+import { getPredictionModel, recordSequence } from './data/predictionRepo';
+import { maxLevel, isFrozenCore } from './domain/growingVocab';
+import {
+  pluralizeNoun,
+  addDefiniteArticle,
+  conjugatePresent,
+} from './domain/morphology/hebrewMorphology';
 
 // E3: פאנלי מבוגר כבדים נטענים lazily (code-splitting) — לא בבנדל הראשוני של מסך הילד.
 const BuilderView = lazy(() =>
@@ -140,10 +153,14 @@ export function App() {
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
   const [syncPhotos, setSyncPhotosState] = useState(false);
-  const [authChecked, setAuthChecked] = useState(!import.meta.env.VITE_FIREBASE_API_KEY);
+  const [showRegister, setShowRegister] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [portalOpen, setPortalOpen] = useState(false);
   const [darkMode, setDarkModeState] = useState(false);
+  // ── פאזה I ──
+  const [currentLevel, setCurrentLevel] = useState(0); // I4
+  const [predictions, setPredictions] = useState<string[]>([]); // I2
+  const predictionModelRef = useRef<NgramModel>(emptyModel());
 
   const ttsRef = useRef<TtsLike | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
@@ -235,7 +252,6 @@ export function App() {
     if (import.meta.env.VITE_FIREBASE_API_KEY) {
       unsubFirebase = onFirebaseAuthChange((firebaseUser) => {
         if (!alive) return;
-        setAuthChecked(true);
         if (!firebaseUser) {
           authService.setAuthUser(null);
           return;
@@ -402,6 +418,43 @@ export function App() {
     return ctx.allBoards[navCurrent(navStack)] ?? ctx.board;
   }, [navStack, ctx]);
 
+  // I4: רשימת התאים הגלויים בלוח הנוכחי (סדר רינדור זהה ל-BoardView) — לסריקה I3 וניבוי I2.
+  const visibleCells = useMemo(() => {
+    if (!currentBoard) return [] as Cell[];
+    const out: Cell[] = [];
+    for (const p of currentBoard.placements) {
+      const c = currentBoard.cells[p.cellId];
+      if (!c || c.hidden) continue;
+      if (!isFrozenCore(c) && (c.level ?? 0) > currentLevel) continue;
+      out.push(c);
+    }
+    return out;
+  }, [currentBoard, currentLevel]);
+
+  const boardMaxLevel = useMemo(() => (currentBoard ? maxLevel(currentBoard) : 0), [currentBoard]);
+
+  // I2: מוסיף מילת ניבוי למשפט ומקריא אותה.
+  const addPredictedWord = useCallback(
+    (word: string): void => {
+      const cell: Cell = { id: `pred-${word}`, label: word, action: { type: 'speak' } };
+      setSentence((s) => [...s, cell]);
+      void ttsRef.current?.speak(word, {
+        voiceURI: selectedVoiceURI,
+        rate: ttsRate,
+        pitch: ttsPitch,
+      });
+    },
+    [selectedVoiceURI, ttsRate, ttsPitch],
+  );
+
+  const predictionsRef = useRef<string[]>([]);
+  predictionsRef.current = predictions;
+
+  // I4 — איפוס רמת החשיפה במעבר בין לוחות.
+  useEffect(() => {
+    setCurrentLevel(0);
+  }, [currentBoard?.id]);
+
   const onToggleModeling = (): void => {
     setModelingActive((prev) => {
       const next = !prev;
@@ -452,14 +505,108 @@ export function App() {
         setSentence((s) => s.slice(0, -1));
       } else if (action.type === 'clear') {
         setSentence([]);
+      } else if (action.type === 'modifyWord') {
+        // I1/I5 — תא הטיה: מטה את המילה האחרונה במשפט.
+        const op = action.op;
+        setSentence((s) => {
+          if (s.length === 0) return s;
+          const last = s[s.length - 1];
+          let label = last.label;
+          if (op === 'pluralize') label = pluralizeNoun(label, last.morphology?.gender ?? 'm');
+          else if (op === 'definite') label = addDefiniteArticle(label);
+          else if (op === 'feminine') {
+            const n = last.morphology?.number;
+            label = conjugatePresent(label, { gender: 'f', number: n === 'dual' ? 'plural' : n });
+          } else if (op === 'masculine') {
+            const n = last.morphology?.number;
+            label = conjugatePresent(label, { gender: 'm', number: n === 'dual' ? 'plural' : n });
+          }
+          const updated: Cell = { ...last, label, nikud: undefined, vocalization: undefined };
+          return [...s.slice(0, -1), updated];
+        });
+      } else if (action.type === 'insertPrediction') {
+        // I2/I5 — מוסיף את ההצעה הראשונה הזמינה.
+        const first = predictionsRef.current[0];
+        if (first) addPredictedWord(first);
+      } else if (action.type === 'playAudio') {
+        void speakCell(cell, symbolRepoRef.current, ttsRef.current, {
+          voiceURI: selectedVoiceURI,
+          rate: ttsRate,
+          pitch: ttsPitch,
+        });
+      } else if (action.type === 'playVideo' || action.type === 'openLink') {
+        // I5 — פתיחת מדיה/קישור חיצוני.
+        try {
+          window.open(action.url, '_blank', 'noopener');
+        } catch {
+          /* no-op */
+        }
       }
+      // setVolume — שמור לעתיד (אין בקרת ווליום גלובלית כרגע).
     },
-    [modelingActive, mode, ctx, currentBoard, selectedVoiceURI, ttsRate, ttsPitch],
+    [
+      modelingActive,
+      mode,
+      ctx,
+      currentBoard,
+      selectedVoiceURI,
+      ttsRate,
+      ttsPitch,
+      addPredictedWord,
+    ],
   );
 
   const speakSentence = (): void => {
-    if (sentence.length > 0) speak(sentence.map(vocalize).join(' '));
+    if (sentence.length === 0) return;
+    speak(sentence.map(vocalize).join(' '));
+    // I2 — למידה מקומית מהאמירה שנאמרה (n-gram פרטי).
+    void recordSequence(sentence.map((c) => c.label))
+      .then(() => getPredictionModel())
+      .then((m) => {
+        predictionModelRef.current = m;
+      })
+      .catch(() => {});
   };
+
+  // I2 — טעינת מודל הניבוי המקומי פעם אחת.
+  useEffect(() => {
+    void getPredictionModel()
+      .then((m) => {
+        predictionModelRef.current = m;
+      })
+      .catch(() => {});
+  }, []);
+
+  // I2 — חישוב הצעות כשהמשפט/הלוח משתנים (רק כשהניבוי מופעל).
+  useEffect(() => {
+    if (!accessSettings.predictionEnabled) {
+      setPredictions([]);
+      return;
+    }
+    const candidates = visibleCells.map((c) => c.label);
+    const context = sentence.map((c) => c.label);
+    setPredictions(
+      predictNext(predictionModelRef.current, context, { candidates, topN: 5 }).map((p) => p.word),
+    );
+  }, [sentence, visibleCells, accessSettings.predictionEnabled]);
+
+  // I3 — סריקת מתגים מעל התאים הגלויים (בתצוגת ילד בלבד).
+  const scanningActive =
+    !!accessSettings.scanningEnabled && !builderMode && !settingsOpen && !!currentBoard;
+  const { highlightedIndex: scanIndex } = useScanning({
+    enabled: scanningActive,
+    itemCount: visibleCells.length,
+    speedMs: accessSettings.scanSpeedMs ?? 1200,
+    auditory: !!accessSettings.scanAuditory,
+    onSelect: (i) => {
+      const c = visibleCells[i];
+      if (c) onCell(c);
+    },
+    onHighlight: (i) => {
+      const c = visibleCells[i];
+      if (c) speak(c.nikud ?? c.label);
+    },
+  });
 
   const tryUnlock = (pin: string): boolean => {
     if (!verifyPin(pin, storedPinRef.current)) return false;
@@ -563,6 +710,7 @@ export function App() {
       emailVerified: false,
       status: 'pending',
     });
+    setShowRegister(false);
   };
 
   const adult = canManageProfiles(mode);
@@ -571,61 +719,28 @@ export function App() {
   // מחוון uid קצר לתצוגה ב-header
   const uidBadge = authUser ? authUser.email.split('@')[0] : null;
 
-  // ── Auth Gate ──────────────────────────────────────────────────────────
-  if (import.meta.env.VITE_FIREBASE_API_KEY) {
-    if (!authChecked) {
-      return (
-        <div className="app app--loading" dir="rtl" role="status" aria-label="טוען…">
-          <div className="app__loading">טוען…</div>
-        </div>
-      );
-    }
-    if (!authUser) {
-      return (
-        <AuthGatePage
-          onSignIn={async (email, password) => {
-            const provider = new FirebaseProvider();
-            await authService.signIn(provider, email, password);
-          }}
-          onGoogleSignIn={onGoogleSignIn}
-          onRegister={onRegister}
-        />
-      );
-    }
-    if (authUser.status === 'pending') {
-      return (
-        <PendingApprovalScreen
-          email={authUser.email}
-          displayName={authUser.displayName}
-          emailVerified={authUser.emailVerified}
-          onSignOut={onSignOut}
-          onResendVerification={sendVerificationEmail}
-        />
-      );
-    }
-    if (authUser.status === 'rejected') {
-      return (
-        <RejectedScreen email={authUser.email} onSignOut={onSignOut} />
-      );
-    }
-  }
-
   return (
-    <div className="app" dir="rtl">
+    <div
+      className="app"
+      dir="rtl"
+      // I9 — גודל תא מינימלי מתוך ההגדרות (ברירת מחדל 92px, ≥44 לנגישות).
+      style={{ ['--cell-min']: `${accessSettings.cellMinPx ?? 92}px` } as CSSProperties}
+    >
       <BrandBar
         profileName={ctx?.activeProfile.name}
         onOpenAdult={adult ? () => setSettingsOpen(true) : () => setPinPrompt(true)}
         onSignOut={adult && authUser ? onSignOut : undefined}
-        isAdult={adult}
-        profiles={adult && ctx ? ctx.profiles : undefined}
-        activeProfileId={ctx?.activeProfile.id}
-        onSwitch={adult ? onSwitch : undefined}
-        onOpenWizard={adult ? () => setWizardOpen(true) : undefined}
-        authEmail={authUser?.email}
-        authDisplayName={authUser?.displayName}
         status={
           <>
             {adult && <SyncStatus status={syncStatus} />}
+            {adult && uidBadge && (
+              <span
+                className="app__badge app__badge--user"
+                aria-label="משתמש מחובר"
+              >
+                {uidBadge}
+              </span>
+            )}
             <span
               className={
                 hasHeVoice === false
@@ -686,9 +801,38 @@ export function App() {
         onClear={() => setSentence([])}
         onSave={adult ? onSaveSentence : undefined}
       />
+      {/* I2 — שורת ניבוי מילה הבאה (כשהניבוי מופעל). */}
+      {accessSettings.predictionEnabled && !builderMode && (
+        <PredictionBar words={predictions} onPick={addPredictedWord} />
+      )}
       {saveToast && (
         <div className="app__toast" role="status" aria-live="polite">
           נשמר!
+        </div>
+      )}
+
+      {/* I4 — בקרת רמת אוצר מילים (מוצגת רק בלוחות עם רמות). */}
+      {!builderMode && boardMaxLevel > 0 && (
+        <div className="level-bar" role="group" aria-label="רמת אוצר מילים">
+          <button
+            type="button"
+            className="level-bar__btn"
+            onClick={() => setCurrentLevel((l) => Math.max(0, l - 1))}
+            disabled={currentLevel <= 0}
+            aria-label="הסתר רמה"
+          >
+            −
+          </button>
+          <span className="level-bar__label">רמה {currentLevel}/{boardMaxLevel}</span>
+          <button
+            type="button"
+            className="level-bar__btn"
+            onClick={() => setCurrentLevel((l) => Math.min(boardMaxLevel, l + 1))}
+            disabled={currentLevel >= boardMaxLevel}
+            aria-label="חשוף רמה"
+          >
+            +
+          </button>
         </div>
       )}
 
@@ -741,18 +885,41 @@ export function App() {
         />
         </Suspense>
       ) : ctx && currentBoard ? (
-        <BoardView
-          board={currentBoard}
-          onCell={onCell}
-          accessSettings={accessSettings}
-          modelingHighlights={modelingSession?.activeHighlights}
-        />
+        currentBoard.kind === 'scene' ? (
+          // I7 — לוח סצנה (VSD): לחיצה על אזור בונה תא וירטואלי ומפעילה את ה-action.
+          <SceneView
+            board={currentBoard}
+            onRegion={(r) => onCell({ id: r.id, label: r.label, action: r.action })}
+          />
+        ) : (
+          <BoardView
+            board={currentBoard}
+            onCell={onCell}
+            accessSettings={accessSettings}
+            modelingHighlights={modelingSession?.activeHighlights}
+            level={currentLevel}
+            scanIndex={scanningActive ? scanIndex : null}
+          />
+        )
       ) : (
         <div className="app__loading" role="status">
           טוען…
         </div>
       )}
       </main>
+
+      {/* I13 — הדפסת הלוח (לואו-טק). מוסתר בהדפסה עצמה. */}
+      {adult && !builderMode && (
+        <button
+          type="button"
+          className="print-fab no-print"
+          onClick={() => window.print()}
+          aria-label="הדפס לוח"
+          title="הדפס לוח"
+        >
+          🖨
+        </button>
+      )}
 
       {settingsOpen && (
         <AccessSettingsPanel
@@ -773,6 +940,44 @@ export function App() {
           onSyncPhotosChange={onSyncPhotosChange}
           isAuthenticated={!!authUser}
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
+        />
+      )}
+
+      {/* LoginPanel / RegisterPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
+      {settingsOpen && syncEnabled && !authUser && (
+        showRegister ? (
+          <RegisterPanel
+            onRegister={onRegister}
+            onGoogleSignIn={onGoogleSignIn}
+            onBackToLogin={() => setShowRegister(false)}
+          />
+        ) : (
+          <LoginPanel
+            onSignIn={async (email, password) => {
+              const provider = new FirebaseProvider();
+              await authService.signIn(provider, email, password);
+            }}
+            onGoogleSignIn={onGoogleSignIn}
+            onGoToRegister={() => setShowRegister(true)}
+          />
+        )
+      )}
+
+      {/* מסכי מצב Auth — חוסמים תוכן כשמחובר אך לא מאושר */}
+      {authUser && authUser.status === 'pending' && (
+        <PendingApprovalScreen
+          email={authUser.email}
+          displayName={authUser.displayName}
+          emailVerified={authUser.emailVerified}
+          onSignOut={onSignOut}
+          onResendVerification={sendVerificationEmail}
+        />
+      )}
+
+      {authUser && authUser.status === 'rejected' && (
+        <RejectedScreen
+          email={authUser.email}
+          onSignOut={onSignOut}
         />
       )}
 

@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import type { Board, Cell } from '../../domain/models';
+import type { Board, Cell, CellPlacement } from '../../domain/models';
 import type { AccessSettings } from '../../domain/accessSettings';
 import { globalNikudService } from '../../services/nikud/nikudSingleton';
+import { isFrozenCore } from '../../domain/growingVocab';
 import { CellButton } from './CellButton';
 
 // E1: memo — הלוח לא מתרנדר מחדש כשמשתנה state לא-קשור (למשל setSentence).
@@ -10,26 +11,36 @@ export const BoardView = memo(function BoardView({
   onCell,
   accessSettings,
   modelingHighlights,
+  level,
+  scanIndex,
 }: {
   board: Board;
   onCell: (c: Cell) => void;
   accessSettings?: AccessSettings;
   modelingHighlights?: Set<string>;
+  /** I4 — רמת חשיפה לאוצר צומח. undefined = הצג הכל (התנהגות קודמת). */
+  level?: number;
+  /** I3 — אינדקס התא המודגש בסריקה (מתוך רשימת התאים הגלויים בסדר רינדור). */
+  scanIndex?: number | null;
 }) {
-  const visibleCells = useMemo(
-    () =>
-      board.placements
-        .map((p) => board.cells[p.cellId])
-        .filter((c): c is Cell => !!c && !c.hidden),
-    [board],
-  );
+  // רשימת התאים הגלויים בסדר רינדור (משותפת לניקוד, לסריקה ולתצוגה).
+  const rendered = useMemo(() => {
+    const out: { p: CellPlacement; cell: Cell }[] = [];
+    for (const p of board.placements) {
+      const cell = board.cells[p.cellId];
+      if (!cell || cell.hidden) continue;
+      if (level !== undefined && !isFrozenCore(cell) && (cell.level ?? 0) > level) continue;
+      out.push({ p, cell });
+    }
+    return out;
+  }, [board, level]);
 
   // E2: ניקוד מחושב פעם אחת ברמת הלוח (deduped לפי label), לא קריאה לכל תא בנפרד.
   const [nikudMap, setNikudMap] = useState<Record<string, string>>({});
   useEffect(() => {
     let cancelled = false;
     const labels = Array.from(
-      new Set(visibleCells.filter((c) => !c.nikud).map((c) => c.label)),
+      new Set(rendered.filter(({ cell }) => !cell.nikud).map(({ cell }) => cell.label)),
     );
     if (labels.length === 0) return;
     void Promise.all(
@@ -43,7 +54,7 @@ export const BoardView = memo(function BoardView({
     return () => {
       cancelled = true;
     };
-  }, [visibleCells]);
+  }, [rendered]);
 
   const labelFor = (cell: Cell): string => cell.nikud ?? nikudMap[cell.label] ?? cell.label;
 
@@ -57,14 +68,18 @@ export const BoardView = memo(function BoardView({
         gridTemplateRows: `repeat(${board.grid.rows}, 1fr)`,
       }}
     >
-      {board.placements.map((p) => {
-        const cell = board.cells[p.cellId];
-        if (!cell || cell.hidden) return null;
+      {rendered.map(({ p, cell }, i) => {
+        const cls = [
+          modelingHighlights?.has(p.cellId) ? 'cell--modeling-highlight' : '',
+          scanIndex === i ? 'cell--scan-highlight' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
         return (
           <div
             key={p.cellId}
             role="gridcell"
-            className={modelingHighlights?.has(p.cellId) ? 'cell--modeling-highlight' : undefined}
+            className={cls || undefined}
             // RTL: col=0 הוא הימני ביותר (הקונטיינר dir=rtl).
             style={{ gridColumn: p.col + 1, gridRow: p.row + 1 }}
           >

@@ -109,6 +109,28 @@ export interface Board {
   isCoreBoard?: boolean;
   /** ארכוב במקום מחיקה — נשמר לשחזור (PRD §4.5 edge case, FR-022). */
   archived?: boolean;
+  /** סוג לוח (I7). ברירת מחדל 'grid'. 'scene' = לוח סצנה חזותי (VSD). */
+  kind?: 'grid' | 'scene';
+  /** נתוני סצנה (I7) — רלוונטי כש-kind==='scene'. */
+  scene?: SceneData;
+}
+
+/** אזור-לחיץ (hotspot) בלוח סצנה — מיקום/גודל באחוזים (0–100). */
+export interface SceneRegion {
+  id: string;
+  /** אחוזים יחסית לתמונת הרקע. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string;
+  action: CellAction;
+}
+
+/** לוח סצנה (VSD, I7): תמונת רקע + אזורים לחיצים. */
+export interface SceneData {
+  backgroundUri: string;
+  regions: SceneRegion[];
 }
 
 export type Role = 'child' | 'parent' | 'clinician' | 'staff';

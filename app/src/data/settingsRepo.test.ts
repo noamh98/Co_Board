@@ -66,7 +66,12 @@ describe('settingsRepo — accessSettings (FR-020)', () => {
       highContrast: false,
     };
     await s.saveAccessSettings(custom);
-    expect(await s.getAccessSettings()).toEqual(custom);
+    // Phase I adds scanning/prediction/cellMinPx fields — merged with defaults on read.
+    const result = await s.getAccessSettings();
+    expect(result).toMatchObject(custom);
+    expect(result.scanningEnabled).toBe(DEFAULT_ACCESS_SETTINGS.scanningEnabled);
+    expect(result.predictionEnabled).toBe(DEFAULT_ACCESS_SETTINGS.predictionEnabled);
+    expect(result.cellMinPx).toBe(DEFAULT_ACCESS_SETTINGS.cellMinPx);
   });
 
   it('שדה חסר ממוזג עם ברירת מחדל (upgrade אדיטיבי)', async () => {

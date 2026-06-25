@@ -12,6 +12,19 @@ export interface AccessSettings {
   dwellPreviewMs: number;
   /** ערכת ניגודיות גבוהה (F4) — שחור/לבן עם גבולות חזקים, שומר קוד-צבע Fitzgerald. */
   highContrast?: boolean;
+  // ── פאזה I (כל הדגלים כבויים כברירת מחדל — אדיטיבי) ──
+  /** I3 — סריקת מתגים פעילה. */
+  scanningEnabled?: boolean;
+  /** I3 — מצב סריקה. */
+  scanMode?: 'linear' | 'row-column';
+  /** I3 — מהירות סריקה אוטומטית (ms). 0 = ידני (מתג מקדם). */
+  scanSpeedMs?: number;
+  /** I3 — סריקה שמיעתית (הקראת התווית בעת הדגשה). */
+  scanAuditory?: boolean;
+  /** I2 — שורת ניבוי מילה הבאה פעילה. */
+  predictionEnabled?: boolean;
+  /** I9 — גודל תא מינימלי (px, ≥44 לנגישות WCAG). */
+  cellMinPx?: number;
 }
 
 export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
@@ -20,4 +33,10 @@ export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
   doubleTapPrevention: false,
   dwellPreviewMs: 300,
   highContrast: false,
+  scanningEnabled: false,
+  scanMode: 'linear',
+  scanSpeedMs: 1200,
+  scanAuditory: true,
+  predictionEnabled: false,
+  cellMinPx: 92, // תואם ל-CSS (--cell-min) — מונע רגרסיה; ניתן להקטין עד 44 (WCAG).
 };

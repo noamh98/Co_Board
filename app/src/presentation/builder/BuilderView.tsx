@@ -10,6 +10,8 @@ import type { NikudService } from '../../services/nikud/nikudService';
 import { BoardView } from '../components/BoardView';
 import { CellEditor, type MediaSyncConfig } from './CellEditor';
 import { GridSizePicker } from './GridSizePicker';
+import { SceneEditor } from './SceneEditor';
+import { AiBoardPanel } from './AiBoardPanel';
 
 export interface BuilderViewProps {
   board: Board;
@@ -26,6 +28,8 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
   const [editingCell, setEditingCell] = useState<{ cell: Cell | null; placement: CellPlacement | null } | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [draggedCellId, setDraggedCellId] = useState<string | null>(null);
+  const [sceneEditorOpen, setSceneEditorOpen] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
   // G1: מצב undo/redo מנוטר ב-state — מתעדכן מיד, לא נקרא מ-ref בזמן render.
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -245,6 +249,22 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           תצוגה מקדימה
         </button>
         <GridSizePicker board={currentBoard} onResize={handleResize} />
+        <button
+          type="button"
+          className="adultbar__btn"
+          onClick={() => setSceneEditorOpen(true)}
+          style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
+        >
+          לוח סצנה
+        </button>
+        <button
+          type="button"
+          className="adultbar__btn"
+          onClick={() => setAiPanelOpen(true)}
+          style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
+        >
+          צור לוח ב-AI
+        </button>
       </div>
 
       {/* Bulk action bar */}
@@ -461,6 +481,27 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           onSave={handleEditorSave}
           onCancel={() => setEditingCell(null)}
           mediaSyncConfig={mediaSyncConfig}
+        />
+      )}
+
+      {/* SceneEditor modal (I7) */}
+      {sceneEditorOpen && (
+        <SceneEditor
+          board={currentBoard}
+          onChange={(newBoard) => void applyBoard(newBoard)}
+          onClose={() => setSceneEditorOpen(false)}
+        />
+      )}
+
+      {/* AiBoardPanel modal (I8) */}
+      {aiPanelOpen && (
+        <AiBoardPanel
+          onGenerated={(newBoard) => {
+            void applyBoard(newBoard);
+            setAiPanelOpen(false);
+          }}
+          onClose={() => setAiPanelOpen(false)}
+          nikudService={nikudService}
         />
       )}
     </div>

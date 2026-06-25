@@ -130,6 +130,57 @@ export function AccessSettingsPanel({
         </div>
       </section>
 
+      {/* ── סריקה וניבוי (פאזה I) ── */}
+      <section className="settings-section" aria-labelledby="s-scan">
+        <div className="settings-section__header">
+          <span className="settings-section__icon" aria-hidden="true">🔁</span>
+          <h3 className="settings-section__title" id="s-scan">סריקה וניבוי</h3>
+        </div>
+        <div className="settings-section__body">
+          <Toggle
+            id="scanning-enabled"
+            checked={settings.scanningEnabled ?? false}
+            onChange={(v) => set({ scanningEnabled: v })}
+            label="סריקת מתגים"
+            description="הדגשה עוברת בין תאים; בחירה ב-Enter או מתג"
+          />
+          <Toggle
+            id="scan-auditory"
+            checked={settings.scanAuditory ?? true}
+            onChange={(v) => set({ scanAuditory: v })}
+            label="סריקה שמיעתית"
+            description="הקראת התווית בעת ההדגשה"
+          />
+          <Slider
+            id="scan-speed"
+            label="מהירות סריקה"
+            value={settings.scanSpeedMs ?? 1200}
+            min={0}
+            max={3000}
+            step={100}
+            format={(v) => (v === 0 ? 'ידני' : `${v} מ"ש`)}
+            onChange={(v) => set({ scanSpeedMs: v })}
+          />
+          <Toggle
+            id="prediction-enabled"
+            checked={settings.predictionEnabled ?? false}
+            onChange={(v) => set({ predictionEnabled: v })}
+            label="ניבוי מילה הבאה"
+            description="שורת הצעות מעל הלוח (לומד מקומית, פרטי)"
+          />
+          <Slider
+            id="cell-min"
+            label="גודל תא מינימלי"
+            value={settings.cellMinPx ?? 92}
+            min={44}
+            max={140}
+            step={4}
+            format={(v) => `${v}px`}
+            onChange={(v) => set({ cellMinPx: v })}
+          />
+        </div>
+      </section>
+
       {/* ── קול ודיבור ── */}
       <section className="settings-section" aria-labelledby="s-voice">
         <div className="settings-section__header">
