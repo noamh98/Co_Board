@@ -142,6 +142,7 @@ export function App() {
   const [ttsPitch, setTtsPitch] = useState(1.0);
   const [syncPhotos, setSyncPhotosState] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [portalOpen, setPortalOpen] = useState(false);
   const [darkMode, setDarkModeState] = useState(false);
@@ -578,17 +579,17 @@ export function App() {
         profileName={ctx?.activeProfile.name}
         onOpenAdult={adult ? () => setSettingsOpen(true) : () => setPinPrompt(true)}
         onSignOut={adult && authUser ? onSignOut : undefined}
+        onSignIn={syncEnabled && !authUser ? () => setLoginOpen(true) : undefined}
+        isAdult={adult}
+        profiles={adult && ctx ? ctx.profiles : undefined}
+        activeProfileId={ctx?.activeProfile.id}
+        onSwitch={adult ? onSwitch : undefined}
+        onOpenWizard={adult ? () => setWizardOpen(true) : undefined}
+        authEmail={authUser?.email}
+        authDisplayName={authUser?.displayName}
         status={
           <>
             {adult && <SyncStatus status={syncStatus} />}
-            {adult && uidBadge && (
-              <span
-                className="app__badge app__badge--user"
-                aria-label="משתמש מחובר"
-              >
-                {uidBadge}
-              </span>
-            )}
             <span
               className={
                 hasHeVoice === false
@@ -740,24 +741,38 @@ export function App() {
         />
       )}
 
-      {/* LoginPanel / RegisterPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
-      {settingsOpen && syncEnabled && !authUser && (
-        showRegister ? (
-          <RegisterPanel
-            onRegister={onRegister}
-            onGoogleSignIn={onGoogleSignIn}
-            onBackToLogin={() => setShowRegister(false)}
-          />
-        ) : (
-          <LoginPanel
-            onSignIn={async (email, password) => {
-              const provider = new FirebaseProvider();
-              await authService.signIn(provider, email, password);
-            }}
-            onGoogleSignIn={onGoogleSignIn}
-            onGoToRegister={() => setShowRegister(true)}
-          />
-        )
+      {/* מסך כניסה — overlay עצמאי, נפתח מאווטר או מהגדרות */}
+      {(loginOpen || (settingsOpen && syncEnabled && !authUser)) && !authUser && (
+        <div className="login-overlay" role="dialog" aria-modal="true" aria-label="כניסה לחשבון" dir="rtl">
+          <div className="login-overlay__backdrop" onClick={() => { setLoginOpen(false); }} aria-hidden="true" />
+          <div className="login-overlay__card">
+            <button
+              type="button"
+              className="login-overlay__close"
+              aria-label="סגור"
+              onClick={() => { setLoginOpen(false); setShowRegister(false); }}
+            >
+              ✕
+            </button>
+            {showRegister ? (
+              <RegisterPanel
+                onRegister={async (...args) => { await onRegister(...args); setLoginOpen(false); }}
+                onGoogleSignIn={async () => { await onGoogleSignIn(); setLoginOpen(false); }}
+                onBackToLogin={() => setShowRegister(false)}
+              />
+            ) : (
+              <LoginPanel
+                onSignIn={async (email, password) => {
+                  const provider = new FirebaseProvider();
+                  await authService.signIn(provider, email, password);
+                  setLoginOpen(false);
+                }}
+                onGoogleSignIn={async () => { await onGoogleSignIn(); setLoginOpen(false); }}
+                onGoToRegister={() => setShowRegister(true)}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       {/* מסכי מצב Auth — חוסמים תוכן כשמחובר אך לא מאושר */}

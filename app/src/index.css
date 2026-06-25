@@ -351,6 +351,22 @@ body {
 .brandbar__menu-icon { font-size: 18px; }
 .brandbar__menu-item--danger { color: var(--cl-danger); font-weight: 700; }
 .brandbar__menu-item--danger:hover { background: rgba(217, 83, 79, 0.1); }
+.brandbar__menu-auth {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--sp-2) var(--sp-4); background: var(--cl-surface-alt);
+  border-radius: var(--r-sm); margin: var(--sp-1) var(--sp-2);
+}
+.brandbar__menu-auth-name { font-size: 14px; font-weight: 700; color: var(--cl-ink); }
+.brandbar__menu-auth-email { font-size: 12px; color: var(--cl-muted); }
+.brandbar__menu-section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--cl-muted); padding: var(--sp-1) var(--sp-4) 0;
+}
+.brandbar__menu-item--profile { gap: var(--sp-2); }
+.brandbar__menu-item--profile.brandbar__menu-item--active { font-weight: 700; color: var(--cl-primary); }
+.brandbar__menu-profile-dot { font-size: 14px; color: var(--cl-primary); }
+.brandbar__menu-item--new { color: var(--cl-primary); font-weight: 600; }
+.brandbar__menu-item--signin { color: var(--cl-accent); font-weight: 600; }
 
 .brandbar__center {
   flex: 1;
@@ -1378,6 +1394,30 @@ body {
 .auth-screen__notice p { margin: 0; font-size: var(--tx-sm); color: var(--cl-ink); }
 .auth-screen__link { color: var(--cl-primary); font-weight: 700; }
 .auth-screen__card .login-panel__btn { margin-top: var(--sp-2); }
+
+/* ── login overlay ─────────────────────────────────────────────────── */
+.login-overlay {
+  position: fixed; inset: 0; z-index: var(--z-modal);
+  display: flex; align-items: center; justify-content: center; padding: var(--sp-5);
+}
+.login-overlay__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(3px);
+}
+.login-overlay__card {
+  position: relative; z-index: 1;
+  width: min(440px, 100%); max-height: 90dvh; overflow-y: auto;
+  background: var(--cl-surface); border: 1px solid var(--cl-border);
+  border-radius: var(--r-lg); padding: var(--sp-8) var(--sp-6) var(--sp-6);
+  box-shadow: var(--sh-lg);
+}
+.login-overlay__close {
+  position: absolute; top: var(--sp-3); left: var(--sp-3);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: var(--cl-chip); cursor: pointer;
+  font-size: 14px; color: var(--cl-muted); display: flex; align-items: center; justify-content: center;
+}
+.login-overlay__close:hover { background: var(--cl-border); color: var(--cl-ink); }
 
 /* ── 18c. ADMIN / PANEL OVERLAY (Claude Design) ──────────────────── */
 .panel-overlay {
