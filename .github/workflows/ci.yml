@@ -42,5 +42,5 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: npm ci
+      - run: npm install
       - run: npm run test:rules
