@@ -103,46 +103,59 @@ export class HebrewTts {
     return new Promise((resolve) => {
       const trimmed = text.trim();
       if (!trimmed) return resolve({ spoken: false, reason: 'empty' });
-      // Prevent utterance queue buildup: always cancel before queuing a new utterance.
-      this.synth.cancel();
-      const voice = this.pickVoice(opts);
-      const u = this.makeUtterance(trimmed);
-      u.lang = 'he-IL';
-      u.rate = opts.rate ?? 1;
-      u.pitch = opts.pitch ?? 1;
-      u.volume = 1;
-      u.voice = voice;
 
       const t0 = this.now();
       let settled = false;
-      // Watchdog: אם onstart לא נורה (קול חסר/תקלת מנוע) — לא להשאיר Promise תלוי.
-      const watchdog = setTimeout(
-        () => settle({ spoken: false, reason: 'timeout', fellBack: voice === null }),
-        3000,
-      );
+      let watchdog: ReturnType<typeof setTimeout> | undefined;
       const settle = (r: SpeakResult): void => {
         if (settled) return;
         settled = true;
-        clearTimeout(watchdog);
+        if (watchdog) clearTimeout(watchdog);
         resolve(r);
       };
 
-      u.onstart = () =>
-        settle({
-          spoken: true,
-          latencyMs: this.now() - t0,
-          usedVoice: voice?.name,
-          offline: voice?.localService ?? false,
-          fellBack: voice === null,
-        });
-      u.onerror = (ev) =>
-        settle({ spoken: false, fellBack: voice === null, reason: String(ev) });
+      const queueUtterance = (): void => {
+        const voice = this.pickVoice(opts);
+        const u = this.makeUtterance(trimmed);
+        u.lang = 'he-IL';
+        u.rate = opts.rate ?? 1;
+        u.pitch = opts.pitch ?? 1;
+        u.volume = 1;
+        u.voice = voice;
 
-      try {
-        this.synth.speak(u);
-      } catch (e) {
-        settle({ spoken: false, reason: String(e) });
-      }
+        // Watchdog: אם onstart לא נורה (קול חסר/תקלת מנוע) — לא להשאיר Promise תלוי.
+        watchdog = setTimeout(
+          () => settle({ spoken: false, reason: 'timeout', fellBack: voice === null }),
+          3000,
+        );
+
+        u.onstart = () =>
+          settle({
+            spoken: true,
+            latencyMs: this.now() - t0,
+            usedVoice: voice?.name,
+            offline: voice?.localService ?? false,
+            fellBack: voice === null,
+          });
+        u.onerror = (ev) =>
+          settle({ spoken: false, fellBack: voice === null, reason: String(ev) });
+
+        try {
+          this.synth.speak(u);
+        } catch (e) {
+          settle({ spoken: false, reason: String(e) });
+        }
+      };
+
+      // Prevent utterance queue buildup: cancel any in-flight utterance first.
+      // IMPORTANT: cancel() and speak() must NOT be called in the same tick —
+      // Chrome's speech engine can get stuck in `speaking=true` indefinitely
+      // if a new utterance is queued before the cancel() has settled, which
+      // outwardly looks like speak() being re-invoked in a slow infinite loop.
+      // Deferring the new speak() to the next tick gives the engine time to
+      // unwind the cancellation first.
+      this.synth.cancel();
+      setTimeout(queueUtterance, 0);
     });
   }
 

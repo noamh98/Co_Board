@@ -99,6 +99,30 @@ describe('HebrewTts', () => {
     );
     expect((await tts.speak('שלום')).spoken).toBe(false);
   });
+
+  it('speak() דוחה את synth.speak() לטיק הבא אחרי synth.cancel() — מונע תקיעת מנוע Chrome (QA: לופ דיבור ללא הפסקה)', async () => {
+    // רגרסיה: cancel() ומיד speak() באותו tick גורם ל-Chrome לתקוע את המנוע
+    // (speaking=true לנצח, ו-onstart/onerror לא נורים) — מה שנראה כלופ דיבור
+    // אינסופי. התיקון: לדחות את synth.speak() ל-tick הבא אחרי synth.cancel().
+    const calls: string[] = [];
+    const synth: SynthLike = {
+      getVoices: () => [voice('Carmit', 'he-IL', true)],
+      cancel: () => calls.push('cancel'),
+      speak: (u) => {
+        calls.push('speak');
+        queueMicrotask(() => u.onstart?.());
+      },
+    };
+    const tts = new HebrewTts(synth, makeUtterance, () => 0);
+    const promise = tts.speak('שלום');
+
+    // סינכרונית, מיד אחרי הקריאה: cancel כבר נקרא, אבל speak עדיין לא —
+    // הם לא קוראים זה לזה באותו tick.
+    expect(calls).toEqual(['cancel']);
+
+    await promise;
+    expect(calls).toEqual(['cancel', 'speak']);
+  });
 });
 
 describe('HebrewTts — voiceURI (FR-010)', () => {

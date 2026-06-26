@@ -114,6 +114,14 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 - **תיקון**: `HebrewTts.speak()` — `this.synth.cancel()` לפני `this.synth.speak(u)` (אחרי בדיקת empty text). מונע queue buildup בכל תרחיש.
 - **קבצים**: `app/src/services/tts/ttsService.ts`
 
+## אומת בדפדפן בתאריך 2026-06-26 (deploy: co-board--phase-i-bugfix-iuejvxox.web.app)
+בדיקת רגרסיה ממוקדת על שלושת התיקונים שלעיל, דרך Claude in Chrome MCP:
+- **באג 1 (חיזוי מילים)**: ✅ PASS — `.prediction-bar` מציג 5 chips (מים/חלב/מיץ/עוד/בננה) לאחר הפעלת הטוגל ובחירת תא.
+- **באג 2 (סריקת שורות-עמודות)**: ✅ PASS — ה-`<select id="scan-mode">` קיים בהגדרות נגישות עם שתי האפשרויות, הבחירה נשמרת בין פתיחות.
+- **באג 3 (לופ speak)**: ❌ FAIL חדש שהתגלה. התיקון הקודם (`synth.cancel()` לפני `synth.speak()` באותו tick) לא פותר את הבעיה לגמרי — הוא יוצר תקיעה אחרת: ב-Chrome, `cancel()` ומיד `speak()` יחד גורמים למנוע הדיבור להישאר ב-`speaking=true` לנצח ול"נסות מחדש" את ה-utterance התקוע בקצב של כ-1 לשנייה, ללא הפסקה — בפועל זה מה שהמשתמש שמע כ"הוא לא מפסיק להגיד דברים". אומת ע"י יירוט `speechSynthesis.speak` בדפדפן: לחיצה בודדת על "דבר" → המונה ממשיך לטפס (28→79+) ללא לחיצות נוספות, ו-`speechSynthesis.speaking` נשאר `true` ברציפות.
+- **תיקון חדש**: `app/src/services/tts/ttsService.ts` — דחיית `this.synth.speak(u)` ל-tick הבא (`setTimeout(..., 0)`) אחרי `this.synth.cancel()`, כדי לתת למנוע של Chrome להתאפס לפני queuing utterance חדש. נוסף טסט רגרסיה ב-`ttsService.test.ts` שמאמת ש-cancel ו-speak לא נקראים סינכרונית באותו tick. `tsc --noEmit` נקי; 14/14 טסטי TTS עוברים (אומת מהסביבה הזו).
+- **לא הושלם מהסביבה הזו**: לא הצלחתי לבצע commit/push/deploy — `.git/index.lock` נעול (כנראה ע"י סשן VS Code/git פעיל אחר על אותו ריפו), ול-`npm run build` יש שגיאת הרשאות בניקוי תיקיית `dist/` הקיימת (לא שגיאת קוד). הקובץ המתוקן כתוב בפועל ב-`app/src/services/tts/ttsService.ts` בדיסק (לא רק בזיכרון) — יש לסגור כל סשן git/VS Code אחר על הריפו, ואז להריץ commit+build+deploy מסשן Claude Code/VS Code רגיל.
+
 ## Open questions
 - `[TODO: Clarify]` ספק/רישוי ניקוד סופי (Nakdan/Dicta — בסיס חינמי כעת). ראה `docs/adr-0001` / PRD נספח D.
 - `[RESOLVED]` ספק TTS פרימיום — `docs/adr-0003-tts.md` נכתב. Google Neural2 כעת; Almagu כיעד עתידי (interface מוכן להחלפה).
