@@ -230,7 +230,9 @@ export function App() {
     // A3: אתחול סינכרוני מיידי — לחיצה ראשונה תמיד מדברת, גם לפני שטוען apiKey.
     ttsRef.current = tts;
     void (async () => {
-      const apiKey = await getTtsApiKey();
+      // COMMERCIAL TODO: switch VITE_GOOGLE_TTS_KEY to Firebase Function proxy before paid launch
+      const envKey = (import.meta.env.VITE_GOOGLE_TTS_KEY as string | undefined) || null;
+      const apiKey = envKey ?? await getTtsApiKey();
       const provider = apiKey ? new GoogleTtsProvider(apiKey) : null;
       // שדרוג ל-hybrid (כולל ספק ענן) ברגע שהמפתח נטען.
       if (alive && tts) ttsRef.current = createHybridTts(tts, provider);
@@ -1014,7 +1016,7 @@ export function App() {
           isAuthenticated={!!authUser}
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
           ttsApiKey={ttsApiKey}
-          onTtsApiKeyChange={onTtsApiKeyChange}
+          onTtsApiKeyChange={(import.meta.env.VITE_GOOGLE_TTS_KEY as string | undefined) ? undefined : onTtsApiKeyChange}
           googleVoices={GOOGLE_HE_VOICES}
         />
       )}
