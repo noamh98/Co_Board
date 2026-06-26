@@ -157,6 +157,8 @@ export function App() {
   const saveToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // ref מסנכרן עם syncEnabled state כדי שקרוב syncEngine תמיד יראה ערך נוכחי
   const syncEnabledRef = useRef(false);
+  // הפרופיל שאיפסנו עבורו לאחרונה — מבדיל טעינה ראשונית מהחלפת פרופיל אמיתית.
+  const resetProfileIdRef = useRef<string | null>(null);
 
   // עדכן ref כשה-state משתנה
   useEffect(() => {
@@ -301,9 +303,17 @@ export function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncEnabled, authUser?.uid]);
 
-  // איפוס מחסנית ניווט כשמחליפים פרופיל
+  // איפוס מחסנית ניווט כשמחליפים פרופיל.
+  // טעינה ראשונית כבר מאתחלת navStack ב-bootstrap; כאן מאפסים רק בהחלפת פרופיל
+  // אמיתית. בלי הבחנה זו, אפקט ה-passive מנקה את sentence אחרי הרינדור הראשון —
+  // ויכול למחוק לחיצה ראשונה שקרתה לפניו (race שהפיל את App.test.tsx ב-CI).
   useEffect(() => {
     if (!ctx) return;
+    const id = ctx.activeProfile.id;
+    if (resetProfileIdRef.current === id) return;
+    const firstLoad = resetProfileIdRef.current === null;
+    resetProfileIdRef.current = id;
+    if (firstLoad) return;
     setNavStack(createNavStack(ctx.activeProfile.homeBoardId));
     setSentence([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
