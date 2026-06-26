@@ -301,8 +301,8 @@ export function AccessSettingsPanel({
               )}
               <p className="tts-api-key-hint">
                 {ttsApiKey
-                  ? 'Google TTS פעיל — קולות עבריים באיכות גבוהה (Neural2/Wavenet). ראשונה מהרשת, אחר כך cache.'
-                  : 'ללא מפתח: קול המכשיר (Microsoft Asaf). עם מפתח: קולות Neural2/Wavenet איכותיים.'}
+                  ? 'Google TTS פעיל — קולות עבריים באיכות גבוהה (Wavenet). ראשונה מהרשת, אחר כך cache.'
+                  : 'ללא מפתח: קול המכשיר (Microsoft Asaf). עם מפתח: קולות Wavenet איכותיים.'}
               </p>
             </div>
           )}

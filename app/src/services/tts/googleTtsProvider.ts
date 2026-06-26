@@ -2,11 +2,14 @@ import type { TTSProvider, VoiceConfig } from './ttsProvider';
 
 const GOOGLE_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
+// הערה: ל-he-IL גוגל מציעה רק קולות Wavenet (אין Neural2/Chirp3 בעברית כרגע ב-v1 הרגיל).
+// אומת ישירות מול texttospeech.googleapis.com/v1/voices?languageCode=he-IL ב-2026-06-26 —
+// he-IL-Neural2-* מחזיר 400 INVALID_ARGUMENT ("Voice does not exist").
 export const GOOGLE_HE_VOICES: VoiceConfig[] = [
-  { id: 'he-IL-Neural2-A', lang: 'he-IL', displayName: 'עברית נשי Neural2', gender: 'female', style: 'adult' },
-  { id: 'he-IL-Neural2-C', lang: 'he-IL', displayName: 'עברית גברי Neural2', gender: 'male', style: 'adult' },
   { id: 'he-IL-Wavenet-A', lang: 'he-IL', displayName: 'עברית נשי Wavenet', gender: 'female', style: 'adult' },
+  { id: 'he-IL-Wavenet-C', lang: 'he-IL', displayName: 'עברית נשי Wavenet 2', gender: 'female', style: 'adult' },
   { id: 'he-IL-Wavenet-B', lang: 'he-IL', displayName: 'עברית גברי Wavenet', gender: 'male', style: 'adult' },
+  { id: 'he-IL-Wavenet-D', lang: 'he-IL', displayName: 'עברית גברי Wavenet 2', gender: 'male', style: 'adult' },
 ];
 
 export class GoogleTtsProvider implements TTSProvider {
