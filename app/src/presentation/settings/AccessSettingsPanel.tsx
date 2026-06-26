@@ -144,6 +144,20 @@ export function AccessSettingsPanel({
             label="סריקת מתגים"
             description="הדגשה עוברת בין תאים; בחירה ב-Enter או מתג"
           />
+          {settings.scanningEnabled && (
+            <div>
+              <label htmlFor="scan-mode" className="voice-select-label">מצב סריקה</label>
+              <select
+                id="scan-mode"
+                className="voice-select"
+                value={settings.scanMode ?? 'linear'}
+                onChange={(e) => set({ scanMode: e.target.value as 'linear' | 'row-column' })}
+              >
+                <option value="linear">לינארי (תא-אחר-תא)</option>
+                <option value="row-column">שורות-עמודות</option>
+              </select>
+            </div>
+          )}
           <Toggle
             id="scan-auditory"
             checked={settings.scanAuditory ?? true}

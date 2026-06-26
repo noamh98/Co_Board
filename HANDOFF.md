@@ -93,6 +93,27 @@ PWA — React 18 + TypeScript + Vite, offline-first (vite-plugin-pwa/Workbox), R
 - **2026-06-21 (M9–M13)** — Quick-Start Wizard · Phrase Bank · cell images · voice playback · Modeling mode.
 - **2026-06-20 (M4–M8)** — Adaptivity/Access · Sync & Cloud · Firebase Auth · Analytics · ARASAAC search.
 
+## תיקוני באג — 2026-06-26 (QA פאזה I)
+
+### באג 1 — חיזוי מילים (Word Prediction) לא הוצג
+- **שורש**: `predictNext` על מודל ריק (משתמש חדש ללא היסטוריה) מחזיר `[]`. `PredictionBar` מחזיר null כשאין הצעות. → המשתמש רואה תמיד רצועה ריקה.
+- **תיקון**: `App.tsx` lines 581–592 — כשהמודל ריק ומחזיר `[]`, נפילה ל-`candidates.slice(0, 5)` (התאים הגלויים בלוח הנוכחי). כך משתמש חדש רואה הצעות מיד.
+- **קבצים**: `app/src/App.tsx` (prediction useEffect)
+
+### באג 2 — סריקת שורות-עמודות: אין בקרת UI ולא הועבר ל-hook
+- **שורש**: `useScanning.ts` hardcode `mode: 'linear'` תמיד. `accessSettings.scanMode` קיים בסכמה אבל לא הועבר. `AccessSettingsPanel` לא הציג כלל בחירת מצב סריקה.
+- **תיקון** (3 קבצים):
+  1. `useScanning.ts` — הוספת `mode?: ScanMode` + `gridCols?: number` ל-`UseScanningOpts`; שינוי config לפי mode; שינוי return ל-`highlightedIndices: number[]` (תומך הדגשת שורה שלמה ב-row-column).
+  2. `App.tsx` — העברת `mode: accessSettings.scanMode`, `gridCols: currentBoard?.grid?.cols ?? 1`; שימוש ב-`scanIndices` במקום `scanIndex`.
+  3. `BoardView.tsx` — `scanIndex?: number | null` → `scanIndices?: number[]`; highlight check: `scanIndices?.includes(i)`.
+  4. `AccessSettingsPanel.tsx` — `<select>` לבחירת מצב סריקה (לינארי / שורות-עמודות), מוצג כשסריקה פעילה.
+- **קבצים**: `app/src/services/access/useScanning.ts`, `app/src/App.tsx`, `app/src/presentation/components/BoardView.tsx`, `app/src/presentation/settings/AccessSettingsPanel.tsx`
+
+### באג 3 — ~19,000 קריאות ל-speechSynthesis.speak()
+- **שורש**: `HebrewTts.speak()` לא קרא `this.synth.cancel()` לפני queuing utterance חדש. אם ה-Web Speech queue כבר היה מלא (למשל מקריאות מהירות בסריקה שמיעתית), utterances נערמו. `HybridTtsService.speak()` קרא `this.cancel()` אבל `HebrewTts.speak()` כשנקרא ישירות (early-init, fallback) — לא.
+- **תיקון**: `HebrewTts.speak()` — `this.synth.cancel()` לפני `this.synth.speak(u)` (אחרי בדיקת empty text). מונע queue buildup בכל תרחיש.
+- **קבצים**: `app/src/services/tts/ttsService.ts`
+
 ## Open questions
 - `[TODO: Clarify]` ספק/רישוי ניקוד סופי (Nakdan/Dicta — בסיס חינמי כעת). ראה `docs/adr-0001` / PRD נספח D.
 - `[RESOLVED]` ספק TTS פרימיום — `docs/adr-0003-tts.md` נכתב. Google Neural2 כעת; Almagu כיעד עתידי (interface מוכן להחלפה).

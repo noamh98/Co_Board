@@ -12,7 +12,7 @@ export const BoardView = memo(function BoardView({
   accessSettings,
   modelingHighlights,
   level,
-  scanIndex,
+  scanIndices,
 }: {
   board: Board;
   onCell: (c: Cell) => void;
@@ -20,8 +20,8 @@ export const BoardView = memo(function BoardView({
   modelingHighlights?: Set<string>;
   /** I4 — רמת חשיפה לאוצר צומח. undefined = הצג הכל (התנהגות קודמת). */
   level?: number;
-  /** I3 — אינדקס התא המודגש בסריקה (מתוך רשימת התאים הגלויים בסדר רינדור). */
-  scanIndex?: number | null;
+  /** I3 — אינדקסי התאים המודגשים בסריקה (תא בודד ב-linear, שורה שלמה ב-row-column). */
+  scanIndices?: number[];
 }) {
   // רשימת התאים הגלויים בסדר רינדור (משותפת לניקוד, לסריקה ולתצוגה).
   const rendered = useMemo(() => {
@@ -71,7 +71,7 @@ export const BoardView = memo(function BoardView({
       {rendered.map(({ p, cell }, i) => {
         const cls = [
           modelingHighlights?.has(p.cellId) ? 'cell--modeling-highlight' : '',
-          scanIndex === i ? 'cell--scan-highlight' : '',
+          (scanIndices?.includes(i) ?? false) ? 'cell--scan-highlight' : '',
         ]
           .filter(Boolean)
           .join(' ');

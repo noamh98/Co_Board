@@ -103,7 +103,8 @@ export class HebrewTts {
     return new Promise((resolve) => {
       const trimmed = text.trim();
       if (!trimmed) return resolve({ spoken: false, reason: 'empty' });
-
+      // Prevent utterance queue buildup: always cancel before queuing a new utterance.
+      this.synth.cancel();
       const voice = this.pickVoice(opts);
       const u = this.makeUtterance(trimmed);
       u.lang = 'he-IL';

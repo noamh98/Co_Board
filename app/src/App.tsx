@@ -585,19 +585,23 @@ export function App() {
     }
     const candidates = visibleCells.map((c) => c.label);
     const context = sentence.map((c) => c.label);
-    setPredictions(
-      predictNext(predictionModelRef.current, context, { candidates, topN: 5 }).map((p) => p.word),
+    const preds = predictNext(predictionModelRef.current, context, { candidates, topN: 5 }).map(
+      (p) => p.word,
     );
+    // Fallback: model empty for new users → show first N visible board cells as suggestions.
+    setPredictions(preds.length > 0 ? preds : candidates.slice(0, 5));
   }, [sentence, visibleCells, accessSettings.predictionEnabled]);
 
   // I3 — סריקת מתגים מעל התאים הגלויים (בתצוגת ילד בלבד).
   const scanningActive =
     !!accessSettings.scanningEnabled && !builderMode && !settingsOpen && !!currentBoard;
-  const { highlightedIndex: scanIndex } = useScanning({
+  const { highlightedIndices: scanIndices } = useScanning({
     enabled: scanningActive,
     itemCount: visibleCells.length,
     speedMs: accessSettings.scanSpeedMs ?? 1200,
     auditory: !!accessSettings.scanAuditory,
+    mode: accessSettings.scanMode ?? 'linear',
+    gridCols: currentBoard?.grid?.cols ?? 1,
     onSelect: (i) => {
       const c = visibleCells[i];
       if (c) onCell(c);
@@ -898,7 +902,7 @@ export function App() {
             accessSettings={accessSettings}
             modelingHighlights={modelingSession?.activeHighlights}
             level={currentLevel}
-            scanIndex={scanningActive ? scanIndex : null}
+            scanIndices={scanningActive ? scanIndices : []}
           />
         )
       ) : (

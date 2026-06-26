@@ -7,7 +7,9 @@ import {
   initScan,
   advance,
   select,
+  highlightedIndices as getHighlightedIndices,
   type ScanConfig,
+  type ScanMode,
   type ScanState,
 } from '../../domain/scanning/scanEngine';
 
@@ -17,16 +19,16 @@ interface UseScanningOpts {
   /** ms בין צעדים אוטומטיים. 0 או שלילי = ידני (מתג מקדם). */
   speedMs: number;
   auditory: boolean;
+  /** I3 — מצב סריקה: linear (ברירת מחדל) או row-column. */
+  mode?: ScanMode;
+  /** I3 — מספר עמודות הגריד (ל-row-column בלבד). */
+  gridCols?: number;
   onSelect: (index: number) => void;
   onHighlight?: (index: number) => void;
 }
 
-function linearIndex(s: ScanState, cfg: ScanConfig): number {
-  return s.row * cfg.cols + s.col;
-}
-
-export function useScanning(opts: UseScanningOpts): { highlightedIndex: number | null } {
-  const { enabled, itemCount, speedMs, auditory, onSelect, onHighlight } = opts;
+export function useScanning(opts: UseScanningOpts): { highlightedIndices: number[] } {
+  const { enabled, itemCount, speedMs, auditory, mode = 'linear', gridCols = 1, onSelect, onHighlight } = opts;
   const [state, setState] = useState<ScanState | null>(null);
   const cfgRef = useRef<ScanConfig | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -34,17 +36,24 @@ export function useScanning(opts: UseScanningOpts): { highlightedIndex: number |
   const onHighlightRef = useRef(onHighlight);
   onHighlightRef.current = onHighlight;
 
-  // אתחול/איפוס בכל שינוי הפעלה או מספר תאים
+  // אתחול/איפוס בכל שינוי הפעלה, מספר תאים, מצב סריקה או עמודות
   useEffect(() => {
     if (!enabled || itemCount <= 0) {
       cfgRef.current = null;
       setState(null);
       return;
     }
-    const cfg: ScanConfig = { mode: 'linear', rows: 1, cols: itemCount };
+    let cfg: ScanConfig;
+    if (mode === 'row-column' && gridCols > 1) {
+      const cols = gridCols;
+      const rows = Math.max(1, Math.ceil(itemCount / cols));
+      cfg = { mode: 'row-column', rows, cols };
+    } else {
+      cfg = { mode: 'linear', rows: 1, cols: itemCount };
+    }
     cfgRef.current = cfg;
     setState(initScan(cfg));
-  }, [enabled, itemCount]);
+  }, [enabled, itemCount, mode, gridCols]);
 
   // קידום אוטומטי
   useEffect(() => {
@@ -55,10 +64,11 @@ export function useScanning(opts: UseScanningOpts): { highlightedIndex: number |
     return () => clearInterval(id);
   }, [enabled, speedMs, itemCount]);
 
-  // סריקה שמיעתית — הקראה בכל שינוי הדגשה
+  // סריקה שמיעתית — הקראה בכל שינוי הדגשה (התא הראשון בשורה ב-row-column)
   useEffect(() => {
     if (enabled && auditory && state && cfgRef.current) {
-      onHighlightRef.current?.(linearIndex(state, cfgRef.current));
+      const first = getHighlightedIndices(cfgRef.current, state)[0] ?? 0;
+      onHighlightRef.current?.(first);
     }
   }, [state, enabled, auditory]);
 
@@ -87,7 +97,7 @@ export function useScanning(opts: UseScanningOpts): { highlightedIndex: number |
     return () => window.removeEventListener('keydown', onKey);
   }, [enabled, speedMs]);
 
-  const highlightedIndex =
-    state && cfgRef.current ? linearIndex(state, cfgRef.current) : null;
-  return { highlightedIndex };
+  const highlighted =
+    state && cfgRef.current ? getHighlightedIndices(cfgRef.current, state) : [];
+  return { highlightedIndices: highlighted };
 }
