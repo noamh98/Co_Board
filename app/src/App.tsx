@@ -50,9 +50,10 @@ import {
   speakCell,
   type TtsLike,
   type SpeakOptions,
+  type HebrewTts,
 } from './services/tts/ttsService';
-import { GoogleTtsProvider } from './services/tts/googleTtsProvider';
-import { getTtsApiKey } from './data/settingsRepo';
+import { GoogleTtsProvider, GOOGLE_HE_VOICES } from './services/tts/googleTtsProvider';
+import { getTtsApiKey, setTtsApiKey } from './data/settingsRepo';
 import { pruneAudioCache } from './data/audioCache';
 import { createSymbolRepo, type SymbolRepo } from './data/symbolRepo';
 import { NikudService } from './services/nikud/nikudService';
@@ -163,6 +164,8 @@ export function App() {
   const predictionModelRef = useRef<NgramModel>(emptyModel());
 
   const ttsRef = useRef<TtsLike | null>(null);
+  const fallbackTtsRef = useRef<HebrewTts | null>(null);
+  const [ttsApiKey, setTtsApiKeyState] = useState<string | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
@@ -222,6 +225,7 @@ export function App() {
     })();
 
     const tts = createBrowserTts();
+    fallbackTtsRef.current = tts;
     // A3: אתחול סינכרוני מיידי — לחיצה ראשונה תמיד מדברת, גם לפני שטוען apiKey.
     ttsRef.current = tts;
     void (async () => {
@@ -229,6 +233,7 @@ export function App() {
       const provider = apiKey ? new GoogleTtsProvider(apiKey) : null;
       // שדרוג ל-hybrid (כולל ספק ענן) ברגע שהמפתח נטען.
       if (alive && tts) ttsRef.current = createHybridTts(tts, provider);
+      if (alive) setTtsApiKeyState(apiKey);
     })();
     if (!tts) {
       setHasHeVoice(false);
@@ -350,6 +355,15 @@ export function App() {
   const onVoiceURIChange = (uri: string | null): void => {
     setSelectedVoiceURI(uri);
     void createSettingsRepo().setSelectedVoiceURI(uri);
+  };
+
+  const onTtsApiKeyChange = (key: string | null): void => {
+    setTtsApiKeyState(key);
+    void setTtsApiKey(key);
+    const provider = key ? new GoogleTtsProvider(key) : null;
+    if (fallbackTtsRef.current) {
+      ttsRef.current = createHybridTts(fallbackTtsRef.current, provider);
+    }
   };
 
   const onTtsRateChange = (n: number): void => {
@@ -944,6 +958,9 @@ export function App() {
           onSyncPhotosChange={onSyncPhotosChange}
           isAuthenticated={!!authUser}
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
+          ttsApiKey={ttsApiKey}
+          onTtsApiKeyChange={onTtsApiKeyChange}
+          googleVoices={GOOGLE_HE_VOICES}
         />
       )}
 

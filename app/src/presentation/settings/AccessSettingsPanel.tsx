@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AccessSettings } from '../../domain/accessSettings';
 import { FITZGERALD } from '../../domain/fitzgerald';
 import { Modal } from '../ui/Modal';
@@ -19,6 +19,9 @@ export function AccessSettingsPanel({
   onTtsRateChange,
   ttsPitch,
   onTtsPitchChange,
+  ttsApiKey,
+  onTtsApiKeyChange,
+  googleVoices = [],
   darkMode,
   onDarkModeChange,
   syncEnabled,
@@ -38,6 +41,9 @@ export function AccessSettingsPanel({
   onTtsRateChange: (n: number) => void;
   ttsPitch: number;
   onTtsPitchChange: (n: number) => void;
+  ttsApiKey?: string | null;
+  onTtsApiKeyChange?: (key: string | null) => void;
+  googleVoices?: Array<{ id: string; displayName: string }>;
   darkMode?: boolean;
   onDarkModeChange?: (enabled: boolean) => void;
   syncEnabled?: boolean;
@@ -53,6 +59,16 @@ export function AccessSettingsPanel({
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const prevApiKeyRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (prevApiKeyRef.current === undefined) {
+      setApiKeyInput(ttsApiKey ?? '');
+    }
+    prevApiKeyRef.current = ttsApiKey;
+  }, [ttsApiKey]);
 
   useEffect(() => {
     const load = () => {
@@ -203,8 +219,24 @@ export function AccessSettingsPanel({
         </div>
         <div className="settings-section__body">
           <div>
-            <label htmlFor="voice-select" className="voice-select-label">קול דיבור</label>
-            {voices.length === 0 ? (
+            <label htmlFor="voice-select" className="voice-select-label">
+              קול דיבור
+              {ttsApiKey && <span className="tts-provider-badge"> Google TTS</span>}
+            </label>
+            {ttsApiKey ? (
+              googleVoices.length > 0 ? (
+                <select
+                  id="voice-select"
+                  className="voice-select"
+                  value={voiceURI ?? googleVoices[0].id}
+                  onChange={(e) => onVoiceURIChange(e.target.value)}
+                >
+                  {googleVoices.map((v) => (
+                    <option key={v.id} value={v.id}>{v.displayName}</option>
+                  ))}
+                </select>
+              ) : null
+            ) : voices.length === 0 ? (
               <p className="voice-none">אין קולות עבריים זמינים במכשיר</p>
             ) : (
               <select
@@ -220,6 +252,61 @@ export function AccessSettingsPanel({
               </select>
             )}
           </div>
+
+          {onTtsApiKeyChange && (
+            <div className="tts-api-key-row">
+              <label htmlFor="tts-api-key" className="voice-select-label">
+                Google TTS — מפתח API
+              </label>
+              {ttsApiKey ? (
+                <div className="tts-api-key-active">
+                  <span className="tts-api-key-set">מפתח מוגדר ✓</span>
+                  <button
+                    type="button"
+                    className="ui-btn ui-btn--danger ui-btn--sm"
+                    onClick={() => { onTtsApiKeyChange(null); setApiKeyInput(''); }}
+                  >
+                    נקה
+                  </button>
+                </div>
+              ) : (
+                <div className="tts-api-key-input-row">
+                  <input
+                    id="tts-api-key"
+                    type={showKey ? 'text' : 'password'}
+                    className="tts-api-key-input"
+                    value={apiKeyInput}
+                    placeholder="AIza..."
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    autoComplete="off"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    className="ui-btn ui-btn--ghost ui-btn--sm"
+                    onClick={() => setShowKey((s) => !s)}
+                    aria-label={showKey ? 'הסתר מפתח' : 'הצג מפתח'}
+                  >
+                    {showKey ? '🙈' : '👁'}
+                  </button>
+                  <button
+                    type="button"
+                    className="ui-btn ui-btn--primary ui-btn--sm"
+                    disabled={!apiKeyInput.trim()}
+                    onClick={() => { if (apiKeyInput.trim()) onTtsApiKeyChange(apiKeyInput.trim()); }}
+                  >
+                    שמור
+                  </button>
+                </div>
+              )}
+              <p className="tts-api-key-hint">
+                {ttsApiKey
+                  ? 'Google TTS פעיל — קולות עבריים באיכות גבוהה (Neural2/Wavenet). ראשונה מהרשת, אחר כך cache.'
+                  : 'ללא מפתח: קול המכשיר (Microsoft Asaf). עם מפתח: קולות Neural2/Wavenet איכותיים.'}
+              </p>
+            </div>
+          )}
+
           <Slider
             id="rate-slider"
             label="קצב הקראה"

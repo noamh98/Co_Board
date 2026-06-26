@@ -70,6 +70,10 @@ export class HybridTtsService implements TtsLike {
 
   private resolveVoiceConfig(opts: SpeakOptions): VoiceConfig {
     const voices = this.provider?.voices ?? [];
+    if (opts.voiceURI) {
+      const byId = voices.find(v => v.id === opts.voiceURI);
+      if (byId) return byId;
+    }
     const pref = opts.voicePref;
     if (pref === 'child' || pref === 'female') {
       return voices.find(v => v.gender === 'female') ?? voices[0];

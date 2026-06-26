@@ -1235,6 +1235,57 @@ body {
   padding: var(--sp-2) 0;
   margin: 0;
 }
+.tts-provider-badge {
+  font-size: var(--tx-xs);
+  font-weight: 600;
+  color: var(--cl-primary);
+  background: color-mix(in srgb, var(--cl-primary) 12%, transparent);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: var(--sp-2);
+}
+.tts-api-key-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.tts-api-key-active {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.tts-api-key-set {
+  font-size: var(--tx-sm);
+  color: var(--cl-primary);
+  font-weight: 500;
+}
+.tts-api-key-input-row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.tts-api-key-input {
+  flex: 1;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1.5px solid var(--cl-border);
+  border-radius: var(--radius-md);
+  background: var(--cl-surface);
+  color: var(--cl-text);
+  font-size: var(--tx-sm);
+  font-family: monospace;
+  min-width: 0;
+}
+.tts-api-key-input:focus {
+  outline: none;
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55);
+}
+.tts-api-key-hint {
+  font-size: var(--tx-xs);
+  color: var(--cl-muted);
+  margin: 0;
+  line-height: 1.5;
+}
 
 /* ── 16. FITZGERALD LEGEND ───────────────────────────────────────── */
 .fitz-legend {
