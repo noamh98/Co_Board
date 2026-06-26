@@ -21,9 +21,10 @@ const SYMBOL_OVERRIDES: Record<string, number> = {
   // 'משחק': 9813 — כבר ב-GENERATED_SYMBOL_MAP
   'משפחה': 5532,  // family category — ARASAAC family group
   'כאב': 30620,   // pain/hurt — same as כואב
-  'שגרת': 3155,   // daily routine/schedule
+  'שגרת': 6012,   // היה 3155 (כיסא — שגוי) → לוח שבועי/תזמון
   'אוצר': 4788,   // vocabulary/words
   'אוהב': 8020,   // היה 31760 (פנים עם X — שגוי) → לב/אהבה
+  'את/ה': 6625,   // היה 12311 (פיצה — שגוי) → אצבע מצביעה/אתה
 };
 
 export const SYMBOL_MAP: Record<string, number> = {
