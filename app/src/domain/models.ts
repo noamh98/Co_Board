@@ -100,6 +100,8 @@ export interface CellPlacement {
 export interface Board {
   id: string;
   name: string;
+  /** שם הלוח עם ניקוד — לתצוגה בתפריט קטגוריות. */
+  nameNikud?: string;
   grid: GridSize;
   /** מילון התאים: cellId → Cell. */
   cells: Record<string, Cell>;

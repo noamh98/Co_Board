@@ -19,6 +19,11 @@ const SYMBOL_OVERRIDES: Record<string, number> = {
   'אוכל': 4610,   // food category nav cell
   'רגשות': 12359, // emotions category nav cell
   // 'משחק': 9813 — כבר ב-GENERATED_SYMBOL_MAP
+  'משפחה': 5532,  // family category — ARASAAC family group
+  'כאב': 30620,   // pain/hurt — same as כואב
+  'שגרת': 3155,   // daily routine/schedule
+  'אוצר': 4788,   // vocabulary/words
+  'אוהב': 8020,   // היה 31760 (פנים עם X — שגוי) → לב/אהבה
 };
 
 export const SYMBOL_MAP: Record<string, number> = {

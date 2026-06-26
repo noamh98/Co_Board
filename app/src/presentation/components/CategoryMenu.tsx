@@ -5,8 +5,12 @@ import type { Board } from '../../domain/models';
 import { localSymbolPath, symbolIdFor } from '../../domain/symbolMap';
 
 function boardSymbol(board: Board): string | undefined {
-  const sid = symbolIdFor(board.name) ?? symbolIdFor(board.name.split(' ')[0]);
-  return sid !== undefined ? localSymbolPath(sid) : undefined;
+  const words = [board.name, ...board.name.replace(/[—–-]/g, ' ').split(/\s+/).filter(Boolean)];
+  for (const w of words) {
+    const sid = symbolIdFor(w);
+    if (sid !== undefined) return localSymbolPath(sid);
+  }
+  return undefined;
 }
 
 export function CategoryMenu({
@@ -59,7 +63,7 @@ export function CategoryMenu({
                   />
                 )}
                 <span className="catmenu__label">
-                  {b.name}
+                  {b.nameNikud ?? b.name}
                   {b.id === homeId ? ' (בית)' : ''}
                 </span>
               </button>

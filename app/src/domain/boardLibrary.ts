@@ -78,6 +78,7 @@ const homeCells: Cell[] = [
 export const HOME_BOARD: Board = {
   id: HOME_BOARD_ID,
   name: 'לוח בית — מתחילים',
+  nameNikud: 'לוּחַ בַּיִת — מַתְחִילִים',
   grid: { rows: 4, cols: 4 },
   isCoreBoard: true,
   cells: Object.fromEntries(homeCells.map((c) => [c.id, c])),
@@ -132,6 +133,7 @@ const foodCells: Cell[] = [
 export const FOOD_BOARD: Board = {
   id: FOOD_BOARD_ID,
   name: 'אוכל ושתייה',
+  nameNikud: 'אֹכֶל וּשְׁתִיָּה',
   grid: { rows: 4, cols: 4 },
   cells: Object.fromEntries(foodCells.map((c) => [c.id, c])),
   placements: foodCells.map((c, i) => ({
@@ -157,6 +159,7 @@ const emotionCells: Cell[] = [
 export const EMOTIONS_BOARD: Board = {
   id: EMOTIONS_BOARD_ID,
   name: 'רגשות',
+  nameNikud: 'רְגָשׁוֹת',
   grid: { rows: 3, cols: 3 },
   cells: Object.fromEntries(emotionCells.map((c) => [c.id, c])),
   placements: emotionCells.map((c, i) => ({
@@ -193,6 +196,7 @@ const playCells: Cell[] = [
 export const PLAY_BOARD: Board = {
   id: PLAY_BOARD_ID,
   name: 'משחק ופנאי',
+  nameNikud: 'מִשְׂחָק וּפְנַאי',
   grid: { rows: 4, cols: 4 },
   cells: Object.fromEntries(playCells.map((c) => [c.id, c])),
   placements: playCells.map((c, i) => ({
@@ -234,6 +238,7 @@ const painHealthCells: Cell[] = [
 export const PAIN_HEALTH_BOARD: Board = {
   id: PAIN_HEALTH_BOARD_ID,
   name: 'כאב ובריאות',
+  nameNikud: 'כְּאֵב וּבְרִיאוּת',
   grid: { rows: 4, cols: 4 },
   cells: Object.fromEntries(painHealthCells.map((c) => [c.id, c])),
   placements: painHealthCells.map((c, i) => ({
@@ -265,6 +270,7 @@ const familyCells: Cell[] = [
 export const FAMILY_BOARD: Board = {
   id: FAMILY_BOARD_ID,
   name: 'משפחה',
+  nameNikud: 'מִשְׁפָּחָה',
   grid: { rows: 4, cols: 4 },
   cells: Object.fromEntries(familyCells.map((c) => [c.id, c])),
   placements: familyCells.map((c, i) => ({
@@ -296,6 +302,7 @@ const schoolCells: Cell[] = [
 export const SCHOOL_BOARD: Board = {
   id: SCHOOL_BOARD_ID,
   name: 'גן ובית ספר',
+  nameNikud: 'גַּן וּבֵית סֵפֶר',
   grid: { rows: 4, cols: 4 },
   cells: Object.fromEntries(schoolCells.map((c) => [c.id, c])),
   placements: schoolCells.map((c, i) => ({
@@ -340,6 +347,7 @@ const coreVocab6x4Cells: Cell[] = [
 export const CORE_VOCAB_6X4_BOARD: Board = {
   id: CORE_VOCAB_6X4_BOARD_ID,
   name: 'אוצר ליבה — בינוני',
+  nameNikud: 'אוֹצַר לֵיבָּה — בֵּינוֹנִי',
   grid: { rows: 4, cols: 6 },
   isCoreBoard: true,
   cells: Object.fromEntries(coreVocab6x4Cells.map((c) => [c.id, c])),
@@ -385,6 +393,7 @@ const feelings6x4Cells: Cell[] = [
 export const FEELINGS_6X4_BOARD: Board = {
   id: FEELINGS_6X4_BOARD_ID,
   name: 'רגשות — מורחב',
+  nameNikud: 'רְגָשׁוֹת — מוּרְחָב',
   grid: { rows: 4, cols: 6 },
   cells: Object.fromEntries(feelings6x4Cells.map((c) => [c.id, c])),
   placements: feelings6x4Cells.map((c, i) => ({
@@ -443,6 +452,7 @@ const coreVocab6x6Cells: Cell[] = [
 export const CORE_VOCAB_6X6_BOARD: Board = {
   id: CORE_VOCAB_6X6_BOARD_ID,
   name: 'אוצר ליבה — מתקדם',
+  nameNikud: 'אוֹצַר לֵיבָּה — מְתַקְדֵּם',
   grid: { rows: 6, cols: 6 },
   isCoreBoard: true,
   cells: Object.fromEntries(coreVocab6x6Cells.map((c) => [c.id, c])),
@@ -502,6 +512,7 @@ const dailyRoutineCells: Cell[] = [
 export const DAILY_ROUTINE_6X6_BOARD: Board = {
   id: DAILY_ROUTINE_6X6_BOARD_ID,
   name: 'שגרת יום',
+  nameNikud: 'שְׁגֶרֶת יוֹם',
   grid: { rows: 6, cols: 6 },
   cells: Object.fromEntries(dailyRoutineCells.map((c) => [c.id, c])),
   placements: dailyRoutineCells.map((c, i) => ({
