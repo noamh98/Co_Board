@@ -27,8 +27,7 @@ import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
-import { LoginPanel } from './presentation/auth/LoginPanel';
-import { RegisterPanel } from './presentation/auth/RegisterPanel';
+import { AuthGatePage } from './presentation/auth/AuthGatePage';
 import { PendingApprovalScreen } from './presentation/auth/PendingApprovalScreen';
 import { RejectedScreen } from './presentation/auth/RejectedScreen';
 import { analyticsService } from './services/analytics/analyticsService';
@@ -154,7 +153,7 @@ export function App() {
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
   const [syncPhotos, setSyncPhotosState] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
+  const [authChecked, setAuthChecked] = useState(!import.meta.env.VITE_FIREBASE_API_KEY);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [portalOpen, setPortalOpen] = useState(false);
   const [darkMode, setDarkModeState] = useState(false);
@@ -177,6 +176,8 @@ export function App() {
   const saveToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // ref מסנכרן עם syncEnabled state כדי שקרוב syncEngine תמיד יראה ערך נוכחי
   const syncEnabledRef = useRef(false);
+  // הפרופיל שאיפסנו עבורו לאחרונה — מבדיל טעינה ראשונית מהחלפת פרופיל אמיתית.
+  const resetProfileIdRef = useRef<string | null>(null);
 
   // עדכן ref כשה-state משתנה
   useEffect(() => {
@@ -257,6 +258,7 @@ export function App() {
     if (import.meta.env.VITE_FIREBASE_API_KEY) {
       unsubFirebase = onFirebaseAuthChange((firebaseUser) => {
         if (!alive) return;
+        setAuthChecked(true);
         if (!firebaseUser) {
           authService.setAuthUser(null);
           return;
@@ -322,9 +324,17 @@ export function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncEnabled, authUser?.uid]);
 
-  // איפוס מחסנית ניווט כשמחליפים פרופיל
+  // איפוס מחסנית ניווט כשמחליפים פרופיל.
+  // טעינה ראשונית כבר מאתחלת navStack ב-bootstrap; כאן מאפסים רק בהחלפת פרופיל
+  // אמיתית. בלי הבחנה זו, אפקט ה-passive מנקה את sentence אחרי הרינדור הראשון —
+  // ויכול למחוק לחיצה ראשונה שקרתה לפניו (race שהפיל את App.test.tsx ב-CI).
   useEffect(() => {
     if (!ctx) return;
+    const id = ctx.activeProfile.id;
+    if (resetProfileIdRef.current === id) return;
+    const firstLoad = resetProfileIdRef.current === null;
+    resetProfileIdRef.current = id;
+    if (firstLoad) return;
     setNavStack(createNavStack(ctx.activeProfile.homeBoardId));
     setSentence([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -728,7 +738,6 @@ export function App() {
       emailVerified: false,
       status: 'pending',
     });
-    setShowRegister(false);
   };
 
   const adult = canManageProfiles(mode);
@@ -736,6 +745,45 @@ export function App() {
 
   // מחוון uid קצר לתצוגה ב-header
   const uidBadge = authUser ? authUser.email.split('@')[0] : null;
+
+  // ── Auth Gate ──────────────────────────────────────────────────────────
+  if (import.meta.env.VITE_FIREBASE_API_KEY) {
+    if (!authChecked) {
+      return (
+        <div className="app app--loading" dir="rtl" role="status" aria-label="טוען…">
+          <div className="app__loading">טוען…</div>
+        </div>
+      );
+    }
+    if (!authUser) {
+      return (
+        <AuthGatePage
+          onSignIn={async (email, password) => {
+            const provider = new FirebaseProvider();
+            await authService.signIn(provider, email, password);
+          }}
+          onGoogleSignIn={onGoogleSignIn}
+          onRegister={onRegister}
+        />
+      );
+    }
+    if (authUser.status === 'pending') {
+      return (
+        <PendingApprovalScreen
+          email={authUser.email}
+          displayName={authUser.displayName}
+          emailVerified={authUser.emailVerified}
+          onSignOut={onSignOut}
+          onResendVerification={sendVerificationEmail}
+        />
+      );
+    }
+    if (authUser.status === 'rejected') {
+      return (
+        <RejectedScreen email={authUser.email} onSignOut={onSignOut} />
+      );
+    }
+  }
 
   return (
     <div
@@ -748,6 +796,13 @@ export function App() {
         profileName={ctx?.activeProfile.name}
         onOpenAdult={adult ? () => setSettingsOpen(true) : () => setPinPrompt(true)}
         onSignOut={adult && authUser ? onSignOut : undefined}
+        isAdult={adult}
+        profiles={adult && ctx ? ctx.profiles : undefined}
+        activeProfileId={ctx?.activeProfile.id}
+        onSwitch={adult ? onSwitch : undefined}
+        onOpenWizard={adult ? () => setWizardOpen(true) : undefined}
+        authEmail={authUser?.email}
+        authDisplayName={authUser?.displayName}
         status={
           <>
             {adult && <SyncStatus status={syncStatus} />}
@@ -964,43 +1019,7 @@ export function App() {
         />
       )}
 
-      {/* LoginPanel / RegisterPanel מוצג כש-syncEnabled=true ועדיין לא מחובר */}
-      {settingsOpen && syncEnabled && !authUser && (
-        showRegister ? (
-          <RegisterPanel
-            onRegister={onRegister}
-            onGoogleSignIn={onGoogleSignIn}
-            onBackToLogin={() => setShowRegister(false)}
-          />
-        ) : (
-          <LoginPanel
-            onSignIn={async (email, password) => {
-              const provider = new FirebaseProvider();
-              await authService.signIn(provider, email, password);
-            }}
-            onGoogleSignIn={onGoogleSignIn}
-            onGoToRegister={() => setShowRegister(true)}
-          />
-        )
-      )}
 
-      {/* מסכי מצב Auth — חוסמים תוכן כשמחובר אך לא מאושר */}
-      {authUser && authUser.status === 'pending' && (
-        <PendingApprovalScreen
-          email={authUser.email}
-          displayName={authUser.displayName}
-          emailVerified={authUser.emailVerified}
-          onSignOut={onSignOut}
-          onResendVerification={sendVerificationEmail}
-        />
-      )}
-
-      {authUser && authUser.status === 'rejected' && (
-        <RejectedScreen
-          email={authUser.email}
-          onSignOut={onSignOut}
-        />
-      )}
 
       {/* פאנל אדמין */}
       {adminPanelOpen && (

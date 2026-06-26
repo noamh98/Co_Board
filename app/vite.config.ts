@@ -59,5 +59,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     css: false,
+    // Firebase keys must not reach test code — auth gate would block all tests.
+    env: { VITE_FIREBASE_API_KEY: '' },
   },
 });
