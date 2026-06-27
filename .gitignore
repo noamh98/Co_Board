@@ -22,3 +22,8 @@ app/vite.config.ts.timestamp-*.mjs
 
 # Firebase deploy cache
 .firebase/
+
+# Claude Code session artifacts
+CLAUDE_CODE_*.md
+CLAUDE_TTS_*.md
+*.zip
