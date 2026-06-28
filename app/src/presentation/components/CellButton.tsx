@@ -12,7 +12,7 @@ import {
 } from '../../services/access/dwellService';
 import { localSymbolPath, symbolIdFor } from '../../domain/symbolMap';
 
-function resolveImageUri(cell: Cell): string | undefined {
+export function resolveImageUri(cell: Cell): string | undefined {
   if (cell.imageUri) return cell.imageUri;
   if (cell.symbolId?.startsWith('arasaac:')) {
     const id = Number(cell.symbolId.slice('arasaac:'.length));

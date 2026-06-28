@@ -69,7 +69,7 @@ export function SmartCreatePanel({ onGenerated, onClose, nikudService }: SmartCr
           try {
             const results = await searchAndCache(word);
             const first = results[0];
-            return first ? String(first.arasaacId) : undefined;
+            return first ? `arasaac:${first.arasaacId}` : undefined;
           } catch {
             return undefined;
           }

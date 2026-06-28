@@ -53,6 +53,7 @@ import {
   type HebrewTts,
 } from './services/tts/ttsService';
 import { createTtsProvider } from './services/tts/ttsWiring';
+import { GOOGLE_HE_VOICES } from './services/tts/googleTtsProvider';
 import { primeDeviceId } from './data/deviceId';
 import { pruneAudioCache } from './data/audioCache';
 import { appendWord } from './domain/sentence';
@@ -1017,6 +1018,8 @@ export function App() {
           onSyncPhotosChange={onSyncPhotosChange}
           isAuthenticated={!!authUser}
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
+          ttsApiKey="proxy"
+          googleVoices={GOOGLE_HE_VOICES}
         />
       )}
 

@@ -52,7 +52,7 @@ export function AiBoardPanel({ onGenerated, onClose, nikudService }: AiBoardPane
             const results = await searchAndCache(word);
             const first = results[0];
             if (!first) return undefined;
-            return String(first.arasaacId);
+            return `arasaac:${first.arasaacId}`;
           } catch {
             return undefined;
           }
