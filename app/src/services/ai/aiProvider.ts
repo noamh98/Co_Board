@@ -1,5 +1,15 @@
+// services/ai/aiProvider.ts — ספק LLM ליצירת לוח (Phase 0, H-KEY).
+// השתנה: במקום fetch ישיר ל-VITE_AI_ENDPOINT מהלקוח, קורא ל-Cloud Function `aiBoard`
+// (onCall) שמחזיק את ה-endpoint/מפתח בשרת. ה-interface (topic,count)→GeneratedWord[] נשמר —
+// boardGenerator וה-callers לא משתנים. timeout/auth/rate-limit נאכפים בשרת.
+
+import { getApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { PartOfSpeech } from '../../domain/models';
 import type { GeneratedWord } from './boardGenerator';
+
+// חייב להתאים ל-FUNCTIONS_REGION ב-functions/src/ttsProxy.ts.
+const FUNCTIONS_REGION = 'europe-west1';
 
 const VALID_POS = new Set<string>([
   'noun', 'verb', 'adjective', 'pronoun', 'preposition', 'adverb', 'number', 'other',
@@ -9,30 +19,29 @@ function toPos(s: string | undefined): PartOfSpeech | undefined {
   return s && VALID_POS.has(s) ? (s as PartOfSpeech) : undefined;
 }
 
+interface AiBoardRequest {
+  action: 'generate';
+  topic: string;
+  count: number;
+}
+interface AiBoardResponse {
+  words: Array<{ word: string; pos?: string }>;
+}
+
 export function createLlmProvider(): (topic: string, count: number) => Promise<GeneratedWord[]> {
   return async (topic: string, count: number): Promise<GeneratedWord[]> => {
-    const endpoint = import.meta.env.VITE_AI_ENDPOINT as string | undefined;
-    if (!endpoint) {
-      throw new Error('AI endpoint not configured');
-    }
+    const fns = getFunctions(getApp(), FUNCTIONS_REGION);
+    const call = httpsCallable<AiBoardRequest, AiBoardResponse>(fns, 'aiBoard');
 
-    let res: Response;
+    let data: AiBoardResponse;
     try {
-      res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, count }),
-      });
+      ({ data } = await call({ action: 'generate', topic, count }));
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Network error');
+      // נפילה חיננית למעלה (boardGenerator זורק → ה-UI מציג שגיאה ידידותית).
+      throw new Error(err instanceof Error ? err.message : 'AI request failed');
     }
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
-    const data = (await res.json()) as { words: Array<{ word: string; pos?: string }> };
-    return data.words.map((w) => ({
+    return (data.words ?? []).map((w) => ({
       word: w.word,
       ...(toPos(w.pos) ? { pos: toPos(w.pos) } : {}),
     }));

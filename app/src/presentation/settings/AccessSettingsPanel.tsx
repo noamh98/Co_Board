@@ -330,6 +330,43 @@ export function AccessSettingsPanel({
         </div>
       </section>
 
+      {/* ── תצוגה ושורת קריאה (F7 — נאמן לאפליקציה) ── */}
+      <section className="settings-section" aria-labelledby="s-readbar">
+        <div className="settings-section__header">
+          <span className="settings-section__icon" aria-hidden="true">🔤</span>
+          <h3 className="settings-section__title" id="s-readbar">תצוגה ושורת קריאה</h3>
+        </div>
+        <div className="settings-section__body">
+          <Slider
+            id="cell-image-scale"
+            label="גודל התמונה במשבצת"
+            value={settings.cellImageScale ?? 100}
+            min={50}
+            max={150}
+            step={10}
+            format={(v) => `${v}%`}
+            onChange={(v) => set({ cellImageScale: v })}
+          />
+          <Slider
+            id="sentence-button-scale"
+            label="גודל כפתורי שורת הקריאה"
+            value={settings.sentenceButtonScale ?? 100}
+            min={50}
+            max={200}
+            step={10}
+            format={(v) => `${v}%`}
+            onChange={(v) => set({ sentenceButtonScale: v })}
+          />
+          <Toggle
+            id="prevent-sequential-duplicates"
+            checked={settings.preventSequentialDuplicates ?? false}
+            onChange={(v) => set({ preventSequentialDuplicates: v })}
+            label="מניעת כפילויות ברצף"
+            description="לחיצה חוזרת על אותה מילה לא תוסיף אותה שוב לשורת הקריאה."
+          />
+        </div>
+      </section>
+
       {/* ── תצוגה ── */}
       {onDarkModeChange !== undefined && (
         <section className="settings-section" aria-labelledby="s-display">

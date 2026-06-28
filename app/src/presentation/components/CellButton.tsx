@@ -26,6 +26,8 @@ function resolveImageUri(cell: Cell): string | undefined {
 
 // E1: memo — לחיצה (setSentence) לא מרנדרת מחדש תאים שלא השתנו.
 // E2: displayLabel (כולל ניקוד) מחושב ברמת BoardView ומועבר כ-prop — לא קריאת ניקוד לכל תא.
+// F6: האריח הוא תווית-למעלה + סמל-מתחת (סדר נקבע ב-tokens.css: .cell__label{order:-1}).
+// F7: גודל התמונה במשבצת נשלט ע"י settings.cellImageScale דרך משתנה --cell-img-scale.
 export const CellButton = memo(function CellButton({
   cell,
   onCell,
@@ -47,6 +49,16 @@ export const CellButton = memo(function CellButton({
   const release = useActivateOnRelease(guarded.onClick, settings);
   const dwell = useDwellActivation(guarded.onClick, settings);
 
+  // F7: יחס גודל-תמונה (100% → 1). מצורף לכל אריח כדי לאפשר כיול גלובלי.
+  const imgScale = (settings.cellImageScale ?? 100) / 100;
+  // CSS custom properties — Record<string,string> כי CSSProperties אינו תומך במפתחות שרירותיים.
+  const cssVars: Record<string, string> = { '--cell-img-scale': String(imgScale) };
+  if (cell.fitzgerald) {
+    // F1: --cell-ink = צבע הטקסט המכויל של Fitzgerald (ניגודיות AA בשני המצבים).
+    cssVars['--cell-tint'] = style.bg;
+    cssVars['--cell-ink'] = style.text;
+  }
+
   return (
     <button
       type="button"
@@ -57,12 +69,7 @@ export const CellButton = memo(function CellButton({
       onPointerLeave={dwell.onPointerLeave}
       onPointerMove={dwell.onPointerMove}
       aria-label={cell.label}
-      style={
-        cell.fitzgerald
-          ? // F1: --cell-ink = צבע הטקסט המכויל של Fitzgerald (ניגודיות AA בשני המצבים).
-            ({ ['--cell-tint']: style.bg, ['--cell-ink']: style.text } as CSSProperties)
-          : undefined
-      }
+      style={cssVars as CSSProperties}
     >
       {imageUri && !imgError && (
         <span className="cell__icon">

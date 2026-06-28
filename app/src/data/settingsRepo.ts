@@ -6,6 +6,10 @@ import {
 
 // הגדרות מכשיר (key/value) — פרופיל פעיל וקוד מטפל (PIN). מקומי בלבד.
 // ה-PIN הוא שער MVP למצב עריכה (PRD §4.5/§8.3), לא אמצעי אבטחה קריפטוגרפי.
+//
+// Phase 0 (H-KEY): מפתח Google TTS *הוסר* מ-IDB. הקראת Google עוברת דרך ttsProxy בשרת
+// (services/tts/functionsTtsProvider). getTtsApiKey נשאר כ-no-op לתאימות-callers בלבד,
+// ומוחק כל מפתח legacy שנשמר בעבר.
 
 const KEY_ACTIVE_PROFILE = 'activeProfileId';
 const KEY_CAREGIVER_PIN = 'caregiverPin';
@@ -15,7 +19,7 @@ const KEY_SELECTED_VOICE_URI = 'selectedVoiceURI';
 const KEY_TTS_RATE = 'ttsRate';
 const KEY_TTS_PITCH = 'ttsPitch';
 const KEY_TTS_PROVIDER = 'ttsProvider';
-const KEY_TTS_API_KEY = 'ttsApiKey';
+const KEY_TTS_API_KEY = 'ttsApiKey'; // legacy — נמחק (לא נכתב יותר).
 const KEY_SYNC_PHOTOS = 'syncPhotos';
 const KEY_DARK_MODE = 'darkMode';
 const KEY_LAST_SYNC_AT = 'lastSyncAt';
@@ -86,17 +90,21 @@ export async function getTtsProvider(): Promise<'google' | 'azure' | 'none'> {
 export async function setTtsProvider(p: 'google' | 'azure' | 'none'): Promise<void> {
   await writeValue(KEY_TTS_PROVIDER, p);
 }
+
+/**
+ * @deprecated Phase 0 (H-KEY) — מפתח TTS עבר ל-proxy בשרת. אין יותר מפתח בלקוח.
+ * מחזיר תמיד null; נשמר רק כדי לא לשבור callers קיימים. מוחק מפתח legacy אם נמצא.
+ */
 export async function getTtsApiKey(): Promise<string | null> {
-  const raw = await readValue(KEY_TTS_API_KEY);
-  return raw ?? null;
+  const db = await getDb();
+  const legacy = (await db.get(STORE_SETTINGS, KEY_TTS_API_KEY)) as SettingEntry | undefined;
+  if (legacy) await db.delete(STORE_SETTINGS, KEY_TTS_API_KEY); // ניקוי חד-פעמי.
+  return null;
 }
-export async function setTtsApiKey(key: string | null): Promise<void> {
-  if (key === null) {
-    const db = await getDb();
-    await db.delete(STORE_SETTINGS, KEY_TTS_API_KEY);
-  } else {
-    await writeValue(KEY_TTS_API_KEY, key);
-  }
+/** @deprecated Phase 0 (H-KEY) — no-op; מוחק מפתח legacy אם הועבר null/ערך. */
+export async function setTtsApiKey(_key: string | null): Promise<void> {
+  const db = await getDb();
+  await db.delete(STORE_SETTINGS, KEY_TTS_API_KEY);
 }
 
 /** האם לסנכרן תמונות אישיות לענן (ברירת מחדל: false — מקומי בלבד). */

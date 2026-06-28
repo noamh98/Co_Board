@@ -1,10 +1,14 @@
 name: Deploy
 
-# Auto-deploy to Firebase Hosting on push to main.
+# Auto-deploy to Firebase on push to main.
 # Gate: lint + test + build must pass; any failure stops the job before deploy.
+# Phase 0 (H-CD): deploy now also pushes firestore:rules, storage:rules and functions —
+#   ends rules/functions drift (rules were previously deployed by hand = security risk).
 # Required GitHub secrets:
 #   FIREBASE_SERVICE_ACCOUNT  — JSON key (Firebase Console → Project Settings → Service accounts)
 #   VITE_FIREBASE_*           — six client credentials mirrored from app/.env.local
+# NOTE: function secrets (GOOGLE_TTS_API_KEY, AI_ENDPOINT, AI_API_KEY) are NOT set here —
+#   set them once with `firebase functions:secrets:set <NAME>` (see integration prompt).
 
 on:
   push:
@@ -14,9 +18,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,16 +26,18 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
-      - name: Install
+      # ── App: gate (lint + test + build) ────────────────────────────
+      - name: Install (app)
+        working-directory: app
         run: npm ci
-
-      - name: Lint
+      - name: Lint (app)
+        working-directory: app
         run: npm run lint
-
-      - name: Test
+      - name: Test (app)
+        working-directory: app
         run: npm test
-
-      - name: Build
+      - name: Build (app)
+        working-directory: app
         run: npm run build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
@@ -44,10 +47,23 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: co-board
-          channelId: live
+      # ── Functions: install + build (so deploy ships compiled lib/) ──
+      - name: Install (functions)
+        working-directory: functions
+        run: npm ci
+      - name: Build (functions)
+        working-directory: functions
+        run: npm run build
+
+      # ── Deploy: hosting + rules + storage + functions (gated above) ─
+      - name: Write service account
+        run: printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/sa.json"
+      - name: Deploy to Firebase
+        working-directory: ${{ github.workspace }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: >-
+          npx --yes firebase-tools@13 deploy
+          --only hosting,firestore:rules,storage,functions
+          --project co-board
+          --non-interactive
