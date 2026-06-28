@@ -8,7 +8,7 @@ import type { GridSize } from '../../domain/models';
 import { createBoardRepo } from '../../data/boardRepo';
 import type { NikudService } from '../../services/nikud/nikudService';
 import { BoardView } from '../components/BoardView';
-import { resolveImageUri } from '../components/CellButton';
+import { CellImage } from '../components/CellButton';
 import { CellEditor, type MediaSyncConfig } from './CellEditor';
 import { GridSizePicker } from './GridSizePicker';
 import { SceneEditor } from './SceneEditor';
@@ -452,17 +452,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
                         🔒
                       </span>
                     )}
-                    {(() => {
-                      const src = resolveImageUri(cell);
-                      return src ? (
-                        <img
-                          src={src}
-                          alt=""
-                          style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6 }}
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      ) : null;
-                    })()}
+                    <CellImage cell={cell} size={36} />
                     <span style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.2 }}>
                       {cell.label}
                     </span>

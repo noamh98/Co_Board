@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Cell } from '../../domain/models';
 import { fitzgeraldStyle } from '../../domain/fitzgerald';
 import {
@@ -11,6 +11,7 @@ import {
   useDoubleTapPrevention,
 } from '../../services/access/dwellService';
 import { localSymbolPath, symbolIdFor } from '../../domain/symbolMap';
+import { fetchAndCacheBlob } from '../../services/symbols/symbolSearchService';
 
 export function resolveImageUri(cell: Cell): string | undefined {
   if (cell.imageUri) return cell.imageUri;
@@ -22,6 +23,79 @@ export function resolveImageUri(cell: Cell): string | undefined {
   const sid = symbolIdFor(cell.label);
   if (sid !== undefined) return localSymbolPath(sid);
   return undefined;
+}
+
+/**
+ * M21 — נפילה לסמלים שלא נארזו offline (למשל תאי AI עם arasaacId חדש שלא
+ * נמצא ב-build-symbol-map.mjs). אם הנתיב המקומי נכשל בטעינה (404/SPA-fallback),
+ * מנסה שליפה חיה מ-ARASAAC + cache ל-IndexedDB (services/symbols) במקום
+ * להסתיר את התמונה לצמיתות.
+ */
+function useCellImageSrc(cell: Cell): { src: string | undefined; onError: () => void } {
+  const baseUri = resolveImageUri(cell);
+  const [src, setSrc] = useState<string | undefined>(baseUri);
+  const [failed, setFailed] = useState(false);
+  const triedFallbackRef = useRef(false);
+
+  useEffect(() => {
+    setSrc(resolveImageUri(cell));
+    setFailed(false);
+    triedFallbackRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cell.id, cell.imageUri, cell.symbolId, cell.label]);
+
+  const onError = useCallback(() => {
+    if (triedFallbackRef.current) {
+      setFailed(true);
+      return;
+    }
+    triedFallbackRef.current = true;
+    const id = cell.symbolId?.startsWith('arasaac:')
+      ? Number(cell.symbolId.slice('arasaac:'.length))
+      : NaN;
+    if (id > 0) {
+      fetchAndCacheBlob(id)
+        .then((uri) => setSrc(uri))
+        .catch(() => setFailed(true));
+    } else {
+      setFailed(true);
+    }
+  }, [cell.symbolId]);
+
+  return { src: failed ? undefined : src, onError };
+}
+
+/**
+ * תמונת-תא משותפת ל-CellButton (play) ול-BuilderView (editor) — עם נפילת fetch חיה.
+ * אם מועבר className בלבד (ללא size/style) — גודל נשלט כליל ע"י CSS (כמו .cell__image
+ * עם --cell-img-scale). אם מועבר size — מוחל style מפורש (שימוש ב-BuilderView).
+ */
+export function CellImage({
+  cell,
+  size,
+  className,
+  style,
+}: {
+  cell: Cell;
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const { src, onError } = useCellImageSrc(cell);
+  if (!src) return null;
+  const resolvedStyle =
+    style ?? (size !== undefined ? { width: size, height: size, objectFit: 'contain' as const, borderRadius: 6 } : undefined);
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      className={className}
+      style={resolvedStyle}
+      onError={onError}
+    />
+  );
 }
 
 // E1: memo — לחיצה (setSentence) לא מרנדרת מחדש תאים שלא השתנו.
@@ -40,8 +114,7 @@ export const CellButton = memo(function CellButton({
   displayLabel?: string;
 }) {
   const style = fitzgeraldStyle(cell.fitzgerald);
-  const [imgError, setImgError] = useState(false);
-  const imageUri = resolveImageUri(cell);
+  const hasImageCandidate = resolveImageUri(cell) !== undefined;
 
   // E1: onActivate יציב לכל render (onCell יציב מ-App; cell יציב מהלוח).
   const handleActivate = useCallback(() => onCell(cell), [onCell, cell]);
@@ -71,16 +144,9 @@ export const CellButton = memo(function CellButton({
       aria-label={cell.label}
       style={cssVars as CSSProperties}
     >
-      {imageUri && !imgError && (
+      {hasImageCandidate && (
         <span className="cell__icon">
-          <img
-            src={imageUri}
-            className="cell__image"
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
+          <CellImage cell={cell} className="cell__image" />
         </span>
       )}
       <span className="cell__label">{displayLabel ?? cell.nikud ?? cell.label}</span>
