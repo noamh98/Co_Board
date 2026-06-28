@@ -57,7 +57,7 @@ export function BoardToolbar({
         ▶
       </button>
 
-      <div className="board-toolbar__tokens" aria-live="polite" aria-label="שורת קריאה">
+      <div className="board-toolbar__tokens" data-testid="sentence-text" aria-live="polite" aria-label="שורת קריאה">
         {words.map((w, i) => (
           <span className="board-toolbar__token" key={`${w}-${i}`}>
             {w}
