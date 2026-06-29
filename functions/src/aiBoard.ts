@@ -27,8 +27,8 @@ interface AiBoardRequest {
 }
 
 /**
- * מנסה לשחזר { words: [...] } מתשובת Gemini שנקטעה (חרגה מ-maxOutputTokens).
- * חותך אחרי האובייקט {"word":...} השלם האחרון וסוגר את המערך/אובייקט.
+ * מנסה לשחזר { words: [...] } מתשובת Gemini שנקטעה (חריגה מ-maxOutputTokens).
+ * חותך אחרי האוביייקט {"word":...} השלם האחרון וסוגר את המערך/אוביייקט.
  * מחזיר null אם אין אפילו פריט שלם אחד.
  */
 function repairTruncatedWordsJson(
@@ -59,6 +59,8 @@ export const aiBoard = onCall(
     const action = data.action ?? 'generate';
 
     await enforceRateLimit(request.auth.uid, 'ai', { windowMs: 60_000, max: 30 });
+    // מכסה יומית פר-uid — הגנת-תקציב מפני שימוש חריג ב-LLM (מעבר לחלון-הדקה).
+    await enforceRateLimit(request.auth.uid, 'ai:daily', { windowMs: 86_400_000, max: 300 });
 
     if (action === 'edit') {
       // TODO(Phase 4): patch-diff על לוח קיים
@@ -92,7 +94,8 @@ export const aiBoard = onCall(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 8192,
+            // 64 מילים ≈ 2,500 טוקנים; 3072 מספיק בשפע וחוסך עלות מול 8192.
+            maxOutputTokens: 3072,
             thinkingConfig: { thinkingBudget: 0 },
           },
         }),
@@ -122,7 +125,7 @@ export const aiBoard = onCall(
       parsed = JSON.parse(jsonStr);
     } catch {
       // Defense-in-depth: אם התשובה נקטעה (token budget), ננסה לשחזר מערך תקין
-      // חלקי — חותכים אחרי האובייקט המלא האחרון בתוך "words":[...] וסוגרים.
+      // חלקי — חותכים אחרי האוביייקט המלא האחרון בתוך "words":[...] וסוגרים.
       const repaired = repairTruncatedWordsJson(jsonStr);
       if (!repaired) throw new HttpsError('internal', 'Gemini החזיר תגובה לא תקינה');
       parsed = repaired;

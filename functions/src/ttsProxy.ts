@@ -58,6 +58,8 @@ export const ttsProxy = onCall(
 
     // מכסה: עד 120 קריאות בדקה לכל uid (הגנת-חיוב; הקראה רגילה מתחת לזה).
     await enforceRateLimit(request.auth.uid, 'tts', { windowMs: 60_000, max: 120 });
+    // מכסה יומית פר-uid — הגנת-תקציב מפני חשבון מאושר שנפרץ (מעבר לחלון-הדקה).
+    await enforceRateLimit(request.auth.uid, 'tts:daily', { windowMs: 86_400_000, max: 2_000 });
 
     const speakingRate = clamp(rate ?? 1.0, 0.25, 4.0);
     const pitchSemitones = clamp(((pitch ?? 1.0) - 1.0) * 20, -20, 20);

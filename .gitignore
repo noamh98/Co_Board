@@ -18,6 +18,9 @@ dist/
 dev-dist/
 coverage/
 
+# Cloud Functions compiled output (tsc → lib/). נבנה ב-CI/deploy, לא נשמר ב-git.
+functions/lib/
+
 app/vite.config.ts.timestamp-*.mjs
 
 # Firebase deploy cache
