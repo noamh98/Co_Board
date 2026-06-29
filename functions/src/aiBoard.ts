@@ -59,8 +59,8 @@ export const aiBoard = onCall(
     const action = data.action ?? 'generate';
 
     await enforceRateLimit(request.auth.uid, 'ai', { windowMs: 60_000, max: 30 });
-    // מכסה יומית פר-uid — הגנת-תקציב מפני שימוש חריג ב-LLM (מעבר לחלון-הדקה).
-    await enforceRateLimit(request.auth.uid, 'ai:daily', { windowMs: 86_400_000, max: 300 });
+    // מכסה יומית פר-uid — הגנת-תקציב מפני שימוש חריג ב-LLM. יצירת לוח היא פעולה נדירה.
+    await enforceRateLimit(request.auth.uid, 'ai:daily', { windowMs: 86_400_000, max: 150 });
 
     if (action === 'edit') {
       // TODO(Phase 4): patch-diff על לוח קיים
