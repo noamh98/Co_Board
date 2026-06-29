@@ -1,0 +1,133 @@
+// functions/src/aiBoard.ts — Cloud Function: יצירת לוח AI דרך Gemini Flash.
+// אבטחה: כניסה + claim approved + rate-limit פר-uid + timeout 15s.
+// secret: GEMINI_API_KEY (מ-Google AI Studio — aistudio.google.com, חינמי).
+
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { enforceRateLimit } from './rateLimit';
+import { FUNCTIONS_REGION } from './ttsProxy';
+
+if (!getApps().length) initializeApp();
+
+const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
+
+const MAX_TOPIC_LEN = 300;
+const MAX_COUNT = 64;
+
+const GEMINI_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
+interface AiBoardRequest {
+  action?: 'generate' | 'edit';
+  topic?: string;
+  count?: number;
+  board?: unknown;
+  command?: string;
+}
+
+/**
+ * מנסה לשחזר { words: [...] } מתשובת Gemini שנקטעה (חרגה מ-maxOutputTokens).
+ * חותך אחרי האובייקט {"word":...} השלם האחרון וסוגר את המערך/אובייקט.
+ * מחזיר null אם אין אפילו פריט שלם אחד.
+ */
+function repairTruncatedWordsJson(
+  jsonStr: string,
+): { words: Array<{ word: string; pos?: string }> } | null {
+  const arrayStart = jsonStr.indexOf('[');
+  if (arrayStart === -1) return null;
+  const lastCloseBrace = jsonStr.lastIndexOf('}');
+  if (lastCloseBrace === -1 || lastCloseBrace < arrayStart) return null;
+
+  const truncated = `${jsonStr.slice(arrayStart, lastCloseBrace + 1)}]`;
+  try {
+    const words = JSON.parse(truncated) as Array<{ word: string; pos?: string }>;
+    return Array.isArray(words) && words.length > 0 ? { words } : null;
+  } catch {
+    return null;
+  }
+}
+
+export const aiBoard = onCall(
+  { region: FUNCTIONS_REGION, secrets: [GEMINI_API_KEY], timeoutSeconds: 30 },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'נדרשת כניסה');
+    if (!request.auth.token['approved'])
+      throw new HttpsError('permission-denied', 'המשתמש אינו מאושר');
+
+    const data = (request.data ?? {}) as AiBoardRequest;
+    const action = data.action ?? 'generate';
+
+    await enforceRateLimit(request.auth.uid, 'ai', { windowMs: 60_000, max: 30 });
+
+    if (action === 'edit') {
+      // TODO(Phase 4): patch-diff על לוח קיים
+      throw new HttpsError('unimplemented', 'עריכת-AI שיחתית עדיין לא זמינה (Phase 4)');
+    }
+
+    const topic = typeof data.topic === 'string' ? data.topic.trim() : '';
+    const count = Math.min(MAX_COUNT, Math.max(1, Math.floor(data.count ?? 0)));
+    if (!topic) throw new HttpsError('invalid-argument', 'topic נדרש');
+    if (topic.length > MAX_TOPIC_LEN)
+      throw new HttpsError('invalid-argument', `topic ארוך מ-${MAX_TOPIC_LEN} תווים`);
+    if (!count) throw new HttpsError('invalid-argument', 'count נדרש');
+
+    const apiKey = GEMINI_API_KEY.value();
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY לא הוגדר');
+
+    const prompt =
+      `צור רשימה של בדיוק ${count} מילים/מושגים בנושא: "${topic}".\n` +
+      `החזר JSON בלבד — מערך words, כל פריט: {"word":"...","pos":"noun|verb|adj|other"}.\n` +
+      `דוגמה: {"words":[{"word":"כלב","pos":"noun"}]}\n` +
+      `אין טקסט מחוץ ל-JSON.`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    let res: Response;
+    try {
+      res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8192,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      throw new HttpsError(
+        'unavailable',
+        err instanceof Error && err.name === 'AbortError'
+          ? 'שירות ה-AI לא הגיב בזמן'
+          : 'שירות ה-AI אינו זמין',
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (!res.ok) throw new HttpsError('internal', `Gemini HTTP ${res.status}`);
+
+    const geminiRes = (await res.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const raw = geminiRes.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const jsonStr = raw.replace(/```json\n?|```/g, '').trim();
+
+    let parsed: { words: Array<{ word: string; pos?: string }> };
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      // Defense-in-depth: אם התשובה נקטעה (token budget), ננסה לשחזר מערך תקין
+      // חלקי — חותכים אחרי האובייקט המלא האחרון בתוך "words":[...] וסוגרים.
+      const repaired = repairTruncatedWordsJson(jsonStr);
+      if (!repaired) throw new HttpsError('internal', 'Gemini החזיר תגובה לא תקינה');
+      parsed = repaired;
+    }
+
+    return { words: parsed.words ?? [] };
+  },
+);

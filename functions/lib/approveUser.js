@@ -23,10 +23,13 @@ exports.approveUser = (0, https_1.onCall)({ region: 'us-central1' }, async (requ
     if (!uid || !['approved', 'rejected'].includes(status)) {
         throw new https_1.HttpsError('invalid-argument', 'uid ו-status נדרשים');
     }
-    // עדכן custom claims
-    const claims = status === 'approved'
-        ? { approved: true }
-        : { approved: false };
+    // עדכן custom claims — מיזוג עם claims קיימים כדי לא לדרוס (למשל admin).
+    const existingUser = await (0, auth_1.getAuth)().getUser(uid);
+    const existingClaims = existingUser.customClaims ?? {};
+    const claims = {
+        ...existingClaims,
+        approved: status === 'approved',
+    };
     await (0, auth_1.getAuth)().setCustomUserClaims(uid, claims);
     // עדכן Firestore
     await (0, firestore_1.getFirestore)().doc(`users/${uid}`).update({

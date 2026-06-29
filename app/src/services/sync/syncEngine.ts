@@ -1,6 +1,9 @@
 // services/sync/syncEngine.ts — מנוע סנכרון: pull→merge→push. אסינכרוני, לא חוסם UI.
 // אינווריאנט: כשל רשת = no-op שקט (לא alert, לא throw לשכבת UI).
 // PRD §4.8, HANDOFF §4.
+//
+// Phase 0 (H-SYNC): setLastSyncAt מתקדם *רק בסיום נקי* — הועבר מ-_doSync ל-runSync,
+// כך שכישלון חלקי (push/merge שזורק) לא מקדם את החותמת ולא יוצר סטיית-נתונים שקטה.
 
 import type { SyncProvider } from './syncProvider';
 import { mergeLastWriteWins, type Versioned } from '../../domain/sync';
@@ -50,7 +53,10 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
     }
     setStatus('syncing');
     try {
-      await _doSync();
+      const syncStartedAt = await _doSync();
+      // H-SYNC: מקדמים את חותמת הסנכרון *רק* אחרי ש-_doSync הסתיים נקי (pull+merge+push).
+      // כישלון חלקי זורק מ-_doSync ולא מגיע לכאן → lastSyncAt לא מתקדם → אין סטייה שקטה.
+      await setLastSyncAt(syncStartedAt);
       setStatus('idle');
     } catch {
       // כשל = no-op שקט. לא מציג שגיאה למשתמש בזמן שימוש ילד.
@@ -58,7 +64,8 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
     }
   }
 
-  async function _doSync(): Promise<void> {
+  /** מבצע pull→merge→push. מחזיר את חותמת ההתחלה (לכתיבה ע"י runSync בסיום נקי). */
+  async function _doSync(): Promise<number> {
     const db = await getDb();
 
     // 1. pull אינקרמנטלי מהענן — מאז הסנכרון המוצלח האחרון (C2, נשמר ב-IDB).
@@ -170,8 +177,8 @@ export function createSyncEngine(provider: SyncProvider, syncEnabled: () => bool
       await syncQueue.ackAll(pending.map((p) => p.id));
     }
 
-    // C2: שמור את חותמת הסנכרון — pull הבא יהיה אינקרמנטלי (לא מושך הכול שוב).
-    await setLastSyncAt(syncStartedAt);
+    // C2: מחזיר את חותמת ההתחלה; runSync יכתוב אותה רק אם הגענו לכאן נקי.
+    return syncStartedAt;
   }
 
   /** קריאה מ-UI אחרי שמירה מקומית — debounce 3 שניות. */

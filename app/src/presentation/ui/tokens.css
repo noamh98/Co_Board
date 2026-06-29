@@ -1,0 +1,227 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Co_Board — Design Tokens (קורל / טרהקוטה) · Phase 2 (F6 ריברנד)
+   ───────────────────────────────────────────────────────────────────
+   מקור-אמת יחיד לזהות-העיצוב החדשה. ממפה מחדש את משתני ה-chrome (--cl-*)
+   לפלטת קורל — כך כל הרכיבים הקיימים מקבלים את הריברנד ללא עריכה פר-רכיב.
+   חובה לייבא *אחרי* index.css ב-main.tsx כדי שינצח.
+
+   כללים:
+   • רק CSS-vars + logical properties (margin-inline / inset-inline-*) — RTL + theming.
+   • צבעי Fitzgerald (--cell-tint / --cell-ink) נקבעים ב-domain/fitzgerald.ts ו-CellButton —
+     *אסור לגעת בהם כאן* (תקן נגישות AAC). tokens.css נוגע רק ב-chrome.
+   • dark + high-contrast = שתי ערכות נוספות (חובה לנגישות).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── ערכת בהיר (ברירת מחדל) — קורל/חול חמים ────────────────────────── */
+:root {
+  --co-brand:        #E8694C;
+  --co-brand-strong: #CE5132;
+  --co-brand-tint:   #FBE6DE;
+
+  /* מיפוי-מחדש של chrome ה-Claude (כחול) → קורל */
+  --cl-bg:          #F6EFE6;
+  --cl-surface:     #FFFFFF;
+  --cl-surface-alt: #FBF6EF;
+  --cl-ink:         #33271F;
+  --cl-muted:       #7A6A5E;
+  --cl-border:      #EAE0D4;
+  --cl-primary:     #E8694C;  /* כתום-קורל = צבע המותג (השמעה/בית/CTA/פוקוס) */
+  --cl-primary-dk:  #CE5132;
+  --cl-primary-lt:  #FBE6DE;
+  --cl-on-primary:  #FFFFFF;
+  --cl-chip:        #FBF6EF;
+  --cl-chip-border: #EAE0D4;
+  --cl-icon-bg:     #FFFFFF;
+
+  /* danger (ניקוי) — אדום נפרד מהמותג */
+  --cl-error:    #C0392B;
+  --cl-error-bg: #FCE3DE;
+  --cl-danger:   #C0392B;
+
+  /* accent (טבעת סריקה) — נשמר טורקיז להבחנה מהמותג (affordance נגישות מובחן) */
+  --cl-accent:   #147FA8;
+  --cl-scan-ring:#147FA8;
+  --cl-success:    #2E7D5B;
+  --cl-success-bg: #DDF0E4;
+
+  /* aliases legacy */
+  --bg: var(--cl-bg); --surface: var(--cl-surface); --ink: var(--cl-ink);
+  --muted: var(--cl-muted); --primary: var(--cl-primary);
+
+  /* רדיוס + צל חמים (נאמן ל-design reference) */
+  --co-r-sm: 12px; --co-r-md: 16px; --co-r-lg: 22px;
+  --co-shadow:    0 8px 24px rgba(70, 45, 30, .09);
+  --co-shadow-sm: 0 2px 8px rgba(70, 45, 30, .06);
+}
+
+/* ── ערכת כהה (קורל-כהה) — auto לפי OS, אלא אם light-mode ידני ───────── */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-mode):not(.high-contrast) {
+    --cl-bg:          #221B16;
+    --cl-surface:     #2B221C;
+    --cl-surface-alt: #241C17;
+    --cl-ink:         #F3EAE2;
+    --cl-muted:       #B6A89C;
+    --cl-border:      #3D3128;
+    --cl-primary:     #F0825F;
+    --cl-primary-dk:  #F39C7D;
+    --cl-primary-lt:  #3A261D;
+    --cl-on-primary:  #2B221C;
+    --cl-chip:        #2B221C;
+    --cl-chip-border: #3D3128;
+    --cl-icon-bg:     #F3EAE2;
+    --cl-error:    #F0837E;
+    --cl-error-bg: #3A1F1E;
+    --cl-danger:   #F0837E;
+    --cl-accent:   #5FC0E0;
+    --cl-scan-ring:#7AD4EE;
+    --cl-success:    #4FB58E;
+    --cl-success-bg: #15301F;
+    --co-brand-tint: #3A261D;
+    --co-shadow:    0 8px 24px rgba(0, 0, 0, .45);
+    --co-shadow-sm: 0 2px 8px rgba(0, 0, 0, .30);
+    --bg: var(--cl-bg); --surface: var(--cl-surface); --ink: var(--cl-ink);
+    --muted: var(--cl-muted); --primary: var(--cl-primary);
+  }
+}
+/* מצב כהה ידני (class על <html>) — אותם ערכי קורל-כהה */
+.dark-mode:not(.high-contrast) {
+  --cl-bg:#221B16; --cl-surface:#2B221C; --cl-surface-alt:#241C17;
+  --cl-ink:#F3EAE2; --cl-muted:#B6A89C; --cl-border:#3D3128;
+  --cl-primary:#F0825F; --cl-primary-dk:#F39C7D; --cl-primary-lt:#3A261D;
+  --cl-on-primary:#2B221C; --cl-chip:#2B221C; --cl-chip-border:#3D3128; --cl-icon-bg:#F3EAE2;
+  --cl-error:#F0837E; --cl-error-bg:#3A1F1E; --cl-danger:#F0837E;
+  --cl-accent:#5FC0E0; --cl-scan-ring:#7AD4EE; --cl-success:#4FB58E; --cl-success-bg:#15301F;
+  --co-brand-tint:#3A261D; --co-shadow:0 8px 24px rgba(0,0,0,.45); --co-shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
+}
+
+/* ── ערכת ניגודיות גבוהה (קורל-HC) — שחור/לבן + מותג חזק ─────────────── */
+.high-contrast {
+  --cl-bg:#000000; --cl-surface:#0A0A0A; --cl-surface-alt:#000000;
+  --cl-ink:#FFFFFF; --cl-muted:#D8D8D8; --cl-border:#FFFFFF;
+  --cl-primary:#FF7A57; --cl-primary-dk:#FF9C7E; --cl-primary-lt:#341A10; --cl-on-primary:#000000;
+  --cl-chip:#000000; --cl-chip-border:#FFFFFF; --cl-icon-bg:#FFFFFF;
+  --cl-error:#FF8A7A; --cl-error-bg:#3A0F0A; --cl-danger:#FF8A7A;
+  --cl-accent:#6FC0FF; --cl-scan-ring:#6FC0FF; --cl-success:#66E08A; --cl-success-bg:#00210F;
+  --co-brand:#FF7A57; --co-brand-strong:#FF9C7E; --co-brand-tint:#341A10;
+  --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
+}
+
+/* ── אריח: תווית עברית למעלה + סמל מתחת (F6, נאמן לסרטון האפליקציה) ───── */
+/* DOM של CellButton: <icon> ואז <label>. order:-1 מקפיץ את התווית למעלה — שינוי CSS בלבד. */
+.cell__label { order: -1; }
+/* גודל התמונה במשבצת (F7) — סקופ דרך --cell-img-scale (CellButton מזריק מההגדרות). */
+.cell__icon { max-height: calc(70% * var(--cell-img-scale, 1)); }
+
+/* ── utility classes (להחלפת inline-styles מפוזרים — F6/A1) ──────────── */
+.flex-col { display: flex; flex-direction: column; }
+.row      { display: flex; align-items: center; }
+.gap-1 { gap: var(--sp-1); } .gap-2 { gap: var(--sp-2); } .gap-3 { gap: var(--sp-3); }
+.grow  { flex: 1; min-width: 0; }
+
+/* ── סרגל-לוח (BoardToolbar): הדפסה · השמעה · מחיקה · ניקוי · בית ─────── */
+.board-toolbar {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
+}
+.board-toolbar__tokens {
+  display: flex; gap: var(--sp-2); flex: 1; flex-wrap: wrap;
+  align-items: center; overflow: hidden;
+  /* גודל-כפתורים (F7) משפיע רק על כפתורי-הסרגל, לא על ה-tokens */
+}
+.board-toolbar__token {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--cl-surface-alt); border: 1px solid var(--cl-border);
+  border-radius: 9px; padding: 4px 9px; font-weight: 800; font-size: var(--tx-sm);
+  color: var(--cl-ink); white-space: nowrap;
+}
+.board-toolbar__token:empty::before { content: 'הקש על אריח…'; color: var(--cl-muted); font-weight: 500; }
+.tbtn {
+  /* גודל בסיס 36px * --tbtn-scale (F7 — גודל כפתורי שורת הקריאה) */
+  width: calc(36px * var(--tbtn-scale, 1));
+  height: calc(36px * var(--tbtn-scale, 1));
+  min-width: 36px; min-height: 36px;
+  border-radius: 50%; display: grid; place-items: center; flex: none;
+  border: 1px solid var(--cl-border); background: var(--cl-surface-alt);
+  color: var(--cl-muted); font-size: 1rem; cursor: pointer;
+  transition: transform var(--ease-fast), background var(--ease);
+}
+.tbtn:hover { background: var(--cl-chip); }
+.tbtn:active { transform: scale(0.93); }
+.tbtn:focus-visible { outline: 3px solid var(--cl-primary); outline-offset: 2px; }
+.tbtn--brand  { background: var(--cl-primary); color: var(--cl-on-primary); border-color: transparent; }
+.tbtn--brand:hover { background: var(--cl-primary-dk); }
+.tbtn--danger { background: var(--cl-error-bg); color: var(--cl-danger); border-color: var(--cl-danger); }
+@media (prefers-reduced-motion: reduce) { .tbtn { transition: none; } .tbtn:active { transform: none; } }
+
+/* ── בורר "לוח חדש" (NewBoardChooser): 3 כרטיסים גדולים ─────────────── */
+.new-board-chooser {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3);
+}
+@media (max-width: 600px) { .new-board-chooser { grid-template-columns: 1fr; } }
+.choice {
+  position: relative; padding: var(--sp-5) var(--sp-4); text-align: center;
+  border-radius: var(--co-r-md); border: 1px solid var(--cl-border);
+  background: var(--cl-surface-alt); cursor: pointer; color: var(--cl-ink);
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
+  transition: transform var(--ease-fast), border-color var(--ease);
+}
+.choice:hover { transform: translateY(-2px); border-color: var(--cl-primary); }
+.choice:focus-visible { outline: 3px solid var(--cl-primary); outline-offset: 2px; }
+.choice__icon {
+  width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+  font-size: 1.25rem; background: var(--cl-surface); box-shadow: var(--co-shadow-sm);
+}
+.choice__title { margin: 0; font-size: var(--tx-md); font-weight: 800; }
+.choice__desc { margin: 0; color: var(--cl-muted); font-size: var(--tx-sm); }
+.choice--ai {
+  border-color: var(--cl-primary); background: var(--co-brand-tint);
+  outline: 2px solid var(--cl-primary); outline-offset: -2px;
+}
+.choice--ai .choice__icon { background: var(--cl-primary); color: var(--cl-on-primary); }
+.choice__rec {
+  position: absolute; inset-block-start: -10px; inset-inline-start: 50%;
+  transform: translateX(50%); background: var(--cl-primary); color: var(--cl-on-primary);
+  font-size: var(--tx-xs); font-weight: 700; padding: 2px 10px; border-radius: var(--r-full);
+}
+
+/* ── יצירה חכמה (SmartCreatePanel) — hero ───────────────────────────── */
+.smart-create { display: flex; flex-direction: column; gap: var(--sp-3); }
+.smart-create__desc {
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 3px var(--co-brand-tint);
+}
+.smart-create__sliders { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+.smart-create__palette { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.smart-create__swatch {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(0,0,0,.12);
+  cursor: pointer; padding: 0;
+}
+.smart-create__swatch--sel { outline: 2px solid var(--cl-primary); outline-offset: 2px; }
+.smart-create__state {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--tx-sm); font-weight: 600;
+}
+.smart-create__state--loading { color: var(--cl-muted); }
+.smart-create__state--error   { color: var(--cl-error); }
+.smart-create__state--success { color: var(--cl-success); }
+
+/* ── ספריית לוחות — קבוצות (group labels) ───────────────────────────── */
+.library-group__label {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-weight: 800; font-size: var(--tx-md); color: var(--cl-ink);
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+.library-group__count {
+  font-size: var(--tx-xs); color: var(--cl-muted);
+  background: var(--cl-chip); border: 1px solid var(--cl-border);
+  border-radius: var(--r-full); padding: 1px 8px; font-weight: 600;
+}
+.board-card__tag {
+  font-size: var(--tx-xs); color: var(--cl-muted);
+  background: var(--cl-chip); border: 1px solid var(--cl-border);
+  padding: 1px 7px; border-radius: var(--r-full);
+}

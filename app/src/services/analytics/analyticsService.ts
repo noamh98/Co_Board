@@ -1,4 +1,4 @@
-import { createSettingsRepo } from '../../data/settingsRepo';
+import { createSettingsRepo, type SettingsRepo } from '../../data/settingsRepo';
 import {
   logEvent,
   getEvents,
@@ -8,6 +8,15 @@ import type { Cell } from '../../domain/models';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Phase 1 (inject/cache repo): ה-SettingsRepo נבנה פעם אחת (lazy singleton) במקום
+// בכל לחיצת תא (~נתיב חם). createSettingsRepo מחזיר פונקציות שניגשות ל-getDb() מחדש,
+// כך שה-singleton נשאר תקֵף גם לאחר reset של ה-DB בבדיקות.
+let _settingsRepo: SettingsRepo | null = null;
+function getSettingsRepo(): SettingsRepo {
+  if (!_settingsRepo) _settingsRepo = createSettingsRepo();
+  return _settingsRepo;
+}
+
 /** fire-and-forget — לא חוסם TTS. no-op כש-analyticsEnabled=false. */
 function trackCellPress(
   profileId: string,
@@ -16,7 +25,7 @@ function trackCellPress(
   sessionId: string,
 ): void {
   void (async () => {
-    const repo = createSettingsRepo();
+    const repo = getSettingsRepo();
     if (!(await repo.getAnalyticsEnabled())) return;
     await logEvent({
       profileId,

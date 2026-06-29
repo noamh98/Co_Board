@@ -18,7 +18,8 @@ import {
   DEFAULT_ACCESS_SETTINGS,
 } from './domain/accessSettings';
 import { BoardView } from './presentation/components/BoardView';
-import { SentenceBar } from './presentation/components/SentenceBar';
+import { BoardToolbar } from './presentation/components/BoardToolbar';
+import { BoardPrintView } from './presentation/print/BoardPrintView';
 import { AdultBar } from './presentation/components/AdultBar';
 import { PinGate } from './presentation/components/PinGate';
 import { NavBar } from './presentation/components/NavBar';
@@ -51,9 +52,11 @@ import {
   type SpeakOptions,
   type HebrewTts,
 } from './services/tts/ttsService';
-import { GoogleTtsProvider, GOOGLE_HE_VOICES } from './services/tts/googleTtsProvider';
-import { getTtsApiKey, setTtsApiKey } from './data/settingsRepo';
+import { createTtsProvider } from './services/tts/ttsWiring';
+import { GOOGLE_HE_VOICES } from './services/tts/googleTtsProvider';
+import { primeDeviceId } from './data/deviceId';
 import { pruneAudioCache } from './data/audioCache';
+import { appendWord } from './domain/sentence';
 import { createSymbolRepo, type SymbolRepo } from './data/symbolRepo';
 import { NikudService } from './services/nikud/nikudService';
 import { createIdbNikudCache } from './services/nikud/nikudCache';
@@ -164,7 +167,6 @@ export function App() {
 
   const ttsRef = useRef<TtsLike | null>(null);
   const fallbackTtsRef = useRef<HebrewTts | null>(null);
-  const [ttsApiKey, setTtsApiKeyState] = useState<string | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
@@ -229,15 +231,9 @@ export function App() {
     fallbackTtsRef.current = tts;
     // A3: אתחול סינכרוני מיידי — לחיצה ראשונה תמיד מדברת, גם לפני שטוען apiKey.
     ttsRef.current = tts;
-    void (async () => {
-      // COMMERCIAL TODO: switch VITE_GOOGLE_TTS_KEY to Firebase Function proxy before paid launch
-      const envKey = (import.meta.env.VITE_GOOGLE_TTS_KEY as string | undefined) || null;
-      const apiKey = envKey ?? await getTtsApiKey();
-      const provider = apiKey ? new GoogleTtsProvider(apiKey) : null;
-      // שדרוג ל-hybrid (כולל ספק ענן) ברגע שהמפתח נטען.
-      if (alive && tts) ttsRef.current = createHybridTts(tts, provider);
-      if (alive) setTtsApiKeyState(apiKey);
-    })();
+    // Phase 0 (H-KEY): ספק TTS דרך proxy בשרת — אין מפתח בלקוח. fallback ל-browser נשמר.
+    if (alive && tts) ttsRef.current = createHybridTts(tts, createTtsProvider());
+    void primeDeviceId(); // CR-6: אתחול deviceId מ-IDB מוקדם.
     if (!tts) {
       setHasHeVoice(false);
     } else {
@@ -369,15 +365,6 @@ export function App() {
     void createSettingsRepo().setSelectedVoiceURI(uri);
   };
 
-  const onTtsApiKeyChange = (key: string | null): void => {
-    setTtsApiKeyState(key);
-    void setTtsApiKey(key);
-    const provider = key ? new GoogleTtsProvider(key) : null;
-    if (fallbackTtsRef.current) {
-      ttsRef.current = createHybridTts(fallbackTtsRef.current, provider);
-    }
-  };
-
   const onTtsRateChange = (n: number): void => {
     setTtsRate(n);
     void createSettingsRepo().setTtsRate(n);
@@ -463,7 +450,7 @@ export function App() {
   const addPredictedWord = useCallback(
     (word: string): void => {
       const cell: Cell = { id: `pred-${word}`, label: word, action: { type: 'speak' } };
-      setSentence((s) => [...s, cell]);
+      setSentence((s) => appendWord(s, cell, preventDupRef.current));
       void ttsRef.current?.speak(word, {
         voiceURI: selectedVoiceURI,
         rate: ttsRate,
@@ -475,6 +462,9 @@ export function App() {
 
   const predictionsRef = useRef<string[]>([]);
   predictionsRef.current = predictions;
+  // F7: ערך עדכני של מניעת-כפילויות (ref — בלי stale closure ב-onCell/addPredictedWord).
+  const preventDupRef = useRef(false);
+  preventDupRef.current = accessSettings.preventSequentialDuplicates ?? false;
 
   // I4 — איפוס רמת החשיפה במעבר בין לוחות.
   useEffect(() => {
@@ -504,7 +494,7 @@ export function App() {
       const action = cell.action;
 
       if (action.type === 'speak') {
-        setSentence((s) => [...s, cell]);
+        setSentence((s) => appendWord(s, cell, preventDupRef.current));
         void speakCell(cell, symbolRepoRef.current, ttsRef.current, {
           voiceURI: selectedVoiceURI,
           rate: ttsRate,
@@ -869,13 +859,23 @@ export function App() {
       </div>
 
       <main className="app__main">
-      <SentenceBar
+      <BoardToolbar
         words={sentence.map((c) => c.label)}
+        onPrint={() => window.print()}
         onSpeak={speakSentence}
-        onDelete={() => setSentence((s) => s.slice(0, -1))}
+        onDeleteWord={() => setSentence((s) => s.slice(0, -1))}
         onClear={() => setSentence([])}
-        onSave={adult ? onSaveSentence : undefined}
+        onHome={() => {
+          if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
+        }}
+        canGoHome={!!ctx}
+        buttonScale={accessSettings.sentenceButtonScale}
       />
+      {adult && (
+        <button type="button" className="app__save-phrase" onClick={onSaveSentence} aria-label="שמירת ביטוי לבנק">
+          💾
+        </button>
+      )}
       {/* I2 — שורת ניבוי מילה הבאה (כשהניבוי מופעל). */}
       {accessSettings.predictionEnabled && !builderMode && (
         <PredictionBar words={predictions} onPick={addPredictedWord} />
@@ -996,6 +996,9 @@ export function App() {
         </button>
       )}
 
+      {/* F3: תצוגת הדפסה/PDF נקייה (A4 RTL) — מוסתרת על המסך, מופיעה בהדפסה. */}
+      {currentBoard && <BoardPrintView board={currentBoard} />}
+
       {settingsOpen && (
         <AccessSettingsPanel
           settings={accessSettings}
@@ -1015,8 +1018,7 @@ export function App() {
           onSyncPhotosChange={onSyncPhotosChange}
           isAuthenticated={!!authUser}
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
-          ttsApiKey={ttsApiKey}
-          onTtsApiKeyChange={(import.meta.env.VITE_GOOGLE_TTS_KEY as string | undefined) ? undefined : onTtsApiKeyChange}
+          ttsApiKey="proxy"
           googleVoices={GOOGLE_HE_VOICES}
         />
       )}

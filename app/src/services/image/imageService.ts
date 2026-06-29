@@ -1,3 +1,6 @@
+// Phase 1: שירות זה אינו מבצע fetch חיצוני, וכל object URL נוצר ב-loadImage משוחרר
+// (URL.revokeObjectURL) גם ב-onload וגם ב-onerror — אין דליפת זיכרון ואין מה לעטוף ב-timeout.
+
 export interface CropRect {
   x: number;
   y: number;

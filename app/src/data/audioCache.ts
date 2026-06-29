@@ -8,6 +8,10 @@ export interface AudioCacheEntry {
   lastAccessedAt: number;
 }
 
+// Phase 1 (debounce lastAccessedAt): חלון מינימלי בין כתיבות lastAccessedAt — מונע
+// db.put בכל hit בנתיב החם של TTS. עדיין שומר LRU שמיש ל-pruneAudioCache.
+const ACCESS_DEBOUNCE_MS = 60_000;
+
 export async function buildCacheKey(
   text: string, voiceId: string, rate: number, pitch: number
 ): Promise<string> {
@@ -20,8 +24,12 @@ export async function getAudioFromCache(key: string): Promise<Blob | null> {
   const db = await getDb();
   const entry = await db.get(STORE_AUDIO_CACHE, key) as AudioCacheEntry | undefined;
   if (!entry) return null;
-  // update lastAccessedAt
-  await db.put(STORE_AUDIO_CACHE, { ...entry, lastAccessedAt: Date.now() });
+  // Phase 1 (debounce lastAccessedAt): כותבים מחדש רק אם עברו לפחות 60ש' מהגישה
+  // האחרונה — אחרת מדלגים. הבלוב מוחזר מיד בכל מקרה.
+  const now = Date.now();
+  if (now - entry.lastAccessedAt >= ACCESS_DEBOUNCE_MS) {
+    await db.put(STORE_AUDIO_CACHE, { ...entry, lastAccessedAt: now });
+  }
   return entry.blob;
 }
 

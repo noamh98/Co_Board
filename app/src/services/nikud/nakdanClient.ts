@@ -1,4 +1,5 @@
 import type { NakdanFetcher } from './nikudService';
+import { fetchWithTimeout } from '../http/fetchWithTimeout';
 
 // לקוח ל-Nakdan (Dicta) להבאת ניקוד אוטומטי.
 // ⚠️ רישוי (G2): ה-endpoint הציבורי שלהלן אינו מורשה רשמית לפרודקשן. יש להגדיר
@@ -25,11 +26,17 @@ function joinNikud(words: NakdanWord[]): string {
 
 export function createNakdanFetcher(url: string = NAKDAN_URL): NakdanFetcher {
   return async (text: string): Promise<string> => {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: 'nakdan', data: text, genre: 'modern' }),
-    });
+    // Phase 1 (H-API timeout): עטיפת ה-fetch ב-timeout (15ש') כדי שבקשת ניקוד תקועה
+    // לא תיתלה — כשל מהיר מאפשר נפילה חיננית ל-cache/ללא-ניקוד.
+    const resp = await fetchWithTimeout(
+      url,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: 'nakdan', data: text, genre: 'modern' }),
+      },
+      15000,
+    );
     if (!resp.ok) throw new Error(`Nakdan HTTP ${resp.status}`);
     const data = (await resp.json()) as NakdanWord[];
     return joinNikud(data);

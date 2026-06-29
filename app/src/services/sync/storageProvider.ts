@@ -12,6 +12,9 @@ import {
   getBlob,
   type FirebaseStorage,
 } from 'firebase/storage';
+// Phase 1 (de-dup Firebase config): שימוש בקונפיג המאומת הקנוני מ-data/firebaseEnv
+// במקום כפילות inline — מקור-אמת יחיד, וזריקת שגיאה ברורה אם חסר משתנה סביבה.
+import { getFirebaseConfig } from '../../data/firebaseEnv';
 
 export interface StorageProvider {
   /** מעלה blob מוצפן ל-path ומחזיר downloadURL. */
@@ -54,15 +57,6 @@ export class LocalStubStorageProvider implements StorageProvider {
   }
 }
 
-const FIREBASE_CONFIG = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
-};
-
 /** Provider Firebase Storage — path: `profiles/{profileId}/media/{mediaId}`. */
 export class FirebaseStorageProvider implements StorageProvider {
   private _storage: FirebaseStorage | null = null;
@@ -72,7 +66,7 @@ export class FirebaseStorageProvider implements StorageProvider {
       const existing = getApps();
       const app: FirebaseApp = existing.length
         ? existing[0]
-        : initializeApp(FIREBASE_CONFIG);
+        : initializeApp(getFirebaseConfig());
       this._storage = getStorage(app);
     }
     return this._storage;

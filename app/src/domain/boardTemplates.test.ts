@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { listTemplates, getTemplate } from './boardTemplates';
 
 describe('boardTemplates', () => {
-  it('listTemplates מחזיר 7 תבניות', () => {
-    expect(listTemplates()).toHaveLength(7);
+  it('listTemplates מחזיר 12 תבניות', () => {
+    expect(listTemplates()).toHaveLength(12);
   });
 
   it('getTemplate מחזיר תבנית ידועה', () => {

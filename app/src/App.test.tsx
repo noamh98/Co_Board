@@ -26,7 +26,7 @@ describe('App — פרוסה אנכית (domain → services → UI)', () => {
   it('מחיקת מילה מעדכנת את שורת המשפט', async () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'אני' }));
-    fireEvent.click(screen.getByRole('button', { name: 'מחק מילה' }));
+    fireEvent.click(screen.getByRole('button', { name: 'מחיקת המילה האחרונה' }));
     expect(screen.getByTestId('sentence-text').textContent).toBe('');
   });
 });

@@ -2,11 +2,13 @@
 // אינווריאנט (A1): כל שמירה מקומית של board/profile מקדמת version, שומרת meta אמיתי,
 // ונכנסת ל-outbox עם id יציב `${type}:${id}` — אחרת השינוי לעולם לא נדחף לענן.
 // שכבת Data טהורה — ללא תלות בשכבת services.
+//
+// Phase 0 (CR-6): deviceId עבר ל-IDB (data/deviceId) — לא עוד localStorage churn במצב פרטי.
 
 import { getDb, STORE_SETTINGS } from './db';
 import { syncQueue } from './syncQueue';
+import { getDeviceId, getDeviceIdSync } from './deviceId';
 
-const DEVICE_ID_KEY = 'sync-device-id';
 const META_PREFIX = 'syncMeta:';
 
 export interface EntityMeta {
@@ -17,21 +19,8 @@ export interface EntityMeta {
 
 export type SyncEntityType = 'board' | 'profile';
 
-/** מזהה מכשיר יציב (אותו מפתח localStorage שבו משתמש services/sync/crypto). */
-export function getDeviceIdSync(): string {
-  try {
-    const existing = localStorage.getItem(DEVICE_ID_KEY);
-    if (existing) return existing;
-    const id =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `dev-${Date.now()}`;
-    localStorage.setItem(DEVICE_ID_KEY, id);
-    return id;
-  } catch {
-    return 'local-device';
-  }
-}
+/** מזהה מכשיר סינכרוני (מ-cache; ראה data/deviceId). נשמר לתאימות. */
+export { getDeviceIdSync };
 
 const metaKey = (t: SyncEntityType, id: string): string => `${META_PREFIX}${t}:${id}`;
 
@@ -70,18 +59,20 @@ export async function setSyncMeta(
 /**
  * מתעד שמירה מקומית: מקדם version, שומר meta אמיתי (updatedAt=now), ומכניס ל-outbox.
  * id יציב `${type}:${id}` → enqueue חוזר מחליף את הרשומה הקודמת (לא מצטבר).
+ * deviceId נלקח מ-IDB (data/deviceId) אם לא הועבר במפורש.
  */
 export async function recordLocalWrite(
   entityType: SyncEntityType,
   entityId: string,
   data: unknown,
-  deviceId: string = getDeviceIdSync(),
+  deviceId?: string,
 ): Promise<void> {
+  const did = deviceId ?? (await getDeviceId());
   const prev = await getSyncMeta(entityType, entityId);
   const next: EntityMeta = {
     version: (prev?.version ?? 0) + 1,
     updatedAt: Date.now(),
-    deviceId,
+    deviceId: did,
   };
   await setSyncMeta(entityType, entityId, next);
   await syncQueue.enqueue({
@@ -91,6 +82,6 @@ export async function recordLocalWrite(
     data,
     version: next.version,
     updatedAt: next.updatedAt,
-    deviceId,
+    deviceId: did,
   });
 }

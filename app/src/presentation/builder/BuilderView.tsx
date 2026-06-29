@@ -8,10 +8,15 @@ import type { GridSize } from '../../domain/models';
 import { createBoardRepo } from '../../data/boardRepo';
 import type { NikudService } from '../../services/nikud/nikudService';
 import { BoardView } from '../components/BoardView';
+import { CellImage } from '../components/CellButton';
 import { CellEditor, type MediaSyncConfig } from './CellEditor';
 import { GridSizePicker } from './GridSizePicker';
 import { SceneEditor } from './SceneEditor';
 import { AiBoardPanel } from './AiBoardPanel';
+import { NewBoardChooser } from '../wizard/NewBoardChooser';
+import type { NewBoardMethod } from '../wizard/NewBoardChooser';
+import { SmartCreatePanel } from '../wizard/SmartCreatePanel';
+import { listTemplates } from '../../domain/boardTemplates';
 
 export interface BuilderViewProps {
   board: Board;
@@ -30,6 +35,9 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
   const [draggedCellId, setDraggedCellId] = useState<string | null>(null);
   const [sceneEditorOpen, setSceneEditorOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [newBoardChooserOpen, setNewBoardChooserOpen] = useState(false);
+  const [smartCreateOpen, setSmartCreateOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   // G1: מצב undo/redo מנוטר ב-state — מתעדכן מיד, לא נקרא מ-ref בזמן render.
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -167,6 +175,25 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
     setEditingCell(null);
   };
 
+  const handleNewBoardChoose = (method: NewBoardMethod): void => {
+    setNewBoardChooserOpen(false);
+    if (method === 'ai') {
+      setSmartCreateOpen(true);
+    } else if (method === 'template') {
+      setTemplatePickerOpen(true);
+    } else {
+      // scratch — empty board, same grid as current
+      const empty: Board = {
+        id: crypto.randomUUID(),
+        name: 'לוח חדש',
+        grid: currentBoard.grid,
+        cells: {},
+        placements: [],
+      };
+      void applyBoard(empty);
+    }
+  };
+
   // Build a lookup: "row-col" -> placement
   const placementMap = new Map<string, CellPlacement>();
   currentBoard.placements.forEach((p) => placementMap.set(`${p.row}-${p.col}`, p));
@@ -260,10 +287,10 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
         <button
           type="button"
           className="adultbar__btn"
-          onClick={() => setAiPanelOpen(true)}
+          onClick={() => setNewBoardChooserOpen(true)}
           style={{ background: 'var(--cl-surface-alt)', color: 'var(--cl-ink)', border: '1px solid var(--cl-border)' }}
         >
-          צור לוח ב-AI
+          לוח חדש
         </button>
       </div>
 
@@ -425,13 +452,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
                         🔒
                       </span>
                     )}
-                    {cell.imageUri && (
-                      <img
-                        src={cell.imageUri}
-                        alt=""
-                        style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6 }}
-                      />
-                    )}
+                    <CellImage cell={cell} size={36} />
                     <span style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.2 }}>
                       {cell.label}
                     </span>
@@ -493,7 +514,7 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
         />
       )}
 
-      {/* AiBoardPanel modal (I8) */}
+      {/* AiBoardPanel modal (I8) — legacy, kept for direct AI shortcut */}
       {aiPanelOpen && (
         <AiBoardPanel
           onGenerated={(newBoard) => {
@@ -503,6 +524,64 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
           onClose={() => setAiPanelOpen(false)}
           nikudService={nikudService}
         />
+      )}
+
+      {/* NewBoardChooser — משפך 3-מסלולים (F1) */}
+      {newBoardChooserOpen && (
+        <div className="wizard-overlay" role="dialog" aria-modal="true" aria-label="לוח חדש" dir="rtl">
+          <div className="wizard" style={{ maxWidth: 460 }}>
+            <div className="wizard__header">
+              <h2 className="wizard__title">לוח חדש</h2>
+              <button type="button" className="wizard__close" aria-label="סגור" onClick={() => setNewBoardChooserOpen(false)}>×</button>
+            </div>
+            <div className="wizard__body">
+              <NewBoardChooser onChoose={handleNewBoardChoose} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SmartCreatePanel — מסלול AI */}
+      {smartCreateOpen && (
+        <SmartCreatePanel
+          onGenerated={(newBoard) => {
+            void applyBoard(newBoard);
+            setSmartCreateOpen(false);
+          }}
+          onClose={() => setSmartCreateOpen(false)}
+          nikudService={nikudService}
+        />
+      )}
+
+      {/* Template picker — מסלול תבניות */}
+      {templatePickerOpen && (
+        <div className="wizard-overlay" role="dialog" aria-modal="true" aria-label="בחירת תבנית" dir="rtl">
+          <div className="wizard" style={{ maxWidth: 480 }}>
+            <div className="wizard__header">
+              <h2 className="wizard__title">בחירת תבנית</h2>
+              <button type="button" className="wizard__close" aria-label="סגור" onClick={() => setTemplatePickerOpen(false)}>×</button>
+            </div>
+            <div className="wizard__body">
+              <div className="wizard__templates">
+                {listTemplates().map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className="wizard__template-card"
+                    onClick={() => {
+                      void applyBoard({ ...t.board, id: crypto.randomUUID() });
+                      setTemplatePickerOpen(false);
+                    }}
+                    aria-label={t.nameHe}
+                  >
+                    <strong className="wizard__template-name">{t.nameHe}</strong>
+                    <span className="wizard__template-desc">{t.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

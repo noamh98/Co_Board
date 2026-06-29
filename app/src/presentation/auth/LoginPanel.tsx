@@ -1,38 +1,16 @@
 // presentation/auth/LoginPanel.tsx — כניסה ל-AAC Cloud Sync.
 // 2A: הוסף כפתור Google + קישור לדף הרשמה.
 // RTL מלא. הודעות שגיאה בעברית.
+// Phase 1 (de-dup translateError): מיפוי קודי Firebase לעברית הועבר ל-translateFirebaseError.
 
 import { useState } from 'react';
+import { translateFirebaseError } from './translateFirebaseError';
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<void>;
   onGoogleSignIn?: () => Promise<void>;
   onGoToRegister?: () => void;
   loading?: boolean;
-}
-
-function translateError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
-  if (msg.includes('wrong-password') || msg.includes('invalid-credential'))
-    return 'סיסמה שגויה או משתמש לא קיים';
-  if (msg.includes('user-not-found')) return 'משתמש לא נמצא';
-  if (msg.includes('email-already-in-use')) return 'כתובת אימייל כבר בשימוש';
-  if (msg.includes('invalid-email')) return 'כתובת אימייל לא תקינה';
-  if (msg.includes('weak-password')) return 'הסיסמה חלשה מדי (לפחות 6 תווים)';
-  if (msg.includes('network-request-failed') || msg.includes('offline'))
-    return 'אין חיבור לרשת — נסה שנית';
-  if (msg.includes('operation-not-allowed'))
-    return 'כניסה עם Google לא מופעלת — יש להפעיל ב-Firebase Console → Authentication → Sign-in method';
-  if (msg.includes('unauthorized-domain'))
-    return 'הדומיין לא מורשה — יש להוסיף co-board.web.app לרשימת הדומיינים המורשים ב-Firebase Console → Authentication → Settings';
-  if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request'))
-    return 'החלון נסגר לפני השלמת הכניסה — נסה שנית';
-  if (msg.includes('popup-blocked'))
-    return 'הדפדפן חסם את חלון הכניסה — אפשר popup לאתר זה ונסה שנית';
-  // שגיאה לא מזוהה — הצג את הקוד לאבחון
-  const codeMatch = msg.match(/\(auth\/([^)]+)\)/);
-  if (codeMatch) return `שגיאת כניסה: ${codeMatch[1]}`;
-  return `שגיאה בכניסה, נסה שנית`;
 }
 
 export function LoginPanel({ onSignIn, onGoogleSignIn, onGoToRegister, loading = false }: Props) {
@@ -49,7 +27,7 @@ export function LoginPanel({ onSignIn, onGoogleSignIn, onGoToRegister, loading =
     try {
       await onSignIn(email.trim(), password);
     } catch (e) {
-      setError(translateError(e));
+      setError(translateFirebaseError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -62,7 +40,7 @@ export function LoginPanel({ onSignIn, onGoogleSignIn, onGoToRegister, loading =
     try {
       await onGoogleSignIn();
     } catch (e) {
-      setError(translateError(e));
+      setError(translateFirebaseError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }

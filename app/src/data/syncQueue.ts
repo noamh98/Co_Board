@@ -1,5 +1,6 @@
 // data/syncQueue.ts — outbox: תור שינויים מקומיים ממתינים ל-push לענן.
 // הסתמאנטיקה: enqueue→peek→ack. לעולם לא חוסם UI.
+// Phase 1: peek משתמש באינדקס by-updatedAt (במקום getAll+sort בכל סנכרון).
 
 import { getDb, STORE_OUTBOX } from './db';
 
@@ -22,10 +23,9 @@ function createSyncQueue() {
 
   async function peek(limit = 50): Promise<OutboxItem[]> {
     const db = await getDb();
-    const all = await db.getAll(STORE_OUTBOX);
-    return all
-      .sort((a, b) => (a.updatedAt as number) - (b.updatedAt as number))
-      .slice(0, limit) as OutboxItem[];
+    // אינדקס by-updatedAt → כבר ממוין עולה לפי updatedAt (FIFO לפי זמן שינוי).
+    const all = (await db.getAllFromIndex(STORE_OUTBOX, 'by-updatedAt')) as OutboxItem[];
+    return all.slice(0, limit);
   }
 
   async function ack(id: string): Promise<void> {

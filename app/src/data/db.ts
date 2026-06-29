@@ -11,10 +11,12 @@ import { openDB, type IDBPDatabase } from 'idb';
 // v9 (M18): נוסף audioCache (TTS blobs, hybrid offline-first).
 // v10 (חלק 3): נוסף media (תמונות אישיות, offline-first + סנכרון מוצפן אופציונלי).
 // v11 (B1): נוסף cryptoKeys — מפתח הצפנה non-extractable כ-CryptoKey (לא JWK ב-localStorage).
+// v12 (Phase 1): אינדקסים — OUTBOX.by-updatedAt + VERSIONS.by-entity (במקום getAll+sort);
+//                + aiBoardCache (cache ללוחות AI לפי hash — מונע הוצאת LLM חוזרת, F2).
 // אינווריאנט מיגרציה: upgrade אדיטיבי בלבד — נתוני v1 (ניקוד) שורדים שדרוג.
 
 export const DB_NAME = 'luach-aac';
-export const DB_VERSION = 11;
+export const DB_VERSION = 12;
 
 export const STORE_NIKUD = 'nikud';
 export const STORE_BOARDS = 'boards';
@@ -29,6 +31,7 @@ export const STORE_PHRASES = 'phrases';
 export const STORE_AUDIO_CACHE = 'audioCache';
 export const STORE_MEDIA = 'media';
 export const STORE_KEYS = 'cryptoKeys';
+export const STORE_AI_CACHE = 'aiBoardCache';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -83,6 +86,10 @@ export function getDb(): Promise<IDBPDatabase> {
         if (!db.objectStoreNames.contains(STORE_KEYS)) {
           db.createObjectStore(STORE_KEYS, { keyPath: 'id' });
         }
+        // v12 (Phase 1): cache ללוחות AI — keyPath 'cacheKey' = hash(topic+grid+level).
+        if (!db.objectStoreNames.contains(STORE_AI_CACHE)) {
+          db.createObjectStore(STORE_AI_CACHE, { keyPath: 'cacheKey' });
+        }
 
         // v8: תיקון mimeType להקלטות קוליות — היה 'image/webp' בטעות (HANDOFF §4).
         if (oldVersion < 8 && db.objectStoreNames.contains(STORE_SYMBOLS)) {
@@ -93,6 +100,17 @@ export function getDb(): Promise<IDBPDatabase> {
               await store.put({ ...entry, mimeType: 'audio/webm' });
             }
           }
+        }
+
+        // v12 (Phase 1): אינדקסים על stores קיימים — מבטל getAll+sort בנתיב החם (E/H).
+        // הוספת אינדקס ל-store קיים חייבת לקרות בתוך upgrade transaction (tx.objectStore).
+        const outbox = tx.objectStore(STORE_OUTBOX);
+        if (!outbox.indexNames.contains('by-updatedAt')) {
+          outbox.createIndex('by-updatedAt', 'updatedAt', { unique: false });
+        }
+        const versions = tx.objectStore(STORE_VERSIONS);
+        if (!versions.indexNames.contains('by-entity')) {
+          versions.createIndex('by-entity', 'entityId', { unique: false });
         }
       },
     });
