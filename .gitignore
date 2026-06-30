@@ -27,3 +27,9 @@ app/vite.config.ts.timestamp-*.mjs
 CLAUDE_CODE_*.md
 CLAUDE_TTS_*.md
 *.zip
+
+# Local archive folder
+קבצים מיותרים/
+
+# UX changes package (applied)
+Co_Board-UX-Changes/

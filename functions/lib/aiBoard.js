@@ -15,6 +15,27 @@ const GEMINI_API_KEY = (0, params_1.defineSecret)('GEMINI_API_KEY');
 const MAX_TOPIC_LEN = 300;
 const MAX_COUNT = 64;
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+/**
+ * מנסה לשחזר { words: [...] } מתשובת Gemini שנקטעה (חרגה מ-maxOutputTokens).
+ * חותך אחרי האובייקט {"word":...} השלם האחרון וסוגר את המערך/אובייקט.
+ * מחזיר null אם אין אפילו פריט שלם אחד.
+ */
+function repairTruncatedWordsJson(jsonStr) {
+    const arrayStart = jsonStr.indexOf('[');
+    if (arrayStart === -1)
+        return null;
+    const lastCloseBrace = jsonStr.lastIndexOf('}');
+    if (lastCloseBrace === -1 || lastCloseBrace < arrayStart)
+        return null;
+    const truncated = `${jsonStr.slice(arrayStart, lastCloseBrace + 1)}]`;
+    try {
+        const words = JSON.parse(truncated);
+        return Array.isArray(words) && words.length > 0 ? { words } : null;
+    }
+    catch {
+        return null;
+    }
+}
 exports.aiBoard = (0, https_1.onCall)({ region: ttsProxy_1.FUNCTIONS_REGION, secrets: [GEMINI_API_KEY], timeoutSeconds: 30 }, async (request) => {
     if (!request.auth)
         throw new https_1.HttpsError('unauthenticated', 'נדרשת כניסה');
@@ -51,7 +72,11 @@ exports.aiBoard = (0, https_1.onCall)({ region: ttsProxy_1.FUNCTIONS_REGION, sec
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 8192,
+                    thinkingConfig: { thinkingBudget: 0 },
+                },
             }),
             signal: controller.signal,
         });
@@ -74,7 +99,12 @@ exports.aiBoard = (0, https_1.onCall)({ region: ttsProxy_1.FUNCTIONS_REGION, sec
         parsed = JSON.parse(jsonStr);
     }
     catch {
-        throw new https_1.HttpsError('internal', 'Gemini החזיר תגובה לא תקינה');
+        // Defense-in-depth: אם התשובה נקטעה (token budget), ננסה לשחזר מערך תקין
+        // חלקי — חותכים אחרי האובייקט המלא האחרון בתוך "words":[...] וסוגרים.
+        const repaired = repairTruncatedWordsJson(jsonStr);
+        if (!repaired)
+            throw new https_1.HttpsError('internal', 'Gemini החזיר תגובה לא תקינה');
+        parsed = repaired;
     }
     return { words: parsed.words ?? [] };
 });
