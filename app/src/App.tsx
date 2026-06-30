@@ -3,7 +3,6 @@ import type { Cell } from './domain/models';
 import {
   type AppMode,
   canManageProfiles,
-  verifyPin,
 } from './domain/access';
 import {
   type ActiveContext,
@@ -20,12 +19,12 @@ import {
 import { BoardView } from './presentation/components/BoardView';
 import { BoardToolbar } from './presentation/components/BoardToolbar';
 import { BoardPrintView } from './presentation/print/BoardPrintView';
-import { AdultBar } from './presentation/components/AdultBar';
-import { PinGate } from './presentation/components/PinGate';
+import { BoardLibrary } from './presentation/components/BoardLibrary';
 import { NavBar } from './presentation/components/NavBar';
 import { BrandBar } from './presentation/components/BrandBar';
 import { CategoryMenu } from './presentation/components/CategoryMenu';
 import { AccessSettingsPanel } from './presentation/settings/AccessSettingsPanel';
+import { BoardManagementSection } from './presentation/settings/BoardManagementSection';
 import { BackupPanel } from './presentation/settings/BackupPanel';
 import { SyncStatus } from './presentation/components/SyncStatus';
 import { AuthGatePage } from './presentation/auth/AuthGatePage';
@@ -36,6 +35,7 @@ import { clearEvents } from './data/usageRepo';
 import { pruneCache } from './data/symbolCache';
 import { getSyncPhotos, setSyncPhotos, getDarkMode, setDarkMode as persistDarkMode } from './data/settingsRepo';
 import { createMediaRepo, pruneArchivedMedia } from './data/mediaRepo';
+import { createBoardRepo } from './data/boardRepo';
 import { deleteMediaFromStorage } from './services/sync/mediaSync';
 import { FirebaseStorageProvider } from './services/sync/storageProvider';
 import { PhraseBankPanel } from './presentation/phraseBank/PhraseBankPanel';
@@ -122,6 +122,9 @@ const ChildrenDashboard = lazy(() =>
   import('./presentation/portal/ChildrenDashboard').then((m) => ({ default: m.ChildrenDashboard })),
 );
 
+/** מצב התצוגה במצב מבוגר: ספריית-לוחות (בית) מול לוח בודד. */
+type AppView = 'library' | 'board';
+
 /** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. */
 function vocalize(c: Cell): string {
   return c.vocalization ?? c.nikud ?? c.label;
@@ -130,11 +133,14 @@ function vocalize(c: Cell): string {
 export function App() {
   const [ctx, setCtx] = useState<ActiveContext | null>(null);
   const [mode, setMode] = useState<AppMode>('locked');
-  const [pinPrompt, setPinPrompt] = useState(false);
+  // MVP: "בית" של המבוגר הוא ספריית-לוחות; הילד (נעול) תמיד בתוך לוח.
+  const [view, setView] = useState<AppView>('board');
   const [sentence, setSentence] = useState<Cell[]>([]);
   const [hasHeVoice, setHasHeVoice] = useState<boolean | null>(null);
   const [navStack, setNavStack] = useState<NavStack | null>(null);
   const [builderMode, setBuilderMode] = useState(false);
+  // כשנכנסים ל-builder דרך "+ לוח חדש" מהספרייה — לפתוח מיד את NewBoardChooser.
+  const [newBoardFromLibrary, setNewBoardFromLibrary] = useState(false);
   const [accessSettings, setAccessSettings] = useState<AccessSettings>(
     DEFAULT_ACCESS_SETTINGS,
   );
@@ -168,6 +174,7 @@ export function App() {
   const ttsRef = useRef<TtsLike | null>(null);
   const fallbackTtsRef = useRef<HebrewTts | null>(null);
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
+  /** קוד מטפל שמור — נטען מראש ל-opt-in PIN מתקדם (כרגע השחרור בלחיצה-ארוכה בלבד). */
   const storedPinRef = useRef<string>('');
   const nikudRef = useRef<NikudService | null>(null);
   const syncEngineRef = useRef<SyncEngine | null>(null);
@@ -338,7 +345,8 @@ export function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx?.activeProfile.id]);
 
-  // מצב נעול מלא (Guided Access, FR-019)
+  // מצב נעול מלא (Guided Access, FR-019) — נשמר גם כשהשחרור עבר ללחיצה-ארוכה:
+  // הלחיצה-הארוכה היא המחווה המכוונת של המבוגר; הילד לא "בורח" בטעות (popstate/beforeunload).
   useEffect(() => {
     if (mode !== 'locked') return;
     window.history.pushState(null, '', window.location.href);
@@ -628,14 +636,52 @@ export function App() {
     },
   });
 
-  const tryUnlock = (pin: string): boolean => {
-    if (!verifyPin(pin, storedPinRef.current)) return false;
+  // ── שחרור/נעילה (MVP: לחיצה-ארוכה, בלי PIN) ─────────────────────────────
+  // unlock: מעבר ישיר למצב מבוגר ונחיתה בספריית-הלוחות (הבית של המבוגר).
+  const unlock = (): void => {
     setMode('adult');
-    setPinPrompt(false);
-    return true;
+    setView('library');
   };
 
-  const lock = (): void => setMode('locked');
+  // lock: חזרה למצב ילד — מאפס את הניווט ללוח הבית של הפרופיל (הילד לא נשאר בלוח שהמבוגר פתח).
+  const lock = (): void => {
+    setMode('locked');
+    setView('board');
+    setBuilderMode(false);
+    if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
+  };
+
+  // פתיחת לוח מהספרייה: שורש מחסנית ניווט חדשה בלוח שנבחר, מעבר לתצוגת לוח.
+  const onOpenBoardFromLibrary = (boardId: string): void => {
+    setNavStack(createNavStack(boardId));
+    setSentence([]);
+    setView('board');
+  };
+
+  // "+ לוח חדש" מהספרייה → נכנס ל-builder ופותח את NewBoardChooser הקיים (בלי שכפול).
+  const onNewBoardFromLibrary = (): void => {
+    setView('board');
+    setNewBoardFromLibrary(true);
+    setBuilderMode(true);
+  };
+
+  // ארכוב לוח מהספרייה (מחיקה רכה, הפיכה) — עם אישור, ועדכון מיידי של allBoards.
+  const onArchiveBoard = (boardId: string): void => {
+    const target = ctx?.allBoards[boardId];
+    const label = target?.name ?? 'הלוח';
+    if (!window.confirm(`להעביר את "${label}" לארכיון? אפשר לשחזר מגיבוי.`)) return;
+    void createBoardRepo()
+      .archive(boardId)
+      .then(() => {
+        setCtx((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev.allBoards };
+          delete next[boardId];
+          return { ...prev, allBoards: next };
+        });
+      })
+      .catch(() => {});
+  };
 
   const onSwitch = (id: string): void => {
     void switchActiveProfile(id).then((next) => {
@@ -734,9 +780,29 @@ export function App() {
 
   const adult = canManageProfiles(mode);
   const canBack = navStack ? navCanGoBack(navStack) : false;
+  // ספרייה כ"בית" של המבוגר: רק במצב מבוגר, מחוץ ל-builder, כשבחרנו תצוגת ספרייה.
+  const inLibrary = adult && !builderMode && view === 'library';
 
   // מחוון uid קצר לתצוגה ב-header
   const uidBadge = authUser ? authUser.email.split('@')[0] : null;
+
+  const statusNode = (
+    <>
+      {adult && <SyncStatus status={syncStatus} />}
+      {adult && uidBadge && (
+        <span className="app__badge app__badge--user" aria-label="משתמש מחובר">
+          {uidBadge}
+        </span>
+      )}
+      <span className={hasHeVoice === false ? 'app__badge app__badge--warn' : 'app__badge'}>
+        {hasHeVoice === null
+          ? 'טוען קול…'
+          : hasHeVoice
+            ? 'קול עברי זמין'
+            : 'אין קול עברי — הקראה בסיסית'}
+      </span>
+    </>
+  );
 
   // ── Auth Gate ──────────────────────────────────────────────────────────
   if (import.meta.env.VITE_FIREBASE_API_KEY) {
@@ -785,206 +851,170 @@ export function App() {
       style={{ ['--cell-min']: `${accessSettings.cellMinPx ?? 92}px` } as CSSProperties}
     >
       <BrandBar
-        profileName={ctx?.activeProfile.name}
-        onOpenAdult={adult ? () => setSettingsOpen(true) : () => setPinPrompt(true)}
-        onSignOut={adult && authUser ? onSignOut : undefined}
         isAdult={adult}
-        profiles={adult && ctx ? ctx.profiles : undefined}
-        activeProfileId={ctx?.activeProfile.id}
-        onSwitch={adult ? onSwitch : undefined}
-        onOpenWizard={adult ? () => setWizardOpen(true) : undefined}
-        authEmail={authUser?.email}
-        authDisplayName={authUser?.displayName}
-        status={
-          <>
-            {adult && <SyncStatus status={syncStatus} />}
-            {adult && uidBadge && (
-              <span
-                className="app__badge app__badge--user"
-                aria-label="משתמש מחובר"
-              >
-                {uidBadge}
-              </span>
-            )}
-            <span
-              className={
-                hasHeVoice === false
-                  ? 'app__badge app__badge--warn'
-                  : 'app__badge'
+        onUnlock={unlock}
+        onLock={lock}
+        onOpenSettings={adult ? () => setSettingsOpen(true) : undefined}
+        onOpenLibrary={
+          adult && !inLibrary
+            ? () => {
+                setBuilderMode(false);
+                setNewBoardFromLibrary(false);
+                setView('library');
               }
-            >
-              {hasHeVoice === null
-                ? 'טוען קול…'
-                : hasHeVoice
-                  ? 'קול עברי זמין'
-                  : 'אין קול עברי — הקראה בסיסית'}
-            </span>
-          </>
+            : undefined
         }
+        status={statusNode}
       />
-
-      <div className="app__controls">
-        {adult ? (
-          ctx && (
-            <AdultBar
-              profiles={ctx.profiles}
-              activeProfileId={ctx.activeProfile.id}
-              onSwitch={onSwitch}
-              onCreate={onCreate}
-              onOpenWizard={() => setWizardOpen(true)}
-              onLock={lock}
-              onEditBoard={() => setBuilderMode(true)}
-              onOpenBackup={() => setBackupOpen(true)}
-              onOpenAnalytics={() => setAnalyticsOpen(true)}
-              onOpenPhraseBank={onOpenPhraseBank}
-              onOpenWordFinder={() => setWordFinderOpen(true)}
-              onSignOut={authUser ? onSignOut : undefined}
-              onOpenPortal={authUser ? () => setPortalOpen(true) : undefined}
-              onOpenAdmin={authUser?.claims?.admin ? () => setAdminPanelOpen(true) : undefined}
-              modelingActive={modelingActive}
-              onToggleModeling={onToggleModeling}
-            />
-          )
-        ) : pinPrompt ? (
-          <PinGate onUnlock={tryUnlock} onCancel={() => setPinPrompt(false)} />
-        ) : (
-          <button
-            type="button"
-            className="app__adultbtn"
-            onClick={() => setPinPrompt(true)}
-          >
-            מצב מבוגר
-          </button>
-        )}
-      </div>
 
       <main className="app__main">
-      <BoardToolbar
-        words={sentence.map((c) => c.label)}
-        onPrint={() => window.print()}
-        onSpeak={speakSentence}
-        onDeleteWord={() => setSentence((s) => s.slice(0, -1))}
-        onClear={() => setSentence([])}
-        onHome={() => {
-          if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
-        }}
-        canGoHome={!!ctx}
-        buttonScale={accessSettings.sentenceButtonScale}
-      />
-      {adult && (
-        <button type="button" className="app__save-phrase" onClick={onSaveSentence} aria-label="שמירת ביטוי לבנק">
-          💾
-        </button>
-      )}
-      {/* I2 — שורת ניבוי מילה הבאה (כשהניבוי מופעל). */}
-      {accessSettings.predictionEnabled && !builderMode && (
-        <PredictionBar words={predictions} onPick={addPredictedWord} />
-      )}
-      {saveToast && (
-        <div className="app__toast" role="status" aria-live="polite">
-          נשמר!
-        </div>
-      )}
-
-      {/* I4 — בקרת רמת אוצר מילים (מוצגת רק בלוחות עם רמות). */}
-      {!builderMode && boardMaxLevel > 0 && (
-        <div className="level-bar" role="group" aria-label="רמת אוצר מילים">
-          <button
-            type="button"
-            className="level-bar__btn"
-            onClick={() => setCurrentLevel((l) => Math.max(0, l - 1))}
-            disabled={currentLevel <= 0}
-            aria-label="הסתר רמה"
-          >
-            −
-          </button>
-          <span className="level-bar__label">רמה {currentLevel}/{boardMaxLevel}</span>
-          <button
-            type="button"
-            className="level-bar__btn"
-            onClick={() => setCurrentLevel((l) => Math.min(boardMaxLevel, l + 1))}
-            disabled={currentLevel >= boardMaxLevel}
-            aria-label="חשוף רמה"
-          >
-            +
-          </button>
-        </div>
-      )}
-
-      <NavBar
-        canGoBack={canBack}
-        onBack={() => setNavStack((prev) => (prev ? navPop(prev) : prev))}
-        onHome={() => {
-          if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
-        }}
-        onCategories={ctx ? () => setCategoryMenuOpen(true) : undefined}
-      />
-
-      {categoryMenuOpen && ctx && (
-        <CategoryMenu
-          boards={Object.values(ctx.allBoards)}
-          homeId={ctx.activeProfile.homeBoardId}
-          onSelect={(boardId) => {
-            setNavStack((prev) => (prev ? navPush(prev, boardId) : prev));
-            setCategoryMenuOpen(false);
-          }}
-          onClose={() => setCategoryMenuOpen(false)}
-        />
-      )}
-
-      {builderMode && ctx && currentBoard ? (
-        <Suspense fallback={<div className="app__loading" role="status">טוען…</div>}>
-        <BuilderView
-          board={currentBoard}
-          mediaSyncConfig={ctx ? {
-            profileId: ctx.activeProfile.id,
-            syncPhotos,
-            authUserId: authUser?.uid,
-            useFirebase: syncEnabled && !!authUser,
-          } : undefined}
-          onBoardChange={(b) => {
-            setCtx((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    board: prev.board.id === b.id ? b : prev.board,
-                    allBoards: { ...prev.allBoards, [b.id]: b },
-                  }
-                : prev,
-            );
-            // C1: טריגר סנכרון (debounced) אחרי עריכת לוח — אחרת השינוי יושב לא-מסונכרן.
-            syncEngineRef.current?.scheduleSync();
-          }}
-          onExitBuilder={() => setBuilderMode(false)}
-          nikudService={nikudRef.current}
-        />
-        </Suspense>
-      ) : ctx && currentBoard ? (
-        currentBoard.kind === 'scene' ? (
-          // I7 — לוח סצנה (VSD): לחיצה על אזור בונה תא וירטואלי ומפעילה את ה-action.
-          <SceneView
-            board={currentBoard}
-            onRegion={(r) => onCell({ id: r.id, label: r.label, action: r.action })}
-          />
+        {inLibrary ? (
+          ctx ? (
+            <BoardLibrary
+              boards={Object.values(ctx.allBoards)}
+              homeId={ctx.activeProfile.homeBoardId}
+              editMode
+              onOpen={onOpenBoardFromLibrary}
+              onNew={onNewBoardFromLibrary}
+              onArchive={onArchiveBoard}
+            />
+          ) : (
+            <div className="app__loading" role="status">טוען…</div>
+          )
         ) : (
-          <BoardView
-            board={currentBoard}
-            onCell={onCell}
-            accessSettings={accessSettings}
-            modelingHighlights={modelingSession?.activeHighlights}
-            level={currentLevel}
-            scanIndices={scanningActive ? scanIndices : []}
-          />
-        )
-      ) : (
-        <div className="app__loading" role="status">
-          טוען…
-        </div>
-      )}
+          <>
+            <BoardToolbar
+              words={sentence.map((c) => c.label)}
+              onPrint={() => window.print()}
+              onSpeak={speakSentence}
+              onDeleteWord={() => setSentence((s) => s.slice(0, -1))}
+              onClear={() => setSentence([])}
+              onHome={() => {
+                if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
+              }}
+              canGoHome={!!ctx}
+              buttonScale={accessSettings.sentenceButtonScale}
+            />
+            {adult && (
+              <button type="button" className="app__save-phrase" onClick={onSaveSentence} aria-label="שמירת ביטוי לבנק">
+                💾
+              </button>
+            )}
+            {/* I2 — שורת ניבוי מילה הבאה (כשהניבוי מופעל). */}
+            {accessSettings.predictionEnabled && !builderMode && (
+              <PredictionBar words={predictions} onPick={addPredictedWord} />
+            )}
+            {saveToast && (
+              <div className="app__toast" role="status" aria-live="polite">
+                נשמר!
+              </div>
+            )}
+
+            {/* I4 — בקרת רמת אוצר מילים (מוצגת רק בלוחות עם רמות). */}
+            {!builderMode && boardMaxLevel > 0 && (
+              <div className="level-bar" role="group" aria-label="רמת אוצר מילים">
+                <button
+                  type="button"
+                  className="level-bar__btn"
+                  onClick={() => setCurrentLevel((l) => Math.max(0, l - 1))}
+                  disabled={currentLevel <= 0}
+                  aria-label="הסתר רמה"
+                >
+                  −
+                </button>
+                <span className="level-bar__label">רמה {currentLevel}/{boardMaxLevel}</span>
+                <button
+                  type="button"
+                  className="level-bar__btn"
+                  onClick={() => setCurrentLevel((l) => Math.min(boardMaxLevel, l + 1))}
+                  disabled={currentLevel >= boardMaxLevel}
+                  aria-label="חשוף רמה"
+                >
+                  +
+                </button>
+              </div>
+            )}
+
+            <NavBar
+              canGoBack={canBack}
+              onBack={() => setNavStack((prev) => (prev ? navPop(prev) : prev))}
+              onHome={() => {
+                if (ctx) setNavStack(navHome(ctx.activeProfile.homeBoardId));
+              }}
+              onCategories={ctx ? () => setCategoryMenuOpen(true) : undefined}
+            />
+
+            {categoryMenuOpen && ctx && (
+              <CategoryMenu
+                boards={Object.values(ctx.allBoards)}
+                homeId={ctx.activeProfile.homeBoardId}
+                onSelect={(boardId) => {
+                  setNavStack((prev) => (prev ? navPush(prev, boardId) : prev));
+                  setCategoryMenuOpen(false);
+                }}
+                onClose={() => setCategoryMenuOpen(false)}
+              />
+            )}
+
+            {builderMode && ctx && currentBoard ? (
+              <Suspense fallback={<div className="app__loading" role="status">טוען…</div>}>
+              <BuilderView
+                board={currentBoard}
+                autoOpenNewBoardChooser={newBoardFromLibrary}
+                mediaSyncConfig={ctx ? {
+                  profileId: ctx.activeProfile.id,
+                  syncPhotos,
+                  authUserId: authUser?.uid,
+                  useFirebase: syncEnabled && !!authUser,
+                } : undefined}
+                onBoardChange={(b) => {
+                  setCtx((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          board: prev.board.id === b.id ? b : prev.board,
+                          allBoards: { ...prev.allBoards, [b.id]: b },
+                        }
+                      : prev,
+                  );
+                  // C1: טריגר סנכרון (debounced) אחרי עריכת לוח — אחרת השינוי יושב לא-מסונכרן.
+                  syncEngineRef.current?.scheduleSync();
+                }}
+                onExitBuilder={() => {
+                  setBuilderMode(false);
+                  setNewBoardFromLibrary(false);
+                }}
+                nikudService={nikudRef.current}
+              />
+              </Suspense>
+            ) : ctx && currentBoard ? (
+              currentBoard.kind === 'scene' ? (
+                // I7 — לוח סצנה (VSD): לחיצה על אזור בונה תא וירטואלי ומפעילה את ה-action.
+                <SceneView
+                  board={currentBoard}
+                  onRegion={(r) => onCell({ id: r.id, label: r.label, action: r.action })}
+                />
+              ) : (
+                <BoardView
+                  board={currentBoard}
+                  onCell={onCell}
+                  accessSettings={accessSettings}
+                  modelingHighlights={modelingSession?.activeHighlights}
+                  level={currentLevel}
+                  scanIndices={scanningActive ? scanIndices : []}
+                />
+              )
+            ) : (
+              <div className="app__loading" role="status">
+                טוען…
+              </div>
+            )}
+          </>
+        )}
       </main>
 
-      {/* I13 — הדפסת הלוח (לואו-טק). מוסתר בהדפסה עצמה. */}
-      {adult && !builderMode && (
+      {/* I13 — הדפסת הלוח (לואו-טק). מוסתר בהדפסה עצמה ובתצוגת ספרייה. */}
+      {adult && !builderMode && !inLibrary && (
         <button
           type="button"
           className="print-fab no-print"
@@ -1020,6 +1050,28 @@ export function App() {
           onDeleteFromCloud={authUser ? onDeletePhotosFromCloud : undefined}
           ttsApiKey="proxy"
           googleVoices={GOOGLE_HE_VOICES}
+          managementSection={
+            ctx ? (
+              <BoardManagementSection
+                profiles={ctx.profiles}
+                activeProfileId={ctx.activeProfile.id}
+                onSwitch={onSwitch}
+                onCreate={onCreate}
+                onOpenWizard={() => setWizardOpen(true)}
+                onEditBoard={() => { setSettingsOpen(false); setBuilderMode(true); }}
+                onNewBoard={() => { setSettingsOpen(false); onNewBoardFromLibrary(); }}
+                onOpenBackup={() => { setSettingsOpen(false); setBackupOpen(true); }}
+                onOpenAnalytics={() => { setSettingsOpen(false); setAnalyticsOpen(true); }}
+                onOpenPhraseBank={() => { setSettingsOpen(false); onOpenPhraseBank(); }}
+                onOpenWordFinder={() => { setSettingsOpen(false); setWordFinderOpen(true); }}
+                onOpenPortal={authUser ? () => { setSettingsOpen(false); setPortalOpen(true); } : undefined}
+                onOpenAdmin={authUser?.claims?.admin ? () => { setSettingsOpen(false); setAdminPanelOpen(true); } : undefined}
+                onSignOut={authUser ? onSignOut : undefined}
+                modelingActive={modelingActive}
+                onToggleModeling={() => { onToggleModeling(); setSettingsOpen(false); setView('board'); }}
+              />
+            ) : undefined
+          }
         />
       )}
 

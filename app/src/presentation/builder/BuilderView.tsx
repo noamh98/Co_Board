@@ -24,9 +24,14 @@ export interface BuilderViewProps {
   onExitBuilder: () => void;
   nikudService: NikudService | null;
   mediaSyncConfig?: MediaSyncConfig;
+  /**
+   * MVP (סעיף 4.5): כשנכנסים ל-builder מתוך "+ לוח חדש" בספרייה — פותח מיד את
+   * NewBoardChooser הקיים (אותה זרימה, בלי שכפול). מופעל פעם אחת בעליית הרכיב.
+   */
+  autoOpenNewBoardChooser?: boolean;
 }
 
-export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService, mediaSyncConfig }: BuilderViewProps) {
+export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService, mediaSyncConfig, autoOpenNewBoardChooser }: BuilderViewProps) {
   const undoStackRef = useRef(new UndoStack<Board>(board));
   const [currentBoard, setCurrentBoard] = useState<Board>(board);
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
@@ -43,6 +48,13 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
   const [canRedo, setCanRedo] = useState(false);
 
   const repo = useRef(createBoardRepo());
+
+  // MVP (סעיף 4.5): "+ לוח חדש" מהספרייה נכנס ל-builder ופותח מיד את הבורר.
+  // BuilderView עולה מחדש בכל כניסה ל-builder → effect חד-פעמי בעליית הרכיב.
+  useEffect(() => {
+    if (autoOpenNewBoardChooser) setNewBoardChooserOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const syncUndoState = () => {
     setCanUndo(undoStackRef.current.canUndo());

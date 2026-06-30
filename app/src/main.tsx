@@ -6,6 +6,7 @@ import { ErrorBoundary } from './presentation/ui/ErrorBoundary';
 import './index.css';
 // Phase 2 (F6): ריברנד קורל — מקור-אמת יחיד. חייב להיטען *אחרי* index.css כדי שינצח.
 import './presentation/ui/tokens.css';
+import './presentation/ui/mvpUx.css';
 
 // Offline-first: רישום Service Worker (vite-plugin-pwa).
 registerSW({ immediate: true });
