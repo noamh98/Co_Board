@@ -33,3 +33,8 @@ CLAUDE_TTS_*.md
 
 # UX changes package (applied)
 Co_Board-UX-Changes/
+
+# Office docs (planning/notes — not source)
+*.docx
+*.xlsx
+*.pptx
