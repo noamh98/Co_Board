@@ -4,6 +4,10 @@ import type { Board } from '../domain/models';
 
 // מאגר לוחות מעל IndexedDB (Offline-first). מחיקה = ארכוב (archived=true), לא הסרה —
 // כך שחזור גרסה/לוח שנמחק בטעות אפשרי גם אופליין (PRD §4.8/FR-022).
+//
+// Phase 0 (CR-4): archive() חייב recordLocalWrite — אחרת לוחות שאורכבו לא נדחפים
+// וחוזרים לא-מאורכבים אחרי סנכרון מהמכשיר השני. לוחות-ליבה (isCoreBoard) מוחרגים
+// מה-outbox (מקומיים, אינם מסונכרנים).
 
 export interface BoardRepo {
   get(id: string): Promise<Board | undefined>;
@@ -29,13 +33,21 @@ export function createBoardRepo(): BoardRepo {
       const db = await getDb();
       await db.put(STORE_BOARDS, board);
       // חיווט outbox (A1): כל שמירת לוח מקדמת version ונכנסת לתור הסנכרון.
-      await recordLocalWrite('board', board.id, board);
+      // לוחות-ליבה מקומיים בלבד — לא מסנכרנים (מונע השמנת ה-outbox בתבניות מובנות).
+      if (!board.isCoreBoard) {
+        await recordLocalWrite('board', board.id, board);
+      }
     },
     async archive(id) {
       const db = await getDb();
       const existing = (await db.get(STORE_BOARDS, id)) as Board | undefined;
       if (!existing) return;
-      await db.put(STORE_BOARDS, { ...existing, archived: true });
+      const archived: Board = { ...existing, archived: true };
+      await db.put(STORE_BOARDS, archived);
+      // CR-4: ארכוב הוא שינוי מקומי — חייב להידחף ל-outbox כדי שיסונכרן.
+      if (!archived.isCoreBoard) {
+        await recordLocalWrite('board', id, archived);
+      }
     },
   };
 }

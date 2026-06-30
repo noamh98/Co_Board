@@ -1,0 +1,290 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Co_Board — MVP UX (ספרייה-כבית · סרגל-מנעול נקי · סקשן ניהול)
+   ───────────────────────────────────────────────────────────────────
+   נטען אחרי tokens.css (ראה main.tsx). מאמץ את *מבנה* אמור-לי — לא צבע:
+   הכול דרך משתני ה-chrome (--cl-*) ולכן מקבל אוטומטית dark + high-contrast.
+   צבעי Fitzgerald של תאי התצוגה-המקדימה מגיעים מ-domain/fitzgerald (inline) —
+   אסור לקבע אותם כאן (תקן נגישות AAC). RTL: logical properties בלבד.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── סרגל מותג: פריסה נקייה (לוגו ימין · מרכז · מנעול שמאל) ──────────── */
+.brandbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.brandbar__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* מנעול / מצב-עריכה — מטרת-מגע גדולה (≥44px), פוקוס נראה, RTL-safe */
+.brandbar__lock {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding-inline: var(--sp-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-full);
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none; /* מונע scroll/gesture מתחרים על המנעול בזמן ההחזקה */
+}
+.brandbar__lock:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.brandbar__lock-icon { font-size: var(--tx-lg); line-height: 1; }
+.brandbar__lock-label { font-size: var(--tx-sm); font-weight: 700; }
+.brandbar__lock--open {
+  background: var(--co-brand-tint);
+  border-color: var(--cl-primary);
+  color: var(--cl-primary-dk);
+}
+
+/* מילוי-התקדמות בזמן לחיצה-ארוכה: רוחב 0→100% למשך --lp-ms.
+   prefers-reduced-motion → ללא אנימציה (עדיין נגיש; ה-fire מתבסס על הטיימר). */
+.brandbar__lock-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 0;
+  background: var(--co-brand-tint);
+  pointer-events: none;
+}
+.brandbar__lock--pressing .brandbar__lock-fill {
+  width: 100%;
+  transition: width var(--lp-ms, 1200ms) linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brandbar__lock--pressing .brandbar__lock-fill { transition: none; }
+}
+.brandbar__lock-icon,
+.brandbar__lock-label { position: relative; z-index: 1; }
+
+/* כפתורי פעולה בסרגל (⚙ הגדרות · ⊞ ספרייה) */
+.brandbar__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-full);
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  font-size: var(--tx-lg);
+  cursor: pointer;
+}
+.brandbar__action:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+
+/* ── ספריית לוחות (הבית של המבוגר) ──────────────────────────────────── */
+.board-library {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.board-library__new {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-5);
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--cl-primary);
+  color: var(--cl-on-primary);
+  font-size: var(--tx-md);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--co-shadow-sm);
+}
+.board-library__new:focus-visible {
+  outline: 3px solid var(--cl-primary-dk);
+  outline-offset: 2px;
+}
+.board-library__empty {
+  color: var(--cl-muted);
+  font-size: var(--tx-base);
+  padding: var(--sp-4) 0;
+}
+
+/* כותרת-קבוצה מתקפלת — .library-group__label קיים ב-tokens.css; כאן הופך לכפתור */
+.library-group { display: flex; flex-direction: column; }
+.library-group__label {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: start;
+}
+.library-group__label:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+.library-group__chevron {
+  color: var(--cl-muted);
+  font-size: var(--tx-sm);
+}
+.library-group__body {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-3);
+}
+
+/* כרטיס לוח */
+.board-card {
+  position: relative;
+  display: flex;
+}
+.board-card__open {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-lg);
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  cursor: pointer;
+  text-align: center;
+  box-shadow: var(--co-shadow-sm);
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.board-card__open:hover { border-color: var(--cl-primary); }
+.board-card__open:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .board-card__open:active { transform: scale(0.98); }
+}
+.board-card__name {
+  font-size: var(--tx-base);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.board-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+}
+.board-card__home { font-size: var(--tx-sm); }
+
+/* כפתור ארכוב (✕) — פינה עליונה-חיצונית, מטרה ≥32px, אדום */
+.board-card__archive {
+  position: absolute;
+  inset-block-start: -8px;
+  inset-inline-start: -8px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-full);
+  background: var(--cl-surface);
+  color: var(--cl-danger);
+  font-size: var(--tx-sm);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--co-shadow-sm);
+}
+.board-card__archive:focus-visible {
+  outline: 3px solid var(--cl-danger);
+  outline-offset: 2px;
+}
+
+/* ── תצוגה-מקדימה (מיני-גריד) — CSS בלבד, צבע Fitzgerald inline ──────── */
+.board-preview {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 3px;
+  border-radius: var(--r-sm);
+  background: var(--cl-surface-alt);
+}
+.board-preview__cell {
+  border-radius: 2px;
+  min-height: 3px;
+}
+.board-preview__cell--empty { opacity: 0.5; }
+.board-card__preview { margin-bottom: var(--sp-1); }
+
+/* ── סקשן "ניהול" בהגדרות (אקשני AdultBar לשעבר) ─────────────────────── */
+.mgmt-profile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-3);
+}
+.mgmt-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-2);
+}
+.mgmt-actions__inline {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--sp-2);
+}
+.mgmt-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-md);
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  font-size: var(--tx-base);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: start;
+}
+.mgmt-actions__btn:hover { border-color: var(--cl-primary); }
+.mgmt-actions__btn:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.mgmt-actions__icon { font-size: var(--tx-lg); line-height: 1; }
+.mgmt-actions__btn--primary {
+  background: var(--cl-primary);
+  color: var(--cl-on-primary);
+  border-color: var(--cl-primary);
+}
+.mgmt-actions__btn--active {
+  background: var(--co-brand-tint);
+  border-color: var(--cl-primary);
+  color: var(--cl-primary-dk);
+}
+.mgmt-actions__btn--danger { color: var(--cl-danger); }
+.mgmt-actions__btn--admin { border-color: var(--cl-accent); }
+.mgmt-note {
+  margin-top: var(--sp-3);
+  font-size: var(--tx-sm);
+  color: var(--cl-muted);
+}

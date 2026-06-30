@@ -2,22 +2,34 @@
 // B1: מפתח המכשיר הוא CryptoKey non-extractable מ-data/keyStore (לא JWK ב-localStorage).
 // B2: מדיה מוצפנת ב-CEK אקראי לכל קובץ, עטוף במפתח-המכשיר (לא נגזר מ-uid).
 // PRD §8.3: הצפנה במנוחה (at rest). לא חוסם UI.
+//
+// Phase 0 (CR-3, E2EE fail-loud): כשאין crypto.subtle (לא-HTTPS / WebView ישן) — *זורקים*
+// במקום fallback ל-base64. "הצפנה" הפיכה-טריוויאלית של נתוני ילדים אסורה בשקט.
 
 import { getDeviceKey } from '../../data/keyStore';
+import { getDeviceId as getDeviceIdFromStore } from '../../data/deviceId';
 
 const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
 /** חתימת פורמט מדיה חדש (B2): 'CB02' — מבדיל מהפורמט הישן (salt+iv+ct). */
 const MEDIA_MAGIC = [0x43, 0x42, 0x30, 0x32] as const; // "CB02"
 
+/** הודעת-שגיאה אחידה כשהדפדפן אינו תומך ב-Web Crypto (להצגה ב-UI). */
+export const E2EE_UNAVAILABLE =
+  'הצפנה אינה זמינה בדפדפן זה (נדרש חיבור מאובטח HTTPS). הסנכרון המוצפן הושבת.';
+
+function assertSubtle(): void {
+  if (!crypto?.subtle) {
+    throw new Error(E2EE_UNAVAILABLE);
+  }
+}
+
 /**
  * מצפין נתון JSON. מחזיר base64 של: IV(12 bytes) + ciphertext.
- * אם Web Crypto לא זמין — מחזיר JSON גלמי (fallback offline safe).
+ * CR-3: אם Web Crypto לא זמין — זורק (לא מחזיר base64 גלמי "מוצפן" לכאורה).
  */
 export async function encryptData(data: unknown): Promise<string> {
-  if (!crypto.subtle) {
-    return btoa(JSON.stringify(data));
-  }
+  assertSubtle();
   const key = await getDeviceKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(JSON.stringify(data));
@@ -43,13 +55,12 @@ function uint8ToBinary(bytes: Uint8Array): string {
 
 /**
  * מפענח נתון שהוצפן ע"י encryptData.
+ * CR-3: אם crypto.subtle חסר — זורק (נתפס → null). לא מנסה "לפענח" base64 גלמי.
  * אם פענוח נכשל (מפתח חסר / שגוי) — מחזיר null (fallback בטוח).
  */
 export async function decryptData(encrypted: string): Promise<unknown | null> {
   try {
-    if (!crypto.subtle) {
-      return JSON.parse(atob(encrypted)) as unknown;
-    }
+    assertSubtle();
     const key = await getDeviceKey();
     const combined = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
     const iv = combined.slice(0, 12);
@@ -86,9 +97,10 @@ export async function deriveMediaKey(uid: string, salt: Uint8Array<ArrayBuffer>)
 /**
  * מצפין Blob (B2). פורמט: ['CB02'(4)] [wrapIv(12)] [wrappedLen(2)] [wrappedCEK] [dataIv(12)] [ciphertext].
  * CEK אקראי לכל קובץ, עטוף במפתח-המכשיר (non-extractable). uid אינו חומר-מפתח.
- * הפרמטר uid נשמר לתאימות חתימה בלבד (אינו בשימוש בהצפנה החדשה).
+ * CR-3: זורק כשאין crypto.subtle (לא מעלה מדיה לא-מוצפנת בשקט).
  */
 export async function encryptBlob(blob: Blob, _uid?: string): Promise<Blob> {
+  assertSubtle();
   const deviceKey = await getDeviceKey();
   const cek = await crypto.subtle.generateKey(
     { name: ALGORITHM, length: KEY_LENGTH },
@@ -130,7 +142,7 @@ export async function decryptBlob(
   mimeType: string,
 ): Promise<Blob | null> {
   try {
-    if (!crypto.subtle) return null;
+    if (!crypto?.subtle) return null;
     const data = new Uint8Array(await encryptedBlob.arrayBuffer());
 
     const isNew =
@@ -173,10 +185,10 @@ export async function decryptBlob(
   }
 }
 
+/**
+ * מזהה המכשיר. Phase 0 (CR-6): עבר ל-IDB (data/deviceId) — לא עוד localStorage.
+ * נשמר כאן כ-re-export לתאימות עם callers קיימים (firebaseProvider, BackupPanel).
+ */
 export async function getDeviceId(): Promise<string> {
-  const stored = localStorage.getItem('sync-device-id');
-  if (stored) return stored;
-  const id = crypto.randomUUID ? crypto.randomUUID() : `dev-${Date.now()}`;
-  localStorage.setItem('sync-device-id', id);
-  return id;
+  return getDeviceIdFromStore();
 }

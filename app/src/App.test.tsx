@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { IDBFactory } from 'fake-indexeddb';
 import { App } from './App';
 import { resetDbForTests } from './data/db';
-import { DEFAULT_PIN } from './domain/access';
 
 function resetIndexedDb(): void {
   (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB =
@@ -12,6 +11,24 @@ function resetIndexedDb(): void {
 }
 
 beforeEach(resetIndexedDb);
+
+// MVP: השחרור עבר ל"לחיצה ארוכה על המנעול" (בלי PIN). חלופת-מקלדת נגישה: Enter בהחזקה.
+// העזר משחרר באמצעות החזקת Enter על כפתור המנעול + קידום טיימרים מדומה.
+async function unlockViaLongPress(): Promise<void> {
+  const lock = screen.getByRole('button', {
+    name: 'שחרור למצב עריכה (לחיצה ארוכה)',
+  });
+  vi.useFakeTimers();
+  try {
+    fireEvent.keyDown(lock, { key: 'Enter' });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1300);
+    });
+    fireEvent.keyUp(lock, { key: 'Enter' });
+  } finally {
+    vi.useRealTimers();
+  }
+}
 
 describe('App — פרוסה אנכית (domain → services → UI)', () => {
   it('טוען לוח מה-DB ומוסיף מילים לשורת המשפט בלחיצה', async () => {
@@ -26,62 +43,61 @@ describe('App — פרוסה אנכית (domain → services → UI)', () => {
   it('מחיקת מילה מעדכנת את שורת המשפט', async () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'אני' }));
-    fireEvent.click(screen.getByRole('button', { name: 'מחק מילה' }));
+    fireEvent.click(screen.getByRole('button', { name: 'מחיקת המילה האחרונה' }));
     expect(screen.getByTestId('sentence-text').textContent).toBe('');
   });
 });
 
-describe('App — מצב נעול, קוד מטפל ומעבר פרופיל (M1)', () => {
-  it('נעול כברירת מחדל: אין בורר פרופיל, יש כפתור מצב מבוגר', async () => {
+describe('App — מצב נעול, שחרור בלחיצה-ארוכה ומעבר פרופיל (MVP)', () => {
+  it('נעול כברירת מחדל: אין בורר פרופיל, יש מנעול לשחרור', async () => {
     render(<App />);
     await screen.findByRole('button', { name: 'אני' });
     expect(screen.queryByLabelText('פרופיל')).toBeNull();
     expect(
-      screen.getByRole('button', { name: 'מצב מבוגר' }),
+      screen.getByRole('button', { name: 'שחרור למצב עריכה (לחיצה ארוכה)' }),
     ).toBeInTheDocument();
   });
 
-  it('קוד שגוי לא פותח; קוד נכון פותח מצב מבוגר עם בורר פרופיל', async () => {
+  it('לחיצה ארוכה על המנעול פותחת את מצב העריכה (ספריית לוחות) — בלי PIN', async () => {
     render(<App />);
     await screen.findByRole('button', { name: 'אני' });
-    fireEvent.click(screen.getByRole('button', { name: 'מצב מבוגר' }));
 
-    fireEvent.change(screen.getByLabelText('קוד מטפל'), {
-      target: { value: '0000' },
+    // לחיצה קצרה (שחרור מוקדם) לא פותחת
+    const lock = screen.getByRole('button', {
+      name: 'שחרור למצב עריכה (לחיצה ארוכה)',
     });
-    fireEvent.click(screen.getByRole('button', { name: 'פתח' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('קוד שגוי');
-    expect(screen.queryByLabelText('פרופיל')).toBeNull();
+    vi.useFakeTimers();
+    fireEvent.keyDown(lock, { key: 'Enter' });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    fireEvent.keyUp(lock, { key: 'Enter' });
+    vi.useRealTimers();
+    expect(screen.queryByRole('region', { name: 'ספריית לוחות' })).toBeNull();
 
-    fireEvent.change(screen.getByLabelText('קוד מטפל'), {
-      target: { value: DEFAULT_PIN },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'פתח' }));
-    expect(await screen.findByLabelText('פרופיל')).toBeInTheDocument();
+    // לחיצה ארוכה פותחת את הספרייה
+    await unlockViaLongPress();
+    expect(
+      await screen.findByRole('region', { name: 'ספריית לוחות' }),
+    ).toBeInTheDocument();
   });
 
-  it('יצירת פרופיל חדש מחליפה את הפרופיל הפעיל', async () => {
+  it('יצירת פרופיל חדש (מתוך ההגדרות) מחליפה את הפרופיל הפעיל', async () => {
     render(<App />);
     await screen.findByRole('button', { name: 'אני' });
-    fireEvent.click(screen.getByRole('button', { name: 'מצב מבוגר' }));
-    fireEvent.change(screen.getByLabelText('קוד מטפל'), {
-      target: { value: DEFAULT_PIN },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'פתח' }));
+    await unlockViaLongPress();
 
-    const select = (await screen.findByLabelText(
-      'פרופיל',
-    )) as HTMLSelectElement;
-    // פרופיל חדש פותח wizard — מילוי שלב 1, 2, 3
-    // E3: ה-Wizard נטען lazily (React.lazy) → ממתינים לטעינת ה-chunk לפני אינטראקציה.
+    // הניהול עבר להגדרות — פותחים את גלגל ההגדרות
+    fireEvent.click(await screen.findByRole('button', { name: 'הגדרות' }));
+    const select = (await screen.findByLabelText('פרופיל')) as HTMLSelectElement;
+
+    // "פרופיל חדש" פותח את ה-Wizard (נטען lazily) — ממתינים לטעינת ה-chunk
     fireEvent.click(screen.getByRole('button', { name: 'פרופיל חדש' }));
     fireEvent.change(await screen.findByLabelText('שם הפרופיל'), {
       target: { value: 'דנה' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'הבא' }));
-    // שלב 2 — תבנית ברירת מחדל (core4x4), לחץ הבא
     fireEvent.click(screen.getByRole('button', { name: 'הבא' }));
-    // שלב 3 — אישור
     fireEvent.click(screen.getByRole('button', { name: 'צור פרופיל' }));
 
     await waitFor(() =>
@@ -108,9 +124,7 @@ describe('App — ניווט בין לוחות M2 (FR-013)', () => {
   it('ניווט ללוח קטגוריה: לחיצת "אוכל" מציגה לוח אוכל', async () => {
     render(<App />);
     await screen.findByRole('button', { name: 'אני' });
-    // לחץ על תא הניווט לאוכל
     fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
-    // לוח האוכל מציג תאים ייחודיים לו
     await screen.findByRole('button', { name: 'מים' });
     expect(screen.getByRole('button', { name: 'בננה' })).toBeInTheDocument();
   });
@@ -121,12 +135,10 @@ describe('App — ניווט בין לוחות M2 (FR-013)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
     await screen.findByRole('button', { name: 'מים' });
 
-    // "חזור" פעיל כעת
     const backBtn = screen.getByRole('button', { name: 'חזור' });
     expect(backBtn).not.toBeDisabled();
     fireEvent.click(backBtn);
 
-    // חזרה ללוח הבית
     await screen.findByRole('button', { name: 'אני' });
     expect(screen.queryByRole('button', { name: 'מים' })).toBeNull();
   });
@@ -151,7 +163,6 @@ describe('App — ניווט בין לוחות M2 (FR-013)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'חזור' }));
     await screen.findByRole('button', { name: 'אני' });
 
-    // שורת המשפט ריקה — "חזור" לא נוסף
     expect(screen.getByTestId('sentence-text').textContent).toBe('');
   });
 
@@ -170,11 +181,9 @@ describe('App — ניווט בין לוחות M2 (FR-013)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'אוכל' }));
     await screen.findByRole('button', { name: 'מים' });
 
-    // חזרה מרובה — לא אמורה לגרום לשגיאה
     const backBtn = screen.getByRole('button', { name: 'חזור' });
     fireEvent.click(backBtn);
     await screen.findByRole('button', { name: 'אני' });
-    // חזרה נוספת מהבית — כפתור מושבת, ממשיך להיות בבית
     expect(screen.getByRole('button', { name: 'חזור' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'חזור' })); // no-op
     expect(screen.getByRole('button', { name: 'אני' })).toBeInTheDocument();

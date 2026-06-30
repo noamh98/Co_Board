@@ -1,0 +1,63 @@
+/* presentation/print/print.css — תצוגת A4 RTL נקייה להדפסה/PDF (F3).
+   Ponytail: print-stylesheet נייטיב (window.print) לפני ספריית-PDF — אפס תלות, offline.
+   ה-.board-print מוסתר על המסך ומופיע רק בהדפסה; שאר ה-app מוסתר בהדפסה. */
+
+.board-print { display: none; }
+
+@media print {
+  /* הסתר את כל ה-UI האינטראקטיבי — נדפיס רק את הלוח הנקי. */
+  .brandbar, .app__controls, .sentence, .board-toolbar,
+  .prediction-bar, .level-bar, .navbar, .print-fab, .app__main,
+  .modal-overlay, .no-print { display: none !important; }
+
+  @page { size: A4 landscape; margin: 10mm; }
+
+  html, body { background: #fff !important; }
+
+  .board-print {
+    display: block;
+    direction: rtl;
+    color: #000;
+    font-family: 'Assistant', system-ui, sans-serif;
+  }
+  .board-print__title {
+    text-align: center;
+    font-size: 18pt;
+    font-weight: 800;
+    margin: 0 0 6mm;
+  }
+  .board-print__grid {
+    display: grid;
+    gap: 3mm;
+    /* עמודות/שורות נקבעים inline לפי גודל הלוח. */
+  }
+  .board-print__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1.5mm;
+    border: 1.5pt solid var(--cell-tint, #999);
+    background: var(--cell-tint, #fff);
+    color: var(--cell-ink, #000);
+    border-radius: 3mm;
+    padding: 2mm 1mm;
+    min-height: 22mm;
+    break-inside: avoid;
+  }
+  /* אריח: תווית עברית למעלה + סמל מתחת (נאמן לאפליקציה). */
+  .board-print__label {
+    order: -1;
+    font-weight: 800;
+    font-size: 11pt;
+    line-height: 1.1;
+    text-align: center;
+  }
+  .board-print__img {
+    max-width: 100%;
+    max-height: 16mm;
+    object-fit: contain;
+    margin-top: auto;
+  }
+  .board-print__empty { border-style: dashed; opacity: 0.4; }
+}

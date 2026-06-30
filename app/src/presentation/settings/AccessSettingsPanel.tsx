@@ -8,6 +8,9 @@ import { Slider } from '../ui/Slider';
 // פאנל הגדרות גישה מוטורית (FR-020, PRD §4.7) — מחולק לסקשנים עם אייקונים.
 // controlled: onChange מעדכן את ה-state ב-App ושומר ב-settingsRepo.saveAccessSettings.
 // פרטיות וסנכרון ממוזגים כסקשן (props אופציונליים).
+//
+// MVP (סעיף 4.4): סקשן "ניהול" (האקשנים שהיו ב-AdultBar) מוזרק כ-slot מ-App
+// (managementSection) ומוצג בראש הפאנל — הניהול הוא המשימה הראשית של המבוגר.
 
 export function AccessSettingsPanel({
   settings,
@@ -31,6 +34,7 @@ export function AccessSettingsPanel({
   isAuthenticated,
   onDeleteFromCloud,
   loginPanel,
+  managementSection,
 }: {
   settings: AccessSettings;
   onChange: (next: AccessSettings) => void;
@@ -53,6 +57,8 @@ export function AccessSettingsPanel({
   isAuthenticated?: boolean;
   onDeleteFromCloud?: () => Promise<void>;
   loginPanel?: ReactNode;
+  /** סקשן "ניהול" (אקשני המבוגר) — מוזרק מ-App; מוצג בראש כשקיים. */
+  managementSection?: ReactNode;
 }) {
   const set = (patch: Partial<AccessSettings>) => onChange({ ...settings, ...patch });
 
@@ -106,6 +112,8 @@ export function AccessSettingsPanel({
 
   return (
     <Modal title="הגדרות גישה" onClose={onClose} aria-label="הגדרות גישה" className="settings-panel modal--drawer">
+
+      {managementSection}
 
       {/* ── גישה מוטורית ── */}
       <section className="settings-section" aria-labelledby="s-motor">
@@ -326,6 +334,43 @@ export function AccessSettingsPanel({
             step={0.1}
             format={(v) => `${v.toFixed(1)}×`}
             onChange={onTtsPitchChange}
+          />
+        </div>
+      </section>
+
+      {/* ── תצוגה ושורת קריאה (F7 — נאמן לאפליקציה) ── */}
+      <section className="settings-section" aria-labelledby="s-readbar">
+        <div className="settings-section__header">
+          <span className="settings-section__icon" aria-hidden="true">🔤</span>
+          <h3 className="settings-section__title" id="s-readbar">תצוגה ושורת קריאה</h3>
+        </div>
+        <div className="settings-section__body">
+          <Slider
+            id="cell-image-scale"
+            label="גודל התמונה במשבצת"
+            value={settings.cellImageScale ?? 100}
+            min={50}
+            max={150}
+            step={10}
+            format={(v) => `${v}%`}
+            onChange={(v) => set({ cellImageScale: v })}
+          />
+          <Slider
+            id="sentence-button-scale"
+            label="גודל כפתורי שורת הקריאה"
+            value={settings.sentenceButtonScale ?? 100}
+            min={50}
+            max={200}
+            step={10}
+            format={(v) => `${v}%`}
+            onChange={(v) => set({ sentenceButtonScale: v })}
+          />
+          <Toggle
+            id="prevent-sequential-duplicates"
+            checked={settings.preventSequentialDuplicates ?? false}
+            onChange={(v) => set({ preventSequentialDuplicates: v })}
+            label="מניעת כפילויות ברצף"
+            description="לחיצה חוזרת על אותה מילה לא תוסיף אותה שוב לשורת הקריאה."
           />
         </div>
       </section>

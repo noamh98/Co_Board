@@ -1,4 +1,5 @@
 import type { Board, Cell, Fitzgerald } from './models';
+import { categoryForLabel } from './fitzgerald';
 import {
   HOME_BOARD,
   CORE_VOCAB_6X4_BOARD,
@@ -106,6 +107,51 @@ const BLANK4X4_BOARD: Board = {
   placements: [],
 };
 
+// ─── תבניות נושאיות עשירות (F5) ───────────────────────────────────────────────
+// data-driven: הקטגוריה (Fitzgerald) נגזרת מהמילון הקנוני (categoryForLabel), והניקוד
+// מושאר לשירות הניקוד בזמן ריצה — לא ממציאים ניקוד שעלול להיות שגוי (Ponytail + דיוק לשוני).
+function themed(id: string, label: string): Cell {
+  const fitz = categoryForLabel(label);
+  return { id, label, ...(fitz ? { fitzgerald: fitz } : {}), action: { type: 'speak' } };
+}
+
+function themeBoard(id: string, name: string, cols: number, labels: string[]): Board {
+  const cells = labels.map((label, i) => themed(`${id}-${i}`, label));
+  return {
+    id,
+    name,
+    grid: { rows: Math.ceil(cells.length / cols), cols },
+    cells: Object.fromEntries(cells.map((c) => [c.id, c])),
+    placements: cells.map((c, i) => ({ cellId: c.id, row: Math.floor(i / cols), col: i % cols })),
+  };
+}
+
+const MORNING_BOARD = themeBoard('tpl-morning', 'בוקר טוב', 4, [
+  'אני', 'רוצה', 'לאכול', 'לשתות',
+  'מים', 'חלב', 'לחם', 'ביצה',
+  'כן', 'לא', 'בבקשה', 'עוד',
+]);
+const DRINKS_BOARD = themeBoard('tpl-drinks', 'שתייה', 3, [
+  'מים', 'חלב', 'מיץ',
+  'רוצה', 'עוד', 'בבקשה',
+  'חם', 'קר', 'תודה',
+]);
+const WANT_BOARD = themeBoard('tpl-want', 'מה אני רוצה', 4, [
+  'אני', 'רוצה', 'לשחק', 'עזרה',
+  'בבקשה', 'תודה', 'כן', 'לא',
+  'עוד', 'סיימתי', 'אוכל', 'מים',
+]);
+const HOME_THEME_BOARD = themeBoard('tpl-home', 'בית', 3, [
+  'בית', 'אמא', 'אבא',
+  'מיטה', 'מטבח', 'חדר',
+  'לישון', 'לשחק', 'רוצה',
+]);
+const GAMES_BOARD = themeBoard('tpl-games', 'משחקים', 3, [
+  'לשחק', 'כדור', 'ספר',
+  'רוצה', 'עוד', 'יחד',
+  'אני', 'כן', 'לא',
+]);
+
 const TEMPLATES: BoardTemplate[] = [
   {
     id: 'core4x4',
@@ -148,6 +194,37 @@ const TEMPLATES: BoardTemplate[] = [
     nameHe: 'רגשות (6×4)',
     description: '24 תאי רגש ומצב נפשי',
     board: FEELINGS_6X4_BOARD,
+  },
+  // ── תבניות נושאיות (F5) ──
+  {
+    id: 'morning',
+    nameHe: 'בוקר טוב (3×4)',
+    description: 'שגרת בוקר — אכילה, שתייה ומילות ליבה',
+    board: MORNING_BOARD,
+  },
+  {
+    id: 'drinks',
+    nameHe: 'שתייה (3×3)',
+    description: 'בחירת משקה — מים, חלב, מיץ, חם/קר',
+    board: DRINKS_BOARD,
+  },
+  {
+    id: 'want',
+    nameHe: 'מה אני רוצה (3×4)',
+    description: 'בקשות נפוצות עם מילות ליבה',
+    board: WANT_BOARD,
+  },
+  {
+    id: 'home',
+    nameHe: 'בית (3×3)',
+    description: 'אוצר מילים של הבית והמשפחה',
+    board: HOME_THEME_BOARD,
+  },
+  {
+    id: 'games',
+    nameHe: 'משחקים (3×3)',
+    description: 'משחק ופנאי',
+    board: GAMES_BOARD,
   },
 ];
 

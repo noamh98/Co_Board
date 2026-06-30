@@ -1,8 +1,10 @@
 // presentation/auth/RegisterPanel.tsx — הרשמה: שם + אימייל + סיסמה + אימות סיסמה.
 // אחרי יצירת חשבון: שליחת מייל אימות + כתיבת status='pending' → מסך המתנה.
 // RTL מלא. הודעות שגיאה בעברית.
+// Phase 1 (de-dup translateError): מיפוי קודי Firebase לעברית הועבר ל-translateFirebaseError.
 
 import { useState } from 'react';
+import { translateFirebaseError } from './translateFirebaseError';
 
 interface Props {
   onRegister: (
@@ -13,16 +15,6 @@ interface Props {
   onGoogleSignIn?: () => Promise<void>;
   onBackToLogin: () => void;
   loading?: boolean;
-}
-
-function translateError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
-  if (msg.includes('email-already-in-use')) return 'כתובת אימייל כבר בשימוש';
-  if (msg.includes('invalid-email')) return 'כתובת אימייל לא תקינה';
-  if (msg.includes('weak-password')) return 'הסיסמה חלשה מדי (לפחות 6 תווים)';
-  if (msg.includes('network-request-failed') || msg.includes('offline'))
-    return 'אין חיבור לרשת — נסה שנית';
-  return 'שגיאה בהרשמה, נסה שנית';
 }
 
 export function RegisterPanel({ onRegister, onGoogleSignIn, onBackToLogin, loading = false }: Props) {
@@ -47,7 +39,7 @@ export function RegisterPanel({ onRegister, onGoogleSignIn, onBackToLogin, loadi
     try {
       await onRegister(email.trim(), password, displayName.trim());
     } catch (e) {
-      setError(translateError(e));
+      setError(translateFirebaseError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -60,7 +52,7 @@ export function RegisterPanel({ onRegister, onGoogleSignIn, onBackToLogin, loadi
     try {
       await onGoogleSignIn();
     } catch (e) {
-      setError(translateError(e));
+      setError(translateFirebaseError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
