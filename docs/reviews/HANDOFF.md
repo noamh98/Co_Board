@@ -74,6 +74,6 @@ cd functions && npm run test:rules                       # דורש Java + אמ�
 | 1.4 functions build ב-CI + npm ci | ✅ בוצע (סבב זה) |
 | 1.5 dependabot | ✅ בוצע (סבב זה) |
 | 1.6 תיקון קישור ARCHITECTURE | ✅ בוצע (סבב זה) |
-| 1.7 notifyError + error toast | ⬜ הבא בתור |
+| 1.7 notifyError + error toast | ✅ בוצע (סבב זה) — `services/notify/notifyService.ts`; הוחלפו 3 הבליעות פונות-המשתמש (archive/save-phrase/sign-out); בליעות prune/telemetry נשארו מכוונות |
 | Phase 2 (רפקטור) | ⬜ |
 | Phase 3 (הקשחה) | ⬜ |

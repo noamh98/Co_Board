@@ -99,6 +99,7 @@ import { useScanning } from './services/access/useScanning';
 import { predictNext, type NgramModel, emptyModel } from './domain/prediction/predictor';
 import { getPredictionModel, recordSequence } from './data/predictionRepo';
 import { maxLevel, isFrozenCore } from './domain/growingVocab';
+import { notifyError, onNotifyError } from './services/notify/notifyService';
 import {
   pluralizeNoun,
   addDefiniteArticle,
@@ -153,6 +154,7 @@ export function App() {
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [phrases, setPhrases] = useState<PhraseEntry[]>([]);
   const [saveToast, setSaveToast] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatusType>('disabled');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -183,6 +185,8 @@ export function App() {
   if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
   /** טיימר ה-toast "נשמר!" — נשמר לניקוי במצב unmount (D3). */
   const saveToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** טיימר toast השגיאה — אותו דפוס ניקוי כמו saveToast (D3). */
+  const errorToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // ref מסנכרן עם syncEnabled state כדי שקרוב syncEngine תמיד יראה ערך נוכחי
   const syncEnabledRef = useRef(false);
   // הפרופיל שאיפסנו עבורו לאחרונה — מבדיל טעינה ראשונית מהחלפת פרופיל אמיתית.
@@ -197,7 +201,19 @@ export function App() {
   useEffect(
     () => () => {
       if (saveToastTimerRef.current) clearTimeout(saveToastTimerRef.current);
+      if (errorToastTimerRef.current) clearTimeout(errorToastTimerRef.current);
     },
+    [],
+  );
+
+  // Phase 1.7 (U-1): הרשמה לערוץ שגיאות-משתמש — כשל בפעולה מציג toast במקום להיבלע.
+  useEffect(
+    () =>
+      onNotifyError((message) => {
+        setErrorToast(message);
+        if (errorToastTimerRef.current) clearTimeout(errorToastTimerRef.current);
+        errorToastTimerRef.current = setTimeout(() => setErrorToast(null), 4000);
+      }),
     [],
   );
 
@@ -680,7 +696,7 @@ export function App() {
           return { ...prev, allBoards: next };
         });
       })
-      .catch(() => {});
+      .catch(() => notifyError('העברת הלוח לארכיון נכשלה — נסו שוב'));
   };
 
   const onSwitch = (id: string): void => {
@@ -722,7 +738,7 @@ export function App() {
         if (saveToastTimerRef.current) clearTimeout(saveToastTimerRef.current);
         saveToastTimerRef.current = setTimeout(() => setSaveToast(false), 1500);
       })
-      .catch(() => {});
+      .catch(() => notifyError('שמירת הביטוי נכשלה — נסו שוב'));
   };
 
   const onDeletePhrase = (id: string): void => {
@@ -738,7 +754,7 @@ export function App() {
 
   const onSignOut = (): void => {
     if (import.meta.env.VITE_FIREBASE_API_KEY) {
-      void signOutFirebase().catch(() => {});
+      void signOutFirebase().catch(() => notifyError('היציאה מהחשבון נכשלה — נסו שוב'));
     }
     const provider = syncEnabled ? new FirebaseProvider() : new LocalStubProvider();
     void authService.signOut(provider);
@@ -1141,6 +1157,13 @@ export function App() {
           homeId={ctx.activeProfile.homeBoardId}
           onClose={() => setWordFinderOpen(false)}
         />
+      )}
+
+      {/* Phase 1.7 (U-1): toast שגיאה גלובלי — מוצג בכל תצוגה, כולל ספרייה ומודאלים. */}
+      {errorToast && (
+        <div className="app__toast app__toast--error" role="alert">
+          {errorToast}
+        </div>
       )}
     </div>
   );
