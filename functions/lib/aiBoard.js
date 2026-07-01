@@ -67,9 +67,10 @@ exports.aiBoard = (0, https_1.onCall)({ region: ttsProxy_1.FUNCTIONS_REGION, sec
     const timer = setTimeout(() => controller.abort(), 15_000);
     let res;
     try {
-        res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+        // המפתח ב-header ולא ב-query string — URL-ים נוטים לדלוף ללוגים/פרוקסי.
+        res = await fetch(GEMINI_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {

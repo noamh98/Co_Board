@@ -22,6 +22,10 @@ interface ShareInviteDoc {
   used?: boolean;
 }
 
+// defense-in-depth: role מועתק מההזמנה ל-childAccess — לא לכתוב ערך שרירותי
+// שהגיע ממסמך שנוצר בלקוח (חוקי Firestore לא מוודאים את השדה ביצירה).
+const ALLOWED_ROLES = new Set<ShareInviteDoc['role']>(['parent', 'clinician', 'staff']);
+
 export const acceptInvite = onCall(
   { region: 'us-central1' },
   async (request) => {
@@ -53,6 +57,9 @@ export const acceptInvite = onCall(
       }
       if (typeof invite.expiresAt === 'number' && invite.expiresAt < now) {
         throw new HttpsError('failed-precondition', 'קוד השיתוף פג תוקף');
+      }
+      if (!ALLOWED_ROLES.has(invite.role)) {
+        throw new HttpsError('failed-precondition', 'קוד השיתוף פגום');
       }
 
       const childRef = db.doc(`users/${invite.ownerUid}/children/${invite.childId}`);

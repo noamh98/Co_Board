@@ -85,9 +85,10 @@ export const aiBoard = onCall(
     const timer = setTimeout(() => controller.abort(), 15_000);
     let res: Response;
     try {
-      res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      // המפתח ב-header ולא ב-query string — URL-ים נוטים לדלוף ללוגים/פרוקסי.
+      res = await fetch(GEMINI_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {

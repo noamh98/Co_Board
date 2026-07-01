@@ -13,6 +13,9 @@ const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 if (!(0, app_1.getApps)().length)
     (0, app_1.initializeApp)();
+// defense-in-depth: role מועתק מההזמנה ל-childAccess — לא לכתוב ערך שרירותי
+// שהגיע ממסמך שנוצר בלקוח (חוקי Firestore לא מוודאים את השדה ביצירה).
+const ALLOWED_ROLES = new Set(['parent', 'clinician', 'staff']);
 exports.acceptInvite = (0, https_1.onCall)({ region: 'us-central1' }, async (request) => {
     // אימות: נדרשת כניסה (uid של המוזמן)
     if (!request.auth) {
@@ -38,6 +41,9 @@ exports.acceptInvite = (0, https_1.onCall)({ region: 'us-central1' }, async (req
         }
         if (typeof invite.expiresAt === 'number' && invite.expiresAt < now) {
             throw new https_1.HttpsError('failed-precondition', 'קוד השיתוף פג תוקף');
+        }
+        if (!ALLOWED_ROLES.has(invite.role)) {
+            throw new https_1.HttpsError('failed-precondition', 'קוד השיתוף פגום');
         }
         const childRef = db.doc(`users/${invite.ownerUid}/children/${invite.childId}`);
         const childSnap = await tx.get(childRef);

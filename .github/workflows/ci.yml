@@ -42,5 +42,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: npm install
+      - run: npm ci
+      # D-1: קומפילציית functions ב-PR — שגיאת TS לא תתגלה רק ב-deploy.
+      - run: npm run build
       - run: npm run test:rules
