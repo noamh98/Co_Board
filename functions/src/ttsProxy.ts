@@ -3,7 +3,7 @@
 // אבטחה: כניסה + claim approved + rate-limit פר-uid. תאימות: מחזיר אותו audioContent
 // (base64 MP3) שהלקוח כבר יודע להמיר ל-Blob — ה-interface של TTSProvider לא משתנה.
 //
-// ⚠️ region: נבחר 'europe-west1' בעקבות מיצוב הפרטיות של Emorli (AWS פרנקפורט).
+// ⚠️ region: 'europe-west1' (./region.ts) נבחר בעקבות מיצוב הפרטיות של Emorli (AWS פרנקפורט).
 //    TODO(אבטחה/רגולציה): לאמת דרישת COPPA/GDPR/חוק-הגנת-הפרטיות מול היועמ"ש לפני ייצור.
 // ⚠️ secret: יש להגדיר `firebase functions:secrets:set GOOGLE_TTS_API_KEY` (לא ב-repo, לא ב-bundle).
 
@@ -11,10 +11,10 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { enforceRateLimit } from './rateLimit';
+import { FUNCTIONS_REGION } from './region';
 
 if (!getApps().length) initializeApp();
 
-export const FUNCTIONS_REGION = 'europe-west1';
 const GOOGLE_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 const GOOGLE_TTS_API_KEY = defineSecret('GOOGLE_TTS_API_KEY');
 

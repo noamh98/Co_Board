@@ -28,6 +28,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { FUNCTIONS_REGION } from '../functionsRegion';
 
 const FIREBASE_CONFIG = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
@@ -184,7 +185,8 @@ export async function setUserStatusViaFunction(
   status: 'approved' | 'rejected',
 ): Promise<void> {
   const { app } = getFirebase();
-  const fns = getFunctions(app, 'us-central1');
+  // 3.4: approveUser עברה ל-europe-west1 (עדיין נגישה גם ב-us-central1 עד מחיקה ידנית).
+  const fns = getFunctions(app, FUNCTIONS_REGION);
   const approveUser = httpsCallable(fns, 'approveUser');
   await approveUser({ uid, status });
 }

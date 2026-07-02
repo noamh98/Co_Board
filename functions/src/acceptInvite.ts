@@ -9,6 +9,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { FUNCTIONS_REGION, LEGACY_MIGRATED_REGIONS } from './region';
 
 if (!getApps().length) initializeApp();
 
@@ -26,8 +27,10 @@ interface ShareInviteDoc {
 // שהגיע ממסמך שנוצר בלקוח (חוקי Firestore לא מוודאים את השדה ביצירה).
 const ALLOWED_ROLES = new Set<ShareInviteDoc['role']>(['parent', 'clinician', 'staff']);
 
+// 3.4: איחוד regions — פרוס גם ב-us-central1 (ישן) וגם ב-europe-west1 (חדש) בו-זמנית,
+// כדי לא לשבור לקוחות/מטמון PWA שטרם התעדכנו. ראה region.ts.
 export const acceptInvite = onCall(
-  { region: 'us-central1' },
+  { region: [FUNCTIONS_REGION, ...LEGACY_MIGRATED_REGIONS] },
   async (request) => {
     // אימות: נדרשת כניסה (uid של המוזמן)
     if (!request.auth) {

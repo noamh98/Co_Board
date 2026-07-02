@@ -6,7 +6,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { enforceRateLimit } from './rateLimit';
-import { FUNCTIONS_REGION } from './ttsProxy';
+import { FUNCTIONS_REGION } from './region';
 
 if (!getApps().length) initializeApp();
 

@@ -18,6 +18,7 @@ import {
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseConfig } from './firebaseEnv';
 import type { ProfilePreferences } from '../domain/models';
+import { FUNCTIONS_REGION } from '../services/functionsRegion';
 
 export interface ChildRecord {
   childId: string;
@@ -183,8 +184,9 @@ export async function acceptShareInvite(
   // חסומה ב-rules (owner-only). השרת מאמת פג-תוקף+חד-פעמיות, מעניק גישה, ומסמן used=true.
   // uid נלקח בצד השרת מ-context.auth; נשמר בחתימה לתאימות קוראים/בדיקות.
   void uid;
+  // 3.4: acceptInvite עברה ל-europe-west1 (עדיין נגישה גם ב-us-central1 עד מחיקה ידנית).
   const call = httpsCallable<{ code: string }, ChildRecord | null>(
-    getFunctions(getApp()),
+    getFunctions(getApp(), FUNCTIONS_REGION),
     'acceptInvite',
   );
   const res = await call({ code });

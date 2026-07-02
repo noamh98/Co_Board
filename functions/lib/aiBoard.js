@@ -8,7 +8,7 @@ const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const app_1 = require("firebase-admin/app");
 const rateLimit_1 = require("./rateLimit");
-const ttsProxy_1 = require("./ttsProxy");
+const region_1 = require("./region");
 if (!(0, app_1.getApps)().length)
     (0, app_1.initializeApp)();
 const GEMINI_API_KEY = (0, params_1.defineSecret)('GEMINI_API_KEY');
@@ -36,7 +36,7 @@ function repairTruncatedWordsJson(jsonStr) {
         return null;
     }
 }
-exports.aiBoard = (0, https_1.onCall)({ region: ttsProxy_1.FUNCTIONS_REGION, secrets: [GEMINI_API_KEY], timeoutSeconds: 30 }, async (request) => {
+exports.aiBoard = (0, https_1.onCall)({ region: region_1.FUNCTIONS_REGION, secrets: [GEMINI_API_KEY], timeoutSeconds: 30 }, async (request) => {
     if (!request.auth)
         throw new https_1.HttpsError('unauthenticated', 'נדרשת כניסה');
     if (!request.auth.token['approved'])

@@ -4,18 +4,18 @@
 // אבטחה: כניסה + claim approved + rate-limit פר-uid. תאימות: מחזיר אותו audioContent
 // (base64 MP3) שהלקוח כבר יודע להמיר ל-Blob — ה-interface של TTSProvider לא משתנה.
 //
-// ⚠️ region: נבחר 'europe-west1' בעקבות מיצוב הפרטיות של Emorli (AWS פרנקפורט).
+// ⚠️ region: 'europe-west1' (./region.ts) נבחר בעקבות מיצוב הפרטיות של Emorli (AWS פרנקפורט).
 //    TODO(אבטחה/רגולציה): לאמת דרישת COPPA/GDPR/חוק-הגנת-הפרטיות מול היועמ"ש לפני ייצור.
 // ⚠️ secret: יש להגדיר `firebase functions:secrets:set GOOGLE_TTS_API_KEY` (לא ב-repo, לא ב-bundle).
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ttsProxy = exports.FUNCTIONS_REGION = void 0;
+exports.ttsProxy = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const app_1 = require("firebase-admin/app");
 const rateLimit_1 = require("./rateLimit");
+const region_1 = require("./region");
 if (!(0, app_1.getApps)().length)
     (0, app_1.initializeApp)();
-exports.FUNCTIONS_REGION = 'europe-west1';
 const GOOGLE_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 const GOOGLE_TTS_API_KEY = (0, params_1.defineSecret)('GOOGLE_TTS_API_KEY');
 // קולות he-IL מאושרים (מקור-אמת זהה ל-googleTtsProvider.GOOGLE_HE_VOICES בלקוח).
@@ -26,7 +26,7 @@ const ALLOWED_VOICES = new Set([
     'he-IL-Wavenet-D',
 ]);
 const MAX_TEXT_LEN = 400;
-exports.ttsProxy = (0, https_1.onCall)({ region: exports.FUNCTIONS_REGION, secrets: [GOOGLE_TTS_API_KEY], timeoutSeconds: 20 }, async (request) => {
+exports.ttsProxy = (0, https_1.onCall)({ region: region_1.FUNCTIONS_REGION, secrets: [GOOGLE_TTS_API_KEY], timeoutSeconds: 20 }, async (request) => {
     if (!request.auth) {
         throw new https_1.HttpsError('unauthenticated', 'נדרשת כניסה');
     }
