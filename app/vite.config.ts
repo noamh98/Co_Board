@@ -61,5 +61,22 @@ export default defineConfig({
     css: false,
     // Firebase keys must not reach test code — auth gate would block all tests.
     env: { VITE_FIREBASE_API_KEY: '' },
+    // 3.1: e2e/*.spec.ts משתמשים ב-@playwright/test, לא בריצת vitest — להוציא
+    // מהגילוי הרגיל (אחרת ה-glob הדיפולטיבי של vitest ('*.spec.ts' כלול) יתנגש).
+    // רשימת ברירת-המחדל של vitest משוכפלת כאן במפורש כי exclude דורס אותה, לא מוסיף לה.
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/cypress/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
+      '**/e2e/**',
+    ],
+    // 3.6: דוח כיסוי ב-CI — ללא סף שנכשל (בלתי-חוסם, למעקב מגמה בלבד).
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcov'],
+      exclude: ['**/*.test.{ts,tsx}', '**/*.config.ts', 'e2e/**'],
+    },
   },
 });

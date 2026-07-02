@@ -40,10 +40,11 @@ service cloud.firestore {
       // יצירה: רק בעל החשבון, status חייב להיות 'pending'
       allow create: if isOwnUid(uid)
         && request.resource.data.status == 'pending';
-      // עדכון: המשתמש יכול לעדכן שדות שאינם status (כגון displayName)
-      // status='approved'/'rejected' נכתב רק ע"י Cloud Function (Admin SDK)
+      // עדכון: המשתמש יכול לעדכן שדות שאינם status (כגון displayName).
+      // status הוא immutable מהלקוח — 'approved'/'rejected' נכתב רק ע"י Cloud Function
+      // (Admin SDK), ומשתמש מאושר אינו יכול להוריד את עצמו חזרה ל-'pending'.
       allow update: if isOwnUid(uid)
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == resource.data.status;
     }
 
     // ── תוכן (boards, profiles, settings וכו') ─────────────

@@ -17,7 +17,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 const PROJECT_ID = 'co-board-rules-test';
 const OWNER = 'owner-uid';
@@ -89,6 +89,11 @@ beforeEach(async () => {
       role: 'clinician',
       grantedAt: 1,
     });
+    // רשומת משתמש מאושרת — לבדיקות immutability של status (S-1).
+    await setDoc(doc(db, `users/${OWNER}`), {
+      status: 'approved',
+      displayName: 'בעלים',
+    });
   });
 });
 
@@ -124,5 +129,16 @@ describe('Firestore rules — hardening (B4)', () => {
     // גם הבעלים — אם אינו מאושר — נחסם (הבעלים אינו פטור מבדיקת האישור).
     const db = unapproved(OWNER).firestore();
     await assertFails(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('user cannot change own status (immutable from client)', async () => {
+    // משתמש מאושר לא יכול להוריד את עצמו ל-pending — status נכתב רק ע"י CF.
+    const db = approved(OWNER).firestore();
+    await assertFails(updateDoc(doc(db, `users/${OWNER}`), { status: 'pending' }));
+  });
+
+  it('user can update own displayName without touching status', async () => {
+    const db = approved(OWNER).firestore();
+    await assertSucceeds(updateDoc(doc(db, `users/${OWNER}`), { displayName: 'שם חדש' }));
   });
 });

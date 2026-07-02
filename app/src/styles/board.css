@@ -1,0 +1,102 @@
+/* ── 8. BOARD GRID ───────────────────────────────────────────────── */
+.board {
+  flex: 1;
+  display: grid;
+  gap: var(--gap);
+  padding: var(--sp-3) var(--sp-4);
+  overflow: auto;      /* scroll when grid is too large for viewport */
+  background: var(--cl-bg);
+  min-width: 0;        /* prevent horizontal overflow */
+}
+@media (max-width: 600px) {
+  .board { gap: 6px; padding: var(--sp-2) var(--sp-3); }
+}
+
+/* ── 9. CELL BUTTON (Claude Design 2026) ─────────────────────────── */
+.cell {
+  width: 100%;
+  height: 100%;
+  min-height: var(--cell-min);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--sp-2);
+  padding: 10px 6px;
+  /* רקע = גוון פיצג'רלד (--cell-tint נקבע ע"י CellButton); ברירת מחדל משטח */
+  background: var(--cell-tint, var(--cl-surface));
+  border: 2px solid color-mix(in srgb, var(--cell-tint, var(--cl-border)) 74%, #16243a 22%);
+  border-radius: var(--r-lg);   /* 20px */
+  font-size: var(--tx-cell);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(20, 32, 46, 0.06);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.35s ease,
+    border-color 0.35s ease;  /* visual feedback < 100ms (PRD §8.1) */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* F1: צבע הטקסט עוקב אחר --cell-ink (text המכויל של Fitzgerald) ולא אחר ערכת הנושא —
+     מבטיח ניגודיות AA על הפסטל בשני המצבים (היה לבן על פסטל בהיר במצב כהה). */
+  color: var(--cell-ink, var(--cl-ink));
+}
+/* מיכל לבן מעוגל לאייקון — הפיקטוגרמה בולטת מעל גוון האריח */
+.cell__icon {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-height: 70%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cl-icon-bg);
+  border-radius: 16px;
+  padding: 6%;
+  box-shadow: inset 0 0 0 1px rgba(20, 32, 46, 0.05);
+}
+.cell__image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.cell__label {
+  font-size: var(--tx-cell-lbl);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.2px;
+  text-align: center;
+  width: 100%;
+  /* F1: עוקב אחר ה-ink המכויל של התא (לא var(--cl-ink) שמתהפך ללבן במצב כהה). */
+  color: var(--cell-ink, var(--cl-ink));
+}
+.cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 16px rgba(20, 32, 46, 0.13);
+}
+.cell:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 1px 3px rgba(20, 32, 46, 0.12);
+}
+.cell:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 3px;
+}
+.cell--modeling-highlight {
+  outline: 4px solid var(--cl-scan-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 14px rgba(20, 127, 168, 0.45);
+  z-index: 1;
+}
+@media (max-width: 600px) {
+  .cell { min-height: var(--target-sm); gap: var(--sp-1); padding: 6px 4px; }
+  .cell__icon { border-radius: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell, .cell:hover, .cell:active { transition: none; transform: none; }
+}
+

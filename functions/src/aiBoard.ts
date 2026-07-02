@@ -6,7 +6,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { enforceRateLimit } from './rateLimit';
-import { FUNCTIONS_REGION } from './ttsProxy';
+import { FUNCTIONS_REGION } from './region';
 
 if (!getApps().length) initializeApp();
 
@@ -31,7 +31,7 @@ interface AiBoardRequest {
  * חותך אחרי האובייקט {"word":...} השלם האחרון וסוגר את המערך/אובייקט.
  * מחזיר null אם אין אפילו פריט שלם אחד.
  */
-function repairTruncatedWordsJson(
+export function repairTruncatedWordsJson(
   jsonStr: string,
 ): { words: Array<{ word: string; pos?: string }> } | null {
   const arrayStart = jsonStr.indexOf('[');
@@ -85,9 +85,10 @@ export const aiBoard = onCall(
     const timer = setTimeout(() => controller.abort(), 15_000);
     let res: Response;
     try {
-      res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      // המפתח ב-header ולא ב-query string — URL-ים נוטים לדלוף ללוגים/פרוקסי.
+      res = await fetch(GEMINI_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {

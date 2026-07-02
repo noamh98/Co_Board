@@ -11,9 +11,15 @@ exports.acceptInvite = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
+const region_1 = require("./region");
 if (!(0, app_1.getApps)().length)
     (0, app_1.initializeApp)();
-exports.acceptInvite = (0, https_1.onCall)({ region: 'us-central1' }, async (request) => {
+// defense-in-depth: role מועתק מההזמנה ל-childAccess — לא לכתוב ערך שרירותי
+// שהגיע ממסמך שנוצר בלקוח (חוקי Firestore לא מוודאים את השדה ביצירה).
+const ALLOWED_ROLES = new Set(['parent', 'clinician', 'staff']);
+// 3.4: איחוד regions — פרוס גם ב-us-central1 (ישן) וגם ב-europe-west1 (חדש) בו-זמנית,
+// כדי לא לשבור לקוחות/מטמון PWA שטרם התעדכנו. ראה region.ts.
+exports.acceptInvite = (0, https_1.onCall)({ region: [region_1.FUNCTIONS_REGION, ...region_1.LEGACY_MIGRATED_REGIONS] }, async (request) => {
     // אימות: נדרשת כניסה (uid של המוזמן)
     if (!request.auth) {
         throw new https_1.HttpsError('unauthenticated', 'נדרשת כניסה');
@@ -38,6 +44,9 @@ exports.acceptInvite = (0, https_1.onCall)({ region: 'us-central1' }, async (req
         }
         if (typeof invite.expiresAt === 'number' && invite.expiresAt < now) {
             throw new https_1.HttpsError('failed-precondition', 'קוד השיתוף פג תוקף');
+        }
+        if (!ALLOWED_ROLES.has(invite.role)) {
+            throw new https_1.HttpsError('failed-precondition', 'קוד השיתוף פגום');
         }
         const childRef = db.doc(`users/${invite.ownerUid}/children/${invite.childId}`);
         const childSnap = await tx.get(childRef);
