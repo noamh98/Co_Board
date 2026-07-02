@@ -3,6 +3,7 @@
 
 import { getDb, STORE_BOARDS, STORE_PROFILES, STORE_SETTINGS, STORE_VERSIONS } from './db';
 import type { Board, Profile } from '../domain/models';
+import { assertValidBackup, isValidBoardRecord, isValidProfileRecord } from './backupValidation';
 
 export interface BackupData {
   /** גרסת פורמט הגיבוי (לא DB_VERSION) */
@@ -49,20 +50,24 @@ function createBackupRepo() {
     };
   }
 
-  async function importBackup(backup: BackupData): Promise<void> {
-    if (backup.backupFormat !== 1) {
-      throw new Error(`גרסת גיבוי לא נתמכת: ${backup.backupFormat as number}`);
-    }
+  // 3.5 (CR-E): הקלט מגיע מקובץ שהמשתמש בחר — עלול להיות פגום/זדוני. assertValidBackup
+  // בודק את מעטפת-העל; isValid*Record מסנן רשומות בודדות פגומות (דוחה, לא שובר את ה-DB).
+  async function importBackup(raw: unknown): Promise<void> {
+    assertValidBackup(raw);
+    const boards = raw.boards.filter(isValidBoardRecord);
+    const profiles = raw.profiles.filter(isValidProfileRecord);
+    const settings = raw.settings;
+
     const db = await getDb();
     const tx = db.transaction([STORE_BOARDS, STORE_PROFILES, STORE_SETTINGS], 'readwrite');
 
-    for (const board of backup.boards) {
+    for (const board of boards) {
       tx.objectStore(STORE_BOARDS).put(board);
     }
-    for (const profile of backup.profiles) {
+    for (const profile of profiles) {
       tx.objectStore(STORE_PROFILES).put(profile);
     }
-    for (const [key, value] of Object.entries(backup.settings)) {
+    for (const [key, value] of Object.entries(settings)) {
       tx.objectStore(STORE_SETTINGS).put({ key, value });
     }
     await tx.done;

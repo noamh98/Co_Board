@@ -1,0 +1,251 @@
+/* ── 4. APP SHELL ─────────────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;           /* dynamic viewport height — avoids mobile browser bar */
+  max-width: 1100px;
+  margin: 0 auto;
+  overflow: hidden;
+  /* Safe-area padding for notch / gesture-bar */
+  padding-top: var(--safe-t);
+  padding-bottom: var(--safe-b);
+  padding-left: var(--safe-l);
+  padding-right: var(--safe-r);
+}
+/* F3: landmark <main> — שומר על מבנה ה-flex הקודם (board בעל flex:1 גדל בתוכו). */
+.app__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+/* F6: .app__header / .app__title הוסרו — CSS מת (BrandBar החליף את ה-header). */
+.app__badge {
+  font-size: var(--tx-xs);
+  color: var(--cl-muted);
+}
+.app__badge--warn { color: var(--cl-warn); }
+/* F6: .app__profile הוסר — CSS מת. */
+
+/* ── BRAND BAR (Claude Design 2026) ──────────────────────────────── */
+.brandbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 10px 18px;
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
+  position: relative;
+  z-index: var(--z-bar);
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.brandbar__avatar-wrap { position: relative; flex-shrink: 0; }
+.brandbar__avatar-btn {
+  border: none;
+  padding: 3px;
+  background: conic-gradient(#6AABF0, #4FA877, #D8AC3E, #E0935F, #6AABF0);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  transition: transform 0.15s ease;
+}
+.brandbar__avatar-btn:hover { transform: scale(1.04); }
+.brandbar__avatar-btn:active { transform: scale(0.93); }
+.brandbar__avatar-btn:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.brandbar__avatar {
+  display: flex;
+  padding: 3px;
+  border-radius: 50%;
+  background: conic-gradient(#6AABF0, #4FA877, #D8AC3E, #E0935F, #6AABF0);
+}
+.brandbar__avatar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #5B9BE0;
+  border: 2.5px solid var(--cl-surface);
+  color: #fff;
+  font-weight: 800;
+}
+.brandbar__avatar--lg, .brandbar__avatar--lg .brandbar__avatar-inner { width: 52px; height: 52px; }
+.brandbar__avatar--lg .brandbar__avatar-inner { font-size: 21px; }
+.brandbar__avatar--sm, .brandbar__avatar--sm .brandbar__avatar-inner { width: 50px; height: 50px; }
+.brandbar__avatar--sm .brandbar__avatar-inner { font-size: 20px; }
+.brandbar__avatar-btn .brandbar__avatar { padding: 0; background: none; }
+
+.brandbar__scrim { position: fixed; inset: 0; z-index: var(--z-overlay); }
+.brandbar__menu {
+  position: absolute;
+  top: 62px;
+  inset-inline-start: 0;
+  width: 288px;
+  max-width: 80vw;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: 20px;
+  box-shadow: var(--sh-lg);
+  padding: 8px;
+  z-index: calc(var(--z-overlay) + 1);
+  animation: brandFade 0.16s ease;
+}
+@keyframes brandFade { from { opacity: 0; } to { opacity: 1; } }
+.brandbar__menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 14px;
+}
+.brandbar__menu-id { display: flex; flex-direction: column; min-width: 0; }
+.brandbar__menu-name { font-size: 18px; font-weight: 800; color: var(--cl-ink); }
+.brandbar__menu-sub { font-size: 13px; color: var(--cl-muted); font-weight: 500; }
+.brandbar__menu-sep { height: 1px; background: var(--cl-border); margin: 4px 6px; }
+.brandbar__menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  color: var(--cl-ink);
+  border-radius: 13px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: start;
+  transition: background var(--ease);
+}
+.brandbar__menu-item:hover { background: var(--cl-chip); }
+.brandbar__menu-item:focus-visible { outline: 2px solid var(--cl-primary); outline-offset: -2px; }
+.brandbar__menu-icon { font-size: 18px; }
+.brandbar__menu-item--danger { color: var(--cl-danger); font-weight: 700; }
+.brandbar__menu-item--danger:hover { background: rgba(217, 83, 79, 0.1); }
+
+.brandbar__center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  overflow: hidden;
+}
+.brandbar__greet {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cl-ink);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brandbar__status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.brandbar__logo { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
+.brandbar__logo-text { display: flex; flex-direction: column; line-height: 1.05; align-items: flex-end; }
+.brandbar__logo-name { font-size: 24px; font-weight: 800; color: var(--cl-ink); letter-spacing: -0.5px; }
+.brandbar__logo-sub { font-size: 12.5px; font-weight: 600; color: var(--cl-muted); }
+.brandbar__logo-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, var(--cl-speak), #2BA88A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(20, 90, 70, 0.25);
+  flex-shrink: 0;
+}
+/* פאן צר: מסתירים את הברכה (כמו בעיצוב) */
+@media (max-width: 600px) {
+  .brandbar { padding: 8px 12px; gap: var(--sp-2); }
+  .brandbar__greet { display: none; }
+  .brandbar__logo-sub { display: none; }
+  .brandbar__logo-name { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brandbar__avatar-btn { transition: none; }
+  .brandbar__avatar-btn:hover, .brandbar__avatar-btn:active { transform: none; }
+  .brandbar__menu { animation: none; }
+}
+
+.app__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: var(--sp-2) var(--sp-4);
+  min-height: 44px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
+}
+.app__controls::-webkit-scrollbar { display: none; }
+.app__adultbtn {
+  min-height: var(--target-min);
+  padding: 0 var(--sp-5);
+  border: 2px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  font-size: var(--tx-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--ease), border-color var(--ease);
+  white-space: nowrap;
+}
+.app__adultbtn:hover { background: var(--cl-chip); border-color: var(--cl-chip-border); }
+.app__adultbtn:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.app__loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cl-muted);
+  font-size: var(--tx-lg);
+}
+.app__toast {
+  position: fixed;
+  bottom: calc(var(--sp-8) + var(--safe-b));
+  inset-inline-start: 50%;
+  transform: translateX(50%);
+  background: var(--cl-ink);
+  color: var(--cl-on-primary);
+  border-radius: var(--r-full);
+  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--tx-sm);
+  font-weight: 600;
+  box-shadow: var(--sh-lg);
+  z-index: var(--z-toast);
+  white-space: nowrap;
+  animation: toast-in 0.2s ease;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(50%) translateY(0); }
+}
+/* Phase 1.7 (U-1): toast שגיאה — רקע error, טקסט עשוי להיות ארוך יותר מ"נשמר!". */
+.app__toast--error {
+  background: var(--cl-error);
+  white-space: normal;
+  max-width: min(90vw, 32rem);
+  text-align: center;
+}
+

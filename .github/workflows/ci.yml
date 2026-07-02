@@ -22,8 +22,32 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test
+      # 3.6: דוח כיסוי (v8) — בלי סף שנכשל, למעקב מגמה בלבד; מריץ את אותה סוויטה כמו npm test.
+      - run: npm run test:coverage
       - run: npm run build
+
+  # 3.1: e2e smoke (Playwright) + סריקת נגישות axe, מול build פרודקשן אמיתי.
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: app/playwright-report/
+          retention-days: 14
 
   # H1/B4: בדיקות כללי Firestore על האמולטור (דורש firebase-tools + Java).
   rules-tests:
@@ -42,5 +66,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: npm install
+      - run: npm ci
+      # D-1: קומפילציית functions ב-PR — שגיאת TS לא תתגלה רק ב-deploy.
+      - run: npm run build
       - run: npm run test:rules

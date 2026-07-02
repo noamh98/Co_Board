@@ -1,0 +1,12 @@
+/* ── 3. BASE ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--cl-bg);
+  color: var(--cl-ink);
+  font-family: 'Assistant', system-ui, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+

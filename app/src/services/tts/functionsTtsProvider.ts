@@ -7,9 +7,7 @@ import { getApp } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { TTSProvider, VoiceConfig } from './ttsProvider';
 import { GOOGLE_HE_VOICES } from './googleTtsProvider';
-
-// חייב להתאים ל-FUNCTIONS_REGION ב-functions/src/ttsProxy.ts.
-const FUNCTIONS_REGION = 'europe-west1';
+import { FUNCTIONS_REGION } from '../functionsRegion';
 
 interface TtsProxyRequest {
   text: string;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { analyticsService } from '../../services/analytics/analyticsService';
 import { createSettingsRepo } from '../../data/settingsRepo';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface TopCell {
   label: string;
@@ -17,6 +18,7 @@ export function UsageDashboard({
   const [enabled, setEnabled] = useState(false);
   const [topCells, setTopCells] = useState<TopCell[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -43,10 +45,11 @@ export function UsageDashboard({
     })();
   };
 
-  const handleClear = (): void => {
-    if (window.confirm('למחוק את כל נתוני השימוש לפרופיל זה?')) {
-      void analyticsService.clearAllData(profileId).then(() => setTopCells([]));
-    }
+  const handleClear = (): void => setConfirmClear(true);
+
+  const confirmClearData = (): void => {
+    setConfirmClear(false);
+    void analyticsService.clearAllData(profileId).then(() => setTopCells([]));
   };
 
   if (loading) {
@@ -114,6 +117,17 @@ export function UsageDashboard({
       <button type="button" className="adultbar__btn" onClick={onClose}>
         סגור
       </button>
+
+      {confirmClear && (
+        <ConfirmDialog
+          title="ניקוי נתונים"
+          message="למחוק את כל נתוני השימוש לפרופיל זה?"
+          confirmLabel="מחק"
+          danger
+          onConfirm={confirmClearData}
+          onCancel={() => setConfirmClear(false)}
+        />
+      )}
     </div>
   );
 }

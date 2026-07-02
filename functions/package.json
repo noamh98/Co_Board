@@ -10,7 +10,7 @@
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
-    "test:rules": "firebase emulators:exec --only firestore \"vitest run test/rules.test.ts\""
+    "test:rules": "firebase emulators:exec --only firestore \"vitest run test/rules.test.ts test/aiBoard.test.ts test/rateLimit.test.ts\""
   },
   "dependencies": {
     "firebase-admin": "^13.10.0",

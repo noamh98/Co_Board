@@ -7,9 +7,7 @@ import { getApp } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { PartOfSpeech } from '../../domain/models';
 import type { GeneratedWord } from './boardGenerator';
-
-// חייב להתאים ל-FUNCTIONS_REGION ב-functions/src/ttsProxy.ts.
-const FUNCTIONS_REGION = 'europe-west1';
+import { FUNCTIONS_REGION } from '../functionsRegion';
 
 const VALID_POS = new Set<string>([
   'noun', 'verb', 'adjective', 'pronoun', 'preposition', 'adverb', 'number', 'other',

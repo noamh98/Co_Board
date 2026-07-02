@@ -89,7 +89,7 @@ describe('App — מצב נעול, שחרור בלחיצה-ארוכה ומעבר
 
     // הניהול עבר להגדרות — פותחים את גלגל ההגדרות
     fireEvent.click(await screen.findByRole('button', { name: 'הגדרות' }));
-    const select = (await screen.findByLabelText('פרופיל')) as HTMLSelectElement;
+    await screen.findByLabelText('פרופיל');
 
     // "פרופיל חדש" פותח את ה-Wizard (נטען lazily) — ממתינים לטעינת ה-chunk
     fireEvent.click(screen.getByRole('button', { name: 'פרופיל חדש' }));
@@ -100,9 +100,13 @@ describe('App — מצב נעול, שחרור בלחיצה-ארוכה ומעבר
     fireEvent.click(screen.getByRole('button', { name: 'הבא' }));
     fireEvent.click(screen.getByRole('button', { name: 'צור פרופיל' }));
 
-    await waitFor(() =>
-      expect(select.selectedOptions[0]?.textContent).toBe('דנה'),
-    );
+    // R6 (openPanel יחיד): ה-wizard סוגר את ההגדרות בזמן שהוא פתוח ומחזיר אליהן
+    // בסיום — הבורר נטען מחדש (DOM node חדש), לכן שולפים אותו מחדש ולא משתמשים
+    // בהפניה שנשמרה לפני פתיחת ה-wizard.
+    await waitFor(() => {
+      const select = screen.getByLabelText('פרופיל') as HTMLSelectElement;
+      expect(select.selectedOptions[0]?.textContent).toBe('דנה');
+    });
   });
 });
 

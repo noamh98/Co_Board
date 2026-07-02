@@ -7,11 +7,14 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { FUNCTIONS_REGION, LEGACY_MIGRATED_REGIONS } from './region';
 
 if (!getApps().length) initializeApp();
 
+// 3.4: איחוד regions — פרוס גם ב-us-central1 (ישן) וגם ב-europe-west1 (חדש) בו-זמנית,
+// כדי לא לשבור לקוחות/מטמון PWA שטרם התעדכנו. ראה region.ts.
 export const approveUser = onCall(
-  { region: 'us-central1' },
+  { region: [FUNCTIONS_REGION, ...LEGACY_MIGRATED_REGIONS] },
   async (request) => {
     // אימות: רק admin
     if (!request.auth) {

@@ -10,8 +10,7 @@
 import { getApp } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { Board } from '../../domain/models';
-
-const FUNCTIONS_REGION = 'europe-west1'; // חייב להתאים ל-functions/src/ttsProxy.ts.
+import { FUNCTIONS_REGION } from '../functionsRegion';
 
 export interface EditBoardResult {
   /** הלוח לאחר ההחלה (כרגע לא ממומש — ראה STUB). */

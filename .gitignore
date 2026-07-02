@@ -38,3 +38,6 @@ Co_Board-UX-Changes/
 *.docx
 *.xlsx
 *.pptx
+firestore-debug.log
+ui-debug.log
+firebase-debug.log

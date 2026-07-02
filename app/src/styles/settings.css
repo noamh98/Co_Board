@@ -1,0 +1,362 @@
+/* ── 11. SETTINGS PANEL ───────────────────────────────────────────── */
+.settings-panel { display: flex; flex-direction: column; gap: 14px; }
+.settings-panel .modal__body { gap: 14px; }
+/* כל סקשן = כרטיס מקובץ בעיצוב Claude Design */
+.settings-section {
+  background: var(--cl-chip);
+  border: 1px solid var(--cl-border);
+  border-radius: 18px;
+  padding: 16px 18px;
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.settings-section__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.settings-section__icon {
+  font-size: 1.2rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.settings-section__title {
+  margin: 0;
+  font-size: var(--tx-md);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--cl-ink);
+}
+.settings-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding-inline-start: 0;
+}
+
+/* ── 12. UI TOGGLE ───────────────────────────────────────────────── */
+.ui-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  cursor: pointer;
+  user-select: none;
+  min-height: var(--target-sm);
+}
+/* Visually hidden checkbox (but accessible) */
+.ui-toggle__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ui-toggle__track {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  background: var(--cl-border);
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+  transition: background var(--ease);
+}
+.ui-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;  /* F6: לוגי — OFF בצד ההתחלה (ימין ב-RTL) */
+  width: 22px;
+  height: 22px;
+  background: var(--cl-on-primary);
+  border-radius: 50%;
+  box-shadow: var(--sh-sm);
+  transition: inset-inline-start var(--ease);
+}
+.ui-toggle__input:checked + .ui-toggle__track {
+  background: var(--cl-primary);
+}
+.ui-toggle__input:checked + .ui-toggle__track .ui-toggle__thumb {
+  inset-inline-start: calc(100% - 22px - 3px); /* F6: לוגי — ON בצד הסיום */
+}
+.ui-toggle__input:focus-visible + .ui-toggle__track {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.ui-toggle__input:disabled + .ui-toggle__track {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ui-toggle__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ui-toggle__label {
+  font-size: var(--tx-base);
+  color: var(--cl-ink);
+  line-height: 1.4;
+}
+.ui-toggle__desc {
+  font-size: var(--tx-xs);
+  color: var(--cl-muted);
+  line-height: 1.4;
+}
+
+/* ── 13. UI SLIDER ───────────────────────────────────────────────── */
+.ui-slider { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ui-slider__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.ui-slider__label {
+  font-size: var(--tx-base);
+  color: var(--cl-ink);
+  font-weight: 500;
+  cursor: default;
+}
+.ui-slider__value {
+  font-size: var(--tx-sm);
+  font-weight: 600;
+  color: var(--cl-primary);
+  background: var(--cl-primary-lt);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-full);
+  white-space: nowrap;
+  min-width: 52px;
+  text-align: center;
+}
+.ui-slider__input {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--cl-border);
+  border-radius: var(--r-full);
+  outline: none;
+  cursor: pointer;
+  display: block;
+}
+.ui-slider__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: var(--cl-primary);
+  border-radius: 50%;
+  box-shadow: var(--sh-sm);
+  transition: background var(--ease-fast), transform var(--ease-fast);
+  cursor: grab;
+}
+.ui-slider__input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: var(--cl-primary);
+  border: none;
+  border-radius: 50%;
+  box-shadow: var(--sh-sm);
+  cursor: grab;
+}
+.ui-slider__input::-webkit-slider-thumb:hover { background: var(--cl-primary-dk); transform: scale(1.1); }
+.ui-slider__input:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 4px;
+}
+
+/* ── 14. UI BUTTON ───────────────────────────────────────────────── */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--target-min);
+  padding: 0 var(--sp-4);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-md);
+  font-size: var(--tx-base);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background var(--ease-fast),
+    border-color var(--ease-fast),
+    transform var(--ease-fast);
+  user-select: none;
+  white-space: nowrap;
+}
+.ui-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ui-btn:active:not(:disabled) { transform: scale(0.97); }
+.ui-btn:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.ui-btn--primary {
+  background: var(--cl-primary);
+  color: var(--cl-on-primary);
+  border-color: var(--cl-primary);
+}
+.ui-btn--primary:hover:not(:disabled) {
+  background: var(--cl-primary-dk);
+  border-color: var(--cl-primary-dk);
+}
+.ui-btn--secondary {
+  background: var(--cl-surface-alt);
+  color: var(--cl-ink);
+  border-color: var(--cl-border);
+}
+.ui-btn--secondary:hover:not(:disabled) { background: var(--cl-border); }
+.ui-btn--ghost {
+  background: transparent;
+  color: var(--cl-ink);
+  border-color: transparent;
+}
+.ui-btn--ghost:hover:not(:disabled) { background: var(--cl-surface-alt); }
+.ui-btn--danger {
+  background: var(--cl-error-bg);
+  color: var(--cl-error);
+  border-color: var(--cl-error);
+}
+.ui-btn--danger:hover:not(:disabled) { background: #fecaca; }
+.ui-btn--sm { min-height: var(--target-sm); padding: 0 var(--sp-3); font-size: var(--tx-sm); }
+.ui-btn--lg { min-height: 52px; padding: 0 var(--sp-6); font-size: var(--tx-lg); }
+.ui-btn__icon { flex-shrink: 0; }
+.ui-btn__text { }
+
+/* ── 15. VOICE SELECT ────────────────────────────────────────────── */
+.voice-select {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1.5px solid var(--cl-border);
+  border-radius: var(--r-md);
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  font-size: var(--tx-base);
+  min-height: var(--target-sm);
+  cursor: pointer;
+  transition: border-color var(--ease-fast);
+}
+.voice-select:focus {
+  outline: none;
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55); /* F5: focus ring חזק יותר */
+}
+.voice-select-label {
+  display: block;
+  font-size: var(--tx-sm);
+  font-weight: 500;
+  color: var(--cl-muted);
+  margin-bottom: var(--sp-2);
+}
+.voice-none {
+  font-size: var(--tx-sm);
+  color: var(--cl-muted);
+  padding: var(--sp-2) 0;
+  margin: 0;
+}
+.tts-provider-badge {
+  font-size: var(--tx-xs);
+  font-weight: 600;
+  color: var(--cl-primary);
+  background: color-mix(in srgb, var(--cl-primary) 12%, transparent);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: var(--sp-2);
+}
+.tts-api-key-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.tts-api-key-active {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.tts-api-key-set {
+  font-size: var(--tx-sm);
+  color: var(--cl-primary);
+  font-weight: 500;
+}
+.tts-api-key-input-row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.tts-api-key-input {
+  flex: 1;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1.5px solid var(--cl-border);
+  border-radius: var(--radius-md);
+  background: var(--cl-surface);
+  color: var(--cl-text);
+  font-size: var(--tx-sm);
+  font-family: monospace;
+  min-width: 0;
+}
+.tts-api-key-input:focus {
+  outline: none;
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55);
+}
+.tts-api-key-hint {
+  font-size: var(--tx-xs);
+  color: var(--cl-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── 16. FITZGERALD LEGEND ───────────────────────────────────────── */
+.fitz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+}
+.fitz-legend__chip {
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: var(--r-sm);
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--tx-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── 17. PRIVACY SECTION ─────────────────────────────────────────── */
+.privacy-section { display: flex; flex-direction: column; gap: var(--sp-3); }
+.privacy-section__desc {
+  font-size: var(--tx-sm);
+  color: var(--cl-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+.privacy-section__desc strong { color: var(--cl-ink); }
+.privacy-section__note {
+  font-size: var(--tx-xs);
+  color: var(--cl-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+.privacy-section__actions { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-2); }
+.privacy-section__feedback {
+  font-size: var(--tx-xs);
+  font-weight: 500;
+}
+.privacy-section__feedback--ok  { color: var(--cl-success); }
+.privacy-section__feedback--err { color: var(--cl-error); }
+
+/* Legacy privacy-toggle classes (PrivacyToggle / MediaPrivacyPanel) */
+.privacy-toggle { display: flex; flex-direction: column; gap: var(--sp-3); }
+.privacy-toggle__title { margin: 0; font-size: var(--tx-md); font-weight: 600; color: var(--cl-ink); }
+.privacy-toggle__desc { font-size: var(--tx-sm); color: var(--cl-muted); margin: 0; line-height: 1.5; }
+.privacy-toggle__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  cursor: pointer;
+  min-height: var(--target-sm);
+}
+.privacy-toggle__note { font-size: var(--tx-xs); color: var(--cl-muted); margin: 0; line-height: 1.5; }
+

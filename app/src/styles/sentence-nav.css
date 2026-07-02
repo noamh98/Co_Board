@@ -1,0 +1,162 @@
+/* ── 6. SENTENCE BAR ─────────────────────────────────────────────── */
+.sentence {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+}
+/* אזור המשפט — chip מעוגל בעיצוב Claude Design */
+.sentence__text {
+  flex: 1;
+  min-width: 160px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--tx-2xl);
+  font-weight: 700;
+  padding: 0 var(--sp-4);
+  background: var(--cl-chip);
+  border: 2px solid var(--cl-chip-border);
+  border-radius: 18px;
+  overflow-x: auto;
+  white-space: nowrap;
+  color: var(--cl-ink);
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+.sentence__text:empty::before {
+  content: 'הקש על אריח כדי לבנות משפט…';
+  color: var(--cl-muted);
+  font-size: var(--tx-lg);
+  font-weight: 500;
+}
+/* כפתור "הקראה" ירוק תלת-מימדי */
+.sentence__speak {
+  height: 60px;
+  min-width: 104px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 18px;
+  background: var(--cl-speak);
+  color: var(--cl-on-primary);
+  font-size: var(--tx-xl);
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 4px 0 var(--cl-speak-sh);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.sentence__speak:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--cl-speak-sh);
+}
+.sentence__speak:focus-visible {
+  outline: 3px solid var(--cl-scan-ring);
+  outline-offset: 2px;
+}
+/* כפתורי מחק / נקה — ריבועים מעוגלים */
+.sentence__btn {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--cl-border);
+  border-radius: 16px;
+  background: var(--cl-bg);
+  color: var(--cl-ink);
+  font-size: var(--tx-sm);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.12s ease, background 0.2s ease;
+}
+.sentence__btn:hover { background: var(--cl-chip); }
+.sentence__btn:active { transform: scale(0.93); }
+.sentence__btn:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+.sentence__btn--save {
+  background: var(--cl-primary-lt);
+  color: var(--cl-primary);
+  border-color: var(--cl-primary);
+}
+
+/* Phone: sentence bar wraps — text on top, buttons below */
+@media (max-width: 600px) {
+  .sentence {
+    flex-wrap: wrap;
+    padding: var(--sp-2) var(--sp-3);
+    gap: var(--sp-2);
+  }
+  .sentence__text {
+    order: -1;
+    flex-basis: 100%;
+    min-height: 48px;
+    font-size: var(--tx-xl);
+  }
+  .sentence__speak { flex: 1; min-width: 0; height: 54px; }
+  .sentence__btn   { width: 52px; height: 54px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sentence__speak, .sentence__btn { transition: none; }
+  .sentence__speak:active, .sentence__btn:active { transform: none; }
+}
+
+/* ── 7. NAV BAR ──────────────────────────────────────────────────── */
+.navbar {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.navbar::-webkit-scrollbar { display: none; }
+.navbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 56px;
+  padding: 0 var(--sp-5);
+  border: 2px solid var(--cl-border);
+  border-radius: 18px;
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  font-size: var(--tx-base);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: var(--sh-xs);
+  transition: transform 0.12s ease, background 0.25s ease, border-color 0.25s ease;
+}
+.navbar__btn-icon { font-size: 1.3em; line-height: 1; }
+.navbar__btn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+.navbar__btn:not(:disabled):hover {
+  background: var(--cl-chip);
+  border-color: var(--cl-chip-border);
+}
+.navbar__btn:not(:disabled):active { transform: scale(0.96); }
+.navbar__btn:focus-visible {
+  outline: 3px solid var(--cl-primary);
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .navbar { padding: var(--sp-2) var(--sp-3); gap: var(--sp-2); }
+  .navbar__btn { min-height: 48px; padding: 0 var(--sp-4); font-size: var(--tx-sm); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar__btn { transition: none; }
+  .navbar__btn:not(:disabled):active { transform: none; }
+}
+
