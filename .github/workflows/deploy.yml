@@ -7,8 +7,11 @@ name: Deploy
 # Required GitHub secrets:
 #   FIREBASE_SERVICE_ACCOUNT  — JSON key (Firebase Console → Project Settings → Service accounts)
 #   VITE_FIREBASE_*           — six client credentials mirrored from app/.env.local
-# NOTE: function secrets (GOOGLE_TTS_API_KEY, AI_ENDPOINT, AI_API_KEY) are NOT set here —
-#   set them once with `firebase functions:secrets:set <NAME>` (see integration prompt).
+# NOTE: function secrets (GOOGLE_TTS_API_KEY, GEMINI_API_KEY — used by ttsProxy/aiBoard,
+#   see functions/src/*.ts defineSecret calls) are NOT GitHub secrets and are NOT set here —
+#   they live in Firebase/GCP Secret Manager, set once per-project with
+#   `firebase functions:secrets:set <NAME>`. If either is missing/renamed there, the
+#   *deploy* still succeeds — only the corresponding Cloud Function call fails at runtime.
 
 on:
   push:
