@@ -1,0 +1,155 @@
+/* ── 21. QUICK-START WIZARD ──────────────────────────────────────── */
+.wizard-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--cl-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: var(--sp-4);
+}
+.wizard {
+  background: var(--cl-surface);
+  border-radius: var(--radius);
+  padding: var(--sp-6);
+  width: min(480px, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  box-shadow: var(--sh-xl);
+  direction: rtl;
+}
+.wizard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-4);
+}
+.wizard__title { margin: 0; font-size: var(--tx-xl); color: var(--cl-ink); }
+.wizard__close {
+  background: none;
+  border: none;
+  font-size: var(--tx-xl);
+  cursor: pointer;
+  padding: var(--sp-1) var(--sp-2);
+  color: var(--cl-muted);
+  min-height: var(--target-sm);
+  min-width: var(--target-sm);
+  border-radius: var(--r-sm);
+}
+.wizard__close:hover { background: var(--cl-surface-alt); }
+.wizard__close:focus-visible { outline: 3px solid var(--cl-primary); outline-offset: 2px; }
+.wizard__progress { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-5); }
+.wizard__step {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--cl-surface-alt);
+  color: var(--cl-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--tx-sm);
+  font-weight: 600;
+}
+.wizard__step--active { background: var(--cl-primary); color: var(--cl-on-primary); }
+.wizard__step--done   { background: #6ee7b7; color: #065f46; }
+.wizard__label   { display: block; font-weight: 600; margin-bottom: var(--sp-2); font-size: var(--tx-base); color: var(--cl-ink); }
+.wizard__input {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1.5px solid var(--cl-border);
+  border-radius: var(--r-sm);
+  font-size: var(--tx-base);
+  direction: rtl;
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  min-height: var(--target-sm);
+}
+.wizard__input:focus {
+  outline: none;
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55); /* F5: focus ring חזק יותר */
+}
+.wizard__error   { color: var(--cl-danger); margin: var(--sp-2) 0 0; font-size: var(--tx-sm); }
+.wizard__hint    { color: var(--cl-muted); margin: 0 0 var(--sp-3); font-size: var(--tx-sm); }
+.wizard__summary { margin: 0 0 var(--sp-2); font-size: var(--tx-base); color: var(--cl-ink); }
+.wizard__templates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.wizard__template-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border: 2px solid var(--cl-border);
+  border-radius: var(--r-md);
+  background: var(--cl-surface);
+  cursor: pointer;
+  text-align: start; /* F6: לוגי במקום right */
+  transition: border-color var(--ease);
+}
+.wizard__template-card--selected {
+  border-color: var(--cl-primary);
+  background: var(--cl-primary-lt);
+}
+.wizard__template-name { font-size: var(--tx-base); color: var(--cl-ink); }
+.wizard__template-desc { font-size: var(--tx-xs);   color: var(--cl-muted); }
+.wizard__actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+  flex-wrap: wrap;
+}
+.wizard__btn {
+  padding: var(--sp-2) var(--sp-5);
+  border: 1.5px solid var(--cl-border);
+  border-radius: var(--r-sm);
+  background: var(--cl-surface);
+  cursor: pointer;
+  font-size: var(--tx-base);
+  color: var(--cl-ink);
+  min-height: var(--target-sm);
+}
+.wizard__btn--primary {
+  background: var(--cl-primary);
+  color: var(--cl-on-primary);
+  border-color: var(--cl-primary);
+}
+.wizard__btn:disabled { opacity: 0.6; cursor: not-allowed; }
+@media (max-width: 600px) {
+  .wizard-overlay { padding: 0; align-items: flex-end; }
+  .wizard {
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-height: 92dvh;
+    padding-bottom: calc(var(--sp-5) + var(--safe-b));
+  }
+}
+
+/* ── 22. ADULT BUTTONS (legacy) ──────────────────────────────────── */
+.adult-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--target-min);
+  min-width: var(--target-min);
+  padding: 0 var(--sp-4);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--cl-primary);
+  color: var(--cl-on-primary);
+  font-size: var(--tx-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--ease-fast), transform var(--ease-fast);
+}
+.adult-btn--active { background: var(--cl-accent); }
+.adult-btn:hover:not(:disabled) { opacity: 0.9; }
+.adult-btn:focus-visible { outline: 3px solid var(--cl-accent); outline-offset: 2px; }
+

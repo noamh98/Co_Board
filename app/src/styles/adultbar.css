@@ -1,0 +1,119 @@
+/* ── 5. ADULT BAR ─────────────────────────────────────────────────── */
+.adultbar,
+.pin {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;         /* scroll on mobile instead of wrap */
+  gap: var(--sp-2);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.adultbar::-webkit-scrollbar,
+.pin::-webkit-scrollbar { display: none; }
+
+.adultbar__label,
+.pin__label {
+  font-size: var(--tx-sm);
+  color: var(--cl-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.adultbar__select,
+.adultbar__input,
+.pin__input {
+  min-height: var(--target-min);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-sm);
+  background: var(--cl-surface);
+  color: var(--cl-ink);
+  font-size: var(--tx-base);
+  flex-shrink: 0;
+  transition: border-color var(--ease-fast);
+}
+.adultbar__select:focus,
+.adultbar__input:focus,
+.pin__input:focus {
+  outline: none;
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 3px rgba(31, 122, 92, 0.55); /* F5: focus ring חזק יותר */
+}
+.adultbar__btn,
+.pin__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  min-height: var(--target-min);
+  min-width: var(--target-min);
+  padding: 0 var(--sp-3);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--cl-primary);
+  color: var(--cl-on-primary);
+  font-size: var(--tx-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--ease-fast), transform var(--ease-fast);
+}
+.adultbar__btn:hover:not(:disabled) { background: var(--cl-primary-dk); }
+.adultbar__btn:active:not(:disabled) { transform: scale(0.96); }
+.adultbar__btn:focus-visible {
+  outline: 3px solid var(--cl-accent);
+  outline-offset: 2px;
+}
+/* Settings button — visually distinct */
+.adultbar__btn--settings {
+  background: var(--cl-surface-alt);
+  color: var(--cl-ink);
+  border: 1.5px solid var(--cl-border);
+  font-size: var(--tx-lg);  /* larger icon */
+}
+.adultbar__btn--settings:hover:not(:disabled) { background: var(--cl-border); }
+
+.adultbar__btn--ghost,
+.pin__btn--ghost {
+  background: var(--cl-surface-alt);
+  color: var(--cl-ink);
+  border: 1px solid var(--cl-border);
+}
+.adultbar__btn--ghost:hover:not(:disabled),
+.pin__btn--ghost:hover:not(:disabled) { background: var(--cl-border); }
+
+.pin__btn:focus-visible {
+  outline: 3px solid var(--cl-accent);
+  outline-offset: 2px;
+}
+.pin__error {
+  color: var(--cl-error);
+  font-size: var(--tx-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Button text/icon spans — text hidden on phone */
+.adultbar__btn-icon {
+  font-style: normal;
+  line-height: 1;
+  flex-shrink: 0;
+  font-size: 1.1em;
+}
+/* On phone: hide button text, show only icon */
+@media (max-width: 600px) {
+  .adultbar__label { display: none; }
+  .adultbar__btn-text { display: none; }
+  .adultbar__btn {
+    padding: 0 var(--sp-2);
+    min-width: var(--target-min);
+    min-height: var(--target-min);
+    justify-content: center;
+  }
+  .adultbar__select { max-width: 110px; font-size: var(--tx-xs); }
+  .adultbar__input  { max-width: 100px; font-size: var(--tx-xs); }
+}
+
