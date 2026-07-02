@@ -31,7 +31,7 @@ interface AiBoardRequest {
  * חותך אחרי האובייקט {"word":...} השלם האחרון וסוגר את המערך/אובייקט.
  * מחזיר null אם אין אפילו פריט שלם אחד.
  */
-function repairTruncatedWordsJson(
+export function repairTruncatedWordsJson(
   jsonStr: string,
 ): { words: Array<{ word: string; pos?: string }> } | null {
   const arrayStart = jsonStr.indexOf('[');

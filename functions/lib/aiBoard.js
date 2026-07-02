@@ -4,6 +4,7 @@
 // secret: GEMINI_API_KEY (מ-Google AI Studio — aistudio.google.com, חינמי).
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiBoard = void 0;
+exports.repairTruncatedWordsJson = repairTruncatedWordsJson;
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const app_1 = require("firebase-admin/app");
