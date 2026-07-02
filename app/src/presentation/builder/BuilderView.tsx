@@ -17,6 +17,7 @@ import { NewBoardChooser } from '../wizard/NewBoardChooser';
 import type { NewBoardMethod } from '../wizard/NewBoardChooser';
 import { SmartCreatePanel } from '../wizard/SmartCreatePanel';
 import { listTemplates } from '../../domain/boardTemplates';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 export interface BuilderViewProps {
   board: Board;
@@ -46,6 +47,12 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
   // G1: מצב undo/redo מנוטר ב-state — מתעדכן מיד, לא נקרא מ-ref בזמן render.
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  // 2.3: אישור הזזת תא-ליבה (ViolationError) — ConfirmDialog במקום window.confirm.
+  const [coreMoveViolation, setCoreMoveViolation] = useState<{
+    cellId: string;
+    targetPlacement: CellPlacement;
+    message: string;
+  } | null>(null);
 
   const repo = useRef(createBoardRepo());
 
@@ -126,18 +133,22 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
       void applyBoard(newBoard);
     } catch (err) {
       if (err instanceof ViolationError) {
-        const ok = window.confirm(`${err.message}\nהאם להמשיך?`);
-        if (ok) {
-          try {
-            const newBoard = moveCell(currentBoard, draggedCellId, targetPlacement, { allowCoreMove: true });
-            void applyBoard(newBoard);
-          } catch (e2) {
-            if (e2 instanceof Error) alert(e2.message);
-          }
-        }
+        setCoreMoveViolation({ cellId: draggedCellId, targetPlacement, message: err.message });
       }
     }
     setDraggedCellId(null);
+  };
+
+  const confirmCoreMove = (): void => {
+    if (!coreMoveViolation) return;
+    const { cellId, targetPlacement } = coreMoveViolation;
+    setCoreMoveViolation(null);
+    try {
+      const newBoard = moveCell(currentBoard, cellId, targetPlacement, { allowCoreMove: true });
+      void applyBoard(newBoard);
+    } catch (e2) {
+      if (e2 instanceof Error) alert(e2.message);
+    }
   };
 
   const handleBulkFitzgerald = (fitz: Fitzgerald) => {
@@ -594,6 +605,18 @@ export function BuilderView({ board, onBoardChange, onExitBuilder, nikudService,
             </div>
           </div>
         </div>
+      )}
+
+      {/* 2.3: אישור הזזת תא-ליבה קפוא — ConfirmDialog נגיש במקום window.confirm. */}
+      {coreMoveViolation && (
+        <ConfirmDialog
+          title="הזזת תא"
+          message={`${coreMoveViolation.message}\nהאם להמשיך?`}
+          confirmLabel="המשך"
+          danger
+          onConfirm={confirmCoreMove}
+          onCancel={() => setCoreMoveViolation(null)}
+        />
       )}
     </div>
   );

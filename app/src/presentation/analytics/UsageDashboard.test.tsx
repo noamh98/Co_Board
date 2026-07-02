@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { IDBFactory } from 'fake-indexeddb';
 import { resetDbForTests } from '../../data/db';
@@ -39,18 +39,22 @@ describe('UsageDashboard — M7', () => {
     expect(screen.getByText(/אבא/)).toBeInTheDocument();
   });
 
-  it('כפתור נקה נתונים מציג אישור עברי', async () => {
+  it('כפתור נקה נתונים מציג ConfirmDialog נגיש (2.3)', async () => {
     const repo = createSettingsRepo();
     await repo.setAnalyticsEnabled(true);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     render(<UsageDashboard profileId="p1" onClose={() => undefined} />);
     await waitFor(() => {
       expect(screen.getByText('נקה נתונים')).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText('נקה נתונים'));
-    expect(confirmSpy).toHaveBeenCalledWith('למחוק את כל נתוני השימוש לפרופיל זה?');
-    confirmSpy.mockRestore();
+    expect(
+      await screen.findByText('למחוק את כל נתוני השימוש לפרופיל זה?'),
+    ).toBeInTheDocument();
+
+    // ביטול לא מוחק
+    fireEvent.click(screen.getByText('ביטול'));
+    expect(screen.queryByText('למחוק את כל נתוני השימוש לפרופיל זה?')).toBeNull();
   });
 
   it('toggle מפעיל מעקב ומציג נתונים', async () => {

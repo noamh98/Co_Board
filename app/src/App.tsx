@@ -43,6 +43,7 @@ import { PredictionBar } from './presentation/components/PredictionBar';
 import { SceneView } from './presentation/components/SceneView';
 import { useScanning } from './services/access/useScanning';
 import { notifyError, onNotifyError } from './services/notify/notifyService';
+import { ConfirmDialog } from './presentation/ui/ConfirmDialog';
 import { AuthGate } from './presentation/app/AuthGate';
 import { AppModals } from './presentation/app/AppModals';
 import type { PanelId } from './presentation/state/panelState';
@@ -245,11 +246,19 @@ export function App() {
     setBuilderMode(true);
   };
 
-  // ארכוב לוח מהספרייה (מחיקה רכה, הפיכה) — עם אישור, ועדכון מיידי של allBoards.
+  // ארכוב לוח מהספרייה (מחיקה רכה, הפיכה) — עם אישור (ConfirmDialog, 2.3), ועדכון
+  // מיידי של allBoards.
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; label: string } | null>(null);
+
   const onArchiveBoard = (boardId: string): void => {
     const target = bootstrap.ctx?.allBoards[boardId];
-    const label = target?.name ?? 'הלוח';
-    if (!window.confirm(`להעביר את "${label}" לארכיון? אפשר לשחזר מגיבוי.`)) return;
+    setArchiveTarget({ id: boardId, label: target?.name ?? 'הלוח' });
+  };
+
+  const confirmArchiveBoard = (): void => {
+    if (!archiveTarget) return;
+    const { id: boardId } = archiveTarget;
+    setArchiveTarget(null);
     void createBoardRepo()
       .archive(boardId)
       .then(() => {
@@ -613,6 +622,18 @@ export function App() {
           onLoadPhrase={onLoadPhrase}
           onDeletePhrase={sentenceState.deletePhraseById}
         />
+
+        {/* 2.3: ConfirmDialog נגיש במקום window.confirm — ארכוב לוח מהספרייה. */}
+        {archiveTarget && (
+          <ConfirmDialog
+            title="העברה לארכיון"
+            message={`להעביר את "${archiveTarget.label}" לארכיון? אפשר לשחזר מגיבוי.`}
+            confirmLabel="העבר לארכיון"
+            danger
+            onConfirm={confirmArchiveBoard}
+            onCancel={() => setArchiveTarget(null)}
+          />
+        )}
 
         {/* Phase 1.7 (U-1): toast שגיאה גלובלי — מוצג בכל תצוגה, כולל ספרייה ומודאלים. */}
         {errorToast && (
