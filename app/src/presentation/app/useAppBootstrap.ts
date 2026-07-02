@@ -36,6 +36,8 @@ import {
   getAdminClaim,
   onFirebaseAuthChange,
 } from '../../services/sync/firebaseAuth';
+import { getMigrationFailure, clearMigrationFailure } from '../../data/migrationFlag';
+import { notifyError } from '../../services/notify/notifyService';
 
 interface BootstrapParams {
   ttsRef: React.MutableRefObject<TtsLike | null>;
@@ -89,6 +91,13 @@ export function useAppBootstrap({
     let alive = true;
     void (async () => {
       await ensureSeeded();
+      // 3.5 (CR-5): שדרוג IDB v8 שנכשל (למשל abort שקט בספארי) מרים דגל מתמשך —
+      // ensureSeeded פותח את ה-DB ולכן מריץ upgrade() אם צריך; נבדק מיד אחריו כדי
+      // לתפוס גם כשלים מהסשן הנוכחי. מוצג פעם אחת כ-toast שגיאה ואז מנוקה.
+      if (alive && getMigrationFailure()) {
+        notifyError('שדרוג נתוני האפליקציה נכשל חלקית — מומלץ לגבות ולפנות לתמיכה');
+        clearMigrationFailure();
+      }
       const settingsRepo = createSettingsRepo();
       storedPinRef.current = (await settingsRepo.getCaregiverPin()) ?? '';
       const access = await settingsRepo.getAccessSettings();

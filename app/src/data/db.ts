@@ -1,4 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb';
+import { setMigrationFailed } from './migrationFlag';
 
 // שכבת Data — מקור האמת המקומי (Offline-first, HANDOFF §3/§4).
 // v1: store ניקוד בלבד. v2 (M1): נוספו boards/profiles/settings. v3: נוסף symbols.
@@ -92,13 +93,20 @@ export function getDb(): Promise<IDBPDatabase> {
         }
 
         // v8: תיקון mimeType להקלטות קוליות — היה 'image/webp' בטעות (HANDOFF §4).
+        // 3.5 (CR-5): עטוף ב-try/catch — כשל כאן (למשל abort שקט בספארי) לא יפיל את כל
+        // טרנזקציית ה-upgrade; stores/אינדקסים חדשים מ-v9-v12 שנוצרו למעלה לא הולכים
+        // לאיבוד. הדגל נבדק ומוצג למשתמש ב-useAppBootstrap.
         if (oldVersion < 8 && db.objectStoreNames.contains(STORE_SYMBOLS)) {
-          const store = tx.objectStore(STORE_SYMBOLS);
-          const all = await store.getAll();
-          for (const entry of all) {
-            if (entry.source === 'recording' && entry.mimeType === 'image/webp') {
-              await store.put({ ...entry, mimeType: 'audio/webm' });
+          try {
+            const store = tx.objectStore(STORE_SYMBOLS);
+            const all = await store.getAll();
+            for (const entry of all) {
+              if (entry.source === 'recording' && entry.mimeType === 'image/webp') {
+                await store.put({ ...entry, mimeType: 'audio/webm' });
+              }
             }
+          } catch (err) {
+            setMigrationFailed(err instanceof Error ? err.message : 'v8 migration failed');
           }
         }
 

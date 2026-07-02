@@ -35,10 +35,23 @@ describe('exportBackup / importBackup — round-trip', () => {
     expect(loaded.name).toBe('לוח בדיקה');
   });
 
-  it('importBackup עם backupFormat שגוי — זורק', async () => {
+  it('importBackup עם backupFormat שגוי — זורק (3.5: assertValidBackup)', async () => {
     await expect(
-      backupRepo.importBackup({ backupFormat: 99 } as never),
-    ).rejects.toThrow('גרסת גיבוי לא נתמכת');
+      backupRepo.importBackup({ backupFormat: 99 }),
+    ).rejects.toThrow('פורמט הגיבוי אינו נתמך');
+  });
+
+  it('importBackup מסנן רשומות board/profile פגומות במקום לזרוק (3.5)', async () => {
+    const backup = await backupRepo.exportBackup('dev-test');
+    resetIdb();
+    await backupRepo.importBackup({
+      ...backup,
+      boards: [sampleBoard, { garbage: true }],
+      profiles: [{ garbage: true }],
+    });
+    const db = await getDb();
+    const loaded = await db.get(STORE_BOARDS, 'b1') as Board;
+    expect(loaded.name).toBe('לוח בדיקה');
   });
 });
 
