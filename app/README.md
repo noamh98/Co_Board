@@ -1,7 +1,7 @@
 # app — לוח תקשורת (PWA)
 
 אפליקציית ה-AAC (React + TypeScript + Vite, offline-first, RTL מלא).
-ראה `../HANDOFF.md` לסקירה ו-`../PRD/PRD-he.md` לאפיון המלא.
+ראה `../docs/reviews/HANDOFF.md` לסקירה ו-`../PRD/PRD-he.md` לאפיון המלא.
 
 ## הרצה
 ```bash
