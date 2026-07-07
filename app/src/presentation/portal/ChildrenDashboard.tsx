@@ -1,5 +1,5 @@
 // presentation/portal/ChildrenDashboard.tsx — דשבורד ילדים בפורטל המבוגר (2B).
-// רשימת ילדים + הוספת ילד + שיתוף גישה.
+// רשימת ילדים + הוספת ילד + שיתוף גישה + ניהול הרשאות (D-05).
 
 import { useEffect, useState } from 'react';
 import type { ProfilePreferences } from '../../domain/models';
@@ -7,6 +7,7 @@ import { listChildren, createChild, saveChild, type ChildRecord } from '../../da
 import { ChildCard } from './ChildCard';
 import { ChildPreferencesPanel } from './ChildPreferencesPanel';
 import { ShareInvitePanel } from './ShareInvitePanel';
+import { AccessListPanel } from './AccessListPanel';
 import { AcceptInviteScreen } from './AcceptInviteScreen';
 
 interface Props {
@@ -25,6 +26,7 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
 
   const [prefsChild, setPrefsChild] = useState<ChildRecord | null>(null);
   const [shareChild, setShareChild] = useState<ChildRecord | null>(null);
+  const [accessChild, setAccessChild] = useState<ChildRecord | null>(null);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,6 +94,7 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
                 child={child}
                 onOpenPreferences={(cid) => setPrefsChild(children.find((c) => c.childId === cid) ?? null)}
                 onShareAccess={(cid) => setShareChild(children.find((c) => c.childId === cid) ?? null)}
+                onManageAccess={(cid) => setAccessChild(children.find((c) => c.childId === cid) ?? null)}
               />
             ))}
             {children.length === 0 && (
@@ -178,6 +181,15 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
           childName={shareChild.name}
           ownerUid={uid}
           onClose={() => setShareChild(null)}
+        />
+      )}
+
+      {accessChild && (
+        <AccessListPanel
+          childId={accessChild.childId}
+          childName={accessChild.name}
+          ownerUid={uid}
+          onClose={() => setAccessChild(null)}
         />
       )}
 
