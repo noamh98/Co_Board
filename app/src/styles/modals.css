@@ -1,4 +1,4 @@
-/* ── 10. MODAL / BOTTOM-SHEET ─────────────────────────────────────── */
+/* ── 10. MODAL / BOTTOM-SHEET ──────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -126,3 +126,52 @@
   .modal--drawer { animation: none; }
 }
 
+/* ── ACCESS LIST (D-05 — מי מורשה + ביטול גישה) ───────────────────── */
+.access-list {
+  list-style: none;
+  margin: var(--sp-4) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.access-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--r-sm);
+  background: var(--cl-surface-alt);
+}
+.access-list__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.access-list__role { font-weight: 700; color: var(--cl-ink); }
+.access-list__uid {
+  font-size: var(--tx-sm);
+  color: var(--cl-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.access-list__badge {
+  align-self: flex-start;
+  font-size: var(--tx-sm);
+  font-weight: 700;
+  color: var(--cl-primary-dk);
+}
+.access-list__expiry {
+  font-size: var(--tx-sm);
+  color: var(--cl-ink-soft);
+}
+.access-list__revoke { flex-shrink: 0; }
+.access-list__empty {
+  color: var(--cl-ink-soft);
+  padding: var(--sp-3);
+}

@@ -9,6 +9,7 @@
 //   4) משתמש לא-מאושר (ללא approved claim) אינו יכול לקרוא children — גם הבעלים.
 //   5) D-01: חבר childAccess מאושר *כן* קורא את מסמך הילד המשותף (positive).
 //   6) D-01: חבר childAccess קורא לוח משותף (top-level childId) אך אינו כותב.
+//   7) D-05: חבר עם expiresAt בעבר נחסם; חבר עם expiresAt בעתיד/ללא expiresAt מורשה.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -28,6 +29,9 @@ const STRANGER = 'stranger-uid';
 const CHILD = 'child-1';
 const CODE = 'ABCDEF0123456789';
 const BOARD = 'board-shared-1';
+// D-05: חברים עם פקיעת-תוקף.
+const EXPIRED_MEMBER = 'expired-member-uid';
+const FUTURE_MEMBER = 'future-member-uid';
 
 let testEnv: RulesTestEnvironment;
 
@@ -91,6 +95,22 @@ beforeEach(async () => {
       uid: CLINICIAN,
       role: 'clinician',
       grantedAt: 1,
+    });
+    // D-05: חבר שפקע (expiresAt בעבר) — אמור להיחסם.
+    await setDoc(doc(db, `childAccess/${CHILD}/members/${EXPIRED_MEMBER}`), {
+      childId: CHILD,
+      uid: EXPIRED_MEMBER,
+      role: 'clinician',
+      grantedAt: 1,
+      expiresAt: 1_000, // עבר רחוק
+    });
+    // D-05: חבר עם פקיעה עתידית — אמור להיות מורשה.
+    await setDoc(doc(db, `childAccess/${CHILD}/members/${FUTURE_MEMBER}`), {
+      childId: CHILD,
+      uid: FUTURE_MEMBER,
+      role: 'clinician',
+      grantedAt: 1,
+      expiresAt: Date.now() + 86_400_000, // מחר
     });
     // רשומת משתמש מאושרת — לבדיקות immutability של status (S-1).
     await setDoc(doc(db, `users/${OWNER}`), {
@@ -228,5 +248,38 @@ describe('Firestore rules — D-01 shared board content (approach A)', () => {
   it('unapproved childAccess member cannot read the shared board doc', async () => {
     const db = unapproved(CLINICIAN).firestore();
     await assertFails(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
+  });
+});
+
+describe('Firestore rules — D-05 childAccess expiresAt enforcement', () => {
+  it('member without expiresAt has permanent access (sanity)', async () => {
+    const db = approved(CLINICIAN).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('member with future expiresAt can read the shared child', async () => {
+    const db = approved(FUTURE_MEMBER).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('member with past expiresAt is denied on the shared child', async () => {
+    // D-05: פקיעת-תוקף — הגישה חסומה למרות שמסמך החבר עדיין קיים.
+    const db = approved(EXPIRED_MEMBER).firestore();
+    await assertFails(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('member with future expiresAt can read a shared board doc', async () => {
+    const db = approved(FUTURE_MEMBER).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
+  });
+
+  it('member with past expiresAt is denied on a shared board doc', async () => {
+    const db = approved(EXPIRED_MEMBER).firestore();
+    await assertFails(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
+  });
+
+  it('owner access is unaffected by member expiry', async () => {
+    const db = approved(OWNER).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
   });
 });

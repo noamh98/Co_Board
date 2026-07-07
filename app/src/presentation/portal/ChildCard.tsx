@@ -6,9 +6,10 @@ interface Props {
   child: ChildRecord;
   onOpenPreferences: (childId: string) => void;
   onShareAccess: (childId: string) => void;
+  onManageAccess: (childId: string) => void;
 }
 
-export function ChildCard({ child, onOpenPreferences, onShareAccess }: Props) {
+export function ChildCard({ child, onOpenPreferences, onShareAccess, onManageAccess }: Props) {
   return (
     <article
       className="child-card"
@@ -33,6 +34,13 @@ export function ChildCard({ child, onOpenPreferences, onShareAccess }: Props) {
           onClick={() => onShareAccess(child.childId)}
         >
           שתף גישה
+        </button>
+        <button
+          type="button"
+          className="login-panel__btn"
+          onClick={() => onManageAccess(child.childId)}
+        >
+          מי מורשה
         </button>
       </div>
     </article>
