@@ -1,9 +1,18 @@
 // presentation/settings/BackupPanel.tsx — ייצוא/ייבוא JSON + שחזור גרסה (FR-022).
 // FR-035: ייצוא/ייבוא OBF (Open Board Format) — Phase 2.
 // עובד 100% offline. לא תלוי בספק ענן.
+//
+// B-11 (R-03): נדג' "גובה לאחרונה לפני N ימים" — דוחף משפחות לגבות (סנכרון ענן
+// או ייצוא מקומי) לפני שאובדן המכשיר יגרום לאובדן הלוחות של הילד/ה.
 
 import { useState, useEffect, useRef } from 'react';
 import { backupRepo, type VersionSnapshot } from '../../data/backupRepo';
+import { getLastSyncAt } from '../../data/settingsRepo';
+import {
+  getBackupStatus,
+  backupNudgeText,
+  type BackupStatus,
+} from '../../domain/backupNudge';
 import { getDeviceId } from '../../services/sync/crypto';
 import type { Board } from '../../domain/models';
 import { exportToOBF, importFromOBF, type OBFBoard } from '../../services/obf/obfService';
@@ -23,12 +32,14 @@ export function BackupPanel({ onClose, currentBoard, onBoardImported }: Props) {
   const [exportingObf, setExportingObf] = useState(false);
   const [importingObf, setImportingObf] = useState(false);
   const [versions, setVersions] = useState<VersionSnapshot[]>([]);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'ok' | 'error' } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const obfFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadVersions();
+    void getLastSyncAt().then((ts) => setBackupStatus(getBackupStatus(ts)));
   }, []);
 
   async function loadVersions(): Promise<void> {
@@ -127,6 +138,22 @@ export function BackupPanel({ onClose, currentBoard, onBoardImported }: Props) {
         <h2>גיבוי ושחזור</h2>
         <button type="button" onClick={onClose} aria-label="סגור">✕</button>
       </div>
+
+      {/* B-11 (R-03): חיווי מצב גיבוי אחרון + דחיפה לגבות. */}
+      {backupStatus && (
+        <div
+          className={`backup-panel__nudge backup-panel__nudge--${backupStatus.urgency}`}
+          role={backupStatus.urgency === 'ok' ? 'status' : 'alert'}
+        >
+          <span className="backup-panel__nudge-text">{backupNudgeText(backupStatus)}</span>
+          {backupStatus.urgency !== 'ok' && (
+            <span className="backup-panel__nudge-hint">
+              מומלץ לגבות: הפעילו סנכרון ענן בהגדרות הפרטיות, או ייצאו גיבוי מקומי כאן.
+              אובדן המכשיר = אובדן הלוחות של הילד/ה.
+            </span>
+          )}
+        </div>
+      )}
 
       {message && (
         <div className={`backup-panel__msg backup-panel__msg--${message.type}`} role="alert">
