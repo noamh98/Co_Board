@@ -1,5 +1,5 @@
 // presentation/portal/ShareInvitePanel.tsx — יצירת קוד שיתוף גישה לילד (2B).
-// קוד 6 ספרות, TTL 48 שעות.
+// קוד אקראי חזק (32 תווי hex), TTL 48 שעות (D-01).
 
 import { useState } from 'react';
 import { createShareInvite, type ChildAccessRole } from '../../data/childRepo';
@@ -62,7 +62,7 @@ export function ShareInvitePanel({ childId, childName, ownerUid, onClose }: Prop
               onChange={(e) => setRole(e.target.value as ChildAccessRole)}
             >
               <option value="parent">הורה (עריכה)</option>
-              <option value="clinician">קלינאי (עריכה)</option>
+              <option value="clinician">קליני (עריכה)</option>
               <option value="staff">צוות (שימוש בלבד)</option>
             </select>
 
