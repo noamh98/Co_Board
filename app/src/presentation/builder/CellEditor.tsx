@@ -52,7 +52,7 @@ function blobToDataUri(blob: Blob): Promise<string> {
   });
 }
 
-/** מימדי תמונה אמיתיים (px) — נחוץ ל-crop נכון (G1: file.size הם בייטים, לא פיקסלים). */
+/** מימדי תמונה אמיתיים (px) — נחוץ ל-crop נכון (G1: file.size הם ביטים, לא פיקסלים). */
 function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -80,6 +80,7 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
   );
   const [imageUri, setImageUri] = useState<string | undefined>(cell?.imageUri);
   const [imagePreview, setImagePreview] = useState<string | undefined>(cell?.imageUri);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [isNikudLoading, setIsNikudLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   // A4: symbolId (ARASAAC) ו-audioId (הקלטה) מופרדים — לא עוד עומס על שדה אחד.
@@ -118,8 +119,9 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
   const handleImageFile = async (file: File, source: MediaEntrySource = 'gallery') => {
     const preview = URL.createObjectURL(file);
     setImagePreview(preview);
+    setImageError(null);
     try {
-      // G1: גזירה ריבועית ממורכזת לפי מימדי התמונה האמיתיים (היה file.size — בייטים).
+      // G1: גזירה ריבועית ממורכזת לפי מימדי התמונה האמיתיים.
       const { width, height } = await getImageDimensions(file);
       const side = Math.min(width, height);
       const cropped = await cropImage(file, {
@@ -129,16 +131,21 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
         height: side,
       });
       const noBg = await removeBackground(cropped);
+      // E-02: compressToWebP מבצע re-encode דרך canvas (מסיר EXIF/GPS) וזורק בכשל.
       const webp = await compressToWebP(noBg);
       blobRef.current = webp;
       mediaSourceRef.current = source;
       const uri = await blobToDataUri(webp);
       setImageUri(uri);
     } catch {
-      blobRef.current = file;
+      // E-02: fail-closed — אין נפילה חזרה לקובץ המקורי (עלול להכיל EXIF/GPS של קטין).
+      // מסירים כל תצוגה/נתון שמקורו בבייטים הגולמיים ומודיעים למשתמש.
+      blobRef.current = null;
       mediaSourceRef.current = source;
-      const uri = await blobToDataUri(file);
-      setImageUri(uri);
+      setImageUri(undefined);
+      setImagePreview(undefined);
+      URL.revokeObjectURL(preview);
+      setImageError('עיבוד התמונה נכשל. נסו תמונה אחרת.');
     }
   };
 
@@ -568,6 +575,11 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
               סמלים ARASAAC
             </button>
           </div>
+          {imageError && (
+            <span role="alert" style={{ display: 'block', marginTop: 6, fontSize: '0.85rem', color: 'var(--cl-danger)' }}>
+              {imageError}
+            </span>
+          )}
         </div>
 
         {symbolPickerOpen && (
