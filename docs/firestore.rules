@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── פונקציות עזר ──────────────────────────────────────
+    // ── פונקציות עזר ───────────────────────────────────────────────
     function isSignedIn() {
       return request.auth != null;
     }
@@ -21,9 +21,19 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.admin == true;
     }
 
+    // חברות childAccess תקפה: מסמך החבר קיים *וגם* לא פקע.
+    // expiresAt אופציונלי (D-05): היעדרו = גישה קבועה; ערך בעבר = פקע → נחסם.
+    // get(...) קורא את מסמך החבר; אם חסר — exists() מחזיר false ונחסם (fail-closed).
+    function childMemberDoc(childId) {
+      return /databases/$(database)/documents/childAccess/$(childId)/members/$(request.auth.uid);
+    }
+
     function hasChildAccess(childId) {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/childAccess/$(childId)/members/$(request.auth.uid));
+        && exists(childMemberDoc(childId))
+        && get(childMemberDoc(childId)).data.get('expiresAt', 0) <= 0
+           ? exists(childMemberDoc(childId))
+           : get(childMemberDoc(childId)).data.get('expiresAt', 0) > request.time.toMillis();
     }
 
     // בעלות על ילד נקבעת לפי קיום users/{uid}/children/{childId} תחת המשתמש המבקש.
@@ -33,7 +43,7 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(request.auth.uid)/children/$(childId));
     }
 
-    // ── רשומות משתמש ──────────────────────────────────────
+    // ── רשומות משתמש ───────────────────────────────────────────────
     match /users/{uid} {
       // קריאת רשומה עצמית בלבד (לבדיקת status)
       allow read: if isOwnUid(uid) || isAdmin();
@@ -61,7 +71,7 @@ service cloud.firestore {
         );
     }
 
-    // ── ילדים (2B) ─────────────────────────────────────────
+    // ── ילדים (2B) ───────────────────────────────────────────────
     match /users/{uid}/children/{childId} {
       // גישה לבעלים ולמי שרשום ב-childAccess — בשני המקרים נדרש אישור (isApproved).
       // הבעלים אינו פטור מבדיקת האישור (B4).
@@ -69,18 +79,19 @@ service cloud.firestore {
         && (isOwnUid(uid) || hasChildAccess(childId));
     }
 
-    // ── גישת ילד (childAccess) ─────────────────────────────
+    // ── גישת ילד (childAccess) ───────────────────────────────────
     match /childAccess/{childId}/members/{memberId} {
       allow read: if isSignedIn()
         && (request.auth.uid == memberId || hasChildAccess(childId));
       // כתיבה: רק הבעלים של הילד (מי שמחזיק users/{uid}/children/{childId}).
       // חבר רגיל (clinician/staff) אינו יכול להוסיף/לשנות חברים — מניעת privilege escalation (B4).
       // הענקת גישה למוזמן מתבצעת ע"י Cloud Function acceptInvite (Admin SDK, עוקף חוקים).
+      // ביטול גישה (D-05) מתבצע ע"י Cloud Function revokeChildAccess (Admin SDK).
       allow write: if isApproved()
         && ownsChildDoc(childId);
     }
 
-    // ── קודי שיתוף (shareInvites) ──────────────────────────
+    // ── קודי שיתוף (shareInvites) ───────────────────────────────
     // קריאה לבעלים בלבד. המוזמן לעולם לא קורא את המסמך ישירות —
     // המימוש מתבצע דרך Cloud Function acceptInvite (Admin SDK, עוקף חוקים).
     match /shareInvites/{code} {
