@@ -1,4 +1,4 @@
-/* ── 27. PHASE I — ניבוי / רמות / סריקה / הדפסה ───────────────────── */
+/* ── 27. PHASE I — ניבוי / רמות / סריקה / הדפסה ─────────────────────────── */
 /* I2 — שורת ניבוי מילה הבאה */
 .prediction-bar {
   display: flex;
@@ -14,7 +14,8 @@
   border: 1px solid var(--cl-chip-border);
   border-radius: var(--r-full, 999px);
   background: var(--cl-surface);
-  color: var(--cl-primary);
+  /* C-02: --cl-primary-dk לניגודיות AA (טקסט ירוק על משטח בהיר). */
+  color: var(--cl-primary-dk);
   font-size: var(--tx-base);
   font-weight: 600;
   cursor: pointer;

@@ -1,4 +1,4 @@
-/* ── 8. BOARD GRID ───────────────────────────────────────────────── */
+/* ── 8. BOARD GRID ─────────────────────────────────────────────────────────── */
 .board {
   flex: 1;
   display: grid;
@@ -12,7 +12,7 @@
   .board { gap: 6px; padding: var(--sp-2) var(--sp-3); }
 }
 
-/* ── 9. CELL BUTTON (Claude Design 2026) ─────────────────────────── */
+/* ── 9. CELL BUTTON (Claude Design 2026) ─────────────────────────────────── */
 .cell {
   width: 100%;
   height: 100%;
@@ -93,10 +93,11 @@
   z-index: 1;
 }
 @media (max-width: 600px) {
-  .cell { min-height: var(--target-sm); gap: var(--sp-1); padding: 6px 4px; }
+  /* C-04: אין דריסה קשיחה ל-44px. גוזרים מ-cellMinPx (--cell-min) עם רצפת WCAG AA
+     (--target-min = 48px) — משתמש שהגדיר יעד מגע גדול שומר עליו יחסית גם בטלפון. */
+  .cell { min-height: max(var(--target-min), calc(var(--cell-min) * 0.75)); gap: var(--sp-1); padding: 6px 4px; }
   .cell__icon { border-radius: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .cell, .cell:hover, .cell:active { transition: none; transform: none; }
 }
-

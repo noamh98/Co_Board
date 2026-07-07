@@ -1,4 +1,4 @@
-/* ── 19. BACKUP PANEL ─────────────────────────────────────────────── */
+/* BACKUP PANEL */
 .backup-panel {
   position: fixed;
   top: 50%;
@@ -37,7 +37,7 @@
   margin-bottom: var(--sp-4);
   font-size: var(--tx-sm);
 }
-.backup-panel__msg--ok  { background: var(--cl-success-bg); color: var(--cl-success); }
+.backup-panel__msg--ok  { background: var(--cl-success-bg); color: var(--cl-primary-dk); }
 .backup-panel__msg--error { background: var(--cl-error-bg); color: var(--cl-error); }
 .backup-panel__section { border-top: 1px solid var(--cl-border); padding: var(--sp-4) 0; }
 .backup-panel__section h3 { margin: 0 0 var(--sp-2); font-size: var(--tx-md); color: var(--cl-ink); }
@@ -48,7 +48,7 @@
   border: 1px solid var(--cl-primary);
   border-radius: var(--r-md);
   background: var(--cl-surface);
-  color: var(--cl-primary);
+  color: var(--cl-primary-dk);
   font-size: var(--tx-base);
   font-weight: 600;
   cursor: pointer;
@@ -82,7 +82,7 @@
   }
 }
 
-/* ── 20. CATEGORY MENU ───────────────────────────────────────────── */
+/* CATEGORY MENU */
 .catmenu-overlay {
   position: fixed;
   inset: 0;
@@ -178,4 +178,3 @@
   }
   .catmenu__grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
 }
-
