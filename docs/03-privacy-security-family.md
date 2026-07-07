@@ -1,5 +1,7 @@
 # 03 — Privacy, Security & Family Model (Parts 7–9, 20)
 
+> 📚 Part of the SaaS transformation docs — see [README.md](README.md) for the full index: [00](00-discovery.md) · [01](01-audit.md) · [02](02-ux-a11y-platforms.md) · [03](03-privacy-security-family.md) · [04](04-media-ai.md) · [05](05-roadmap.md) · [06](06-executive-summary.md) · [Session summary](SESSION_SUMMARY.md)
+
 > Stage D output of the SaaS transformation plan (see `COBOARD_TASK.md`, Parts 7, 8, 9, 20).
 > Date: 2026-07-07 · Authors: **Security Sentinel + Analyst** (Sonnet).
 > Baseline (trusted, not re-derived): `docs/00-discovery.md` (Stage A), `docs/01-audit.md` (Stage B, findings B-01…B-24), `docs/04-media-ai.md` (Stage E, findings E-01…E-15).

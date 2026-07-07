@@ -1,5 +1,7 @@
 # 02 — UX, Accessibility & Cross-Platform (Parts 17–19)
 
+> 📚 Part of the SaaS transformation docs — see [README.md](README.md) for the full index: [00](00-discovery.md) · [01](01-audit.md) · [02](02-ux-a11y-platforms.md) · [03](03-privacy-security-family.md) · [04](04-media-ai.md) · [05](05-roadmap.md) · [06](06-executive-summary.md) · [Session summary](SESSION_SUMMARY.md)
+
 > Stage C output of the SaaS transformation plan (see `COBOARD_TASK.md`, Parts 17–19).
 > Date: 2026-07-07 · Author: **UX Auditor** agent (Sonnet).
 > Baseline (trusted, not re-derived): `docs/00-discovery.md` (Stage A), `docs/01-audit.md` (Stage B, B-06/B-07/B-11/B-22), `docs/04-media-ai.md` (Stage E, E-13).

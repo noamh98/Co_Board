@@ -1,5 +1,7 @@
 # 01 — Comprehensive Audit (Parts 2–6, 10–16)
 
+> 📚 Part of the SaaS transformation docs — see [README.md](README.md) for the full index: [00](00-discovery.md) · [01](01-audit.md) · [02](02-ux-a11y-platforms.md) · [03](03-privacy-security-family.md) · [04](04-media-ai.md) · [05](05-roadmap.md) · [06](06-executive-summary.md) · [Session summary](SESSION_SUMMARY.md)
+
 > Stage B output · date 2026-07-07 · authored by **Analyst** agent (Sonnet), cross-checked against source.
 > Baseline: `docs/00-discovery.md` (Stage A, trusted). Source of truth = code. Every claim below is either cited to a file path or explicitly tagged `[Assumption]` / `[TBD]`.
 

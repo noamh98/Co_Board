@@ -1,5 +1,7 @@
 # 00 — Discovery: Current State of Co_Board
 
+> 📚 Part of the SaaS transformation docs — see [README.md](README.md) for the full index: [00](00-discovery.md) · [01](01-audit.md) · [02](02-ux-a11y-platforms.md) · [03](03-privacy-security-family.md) · [04](04-media-ai.md) · [05](05-roadmap.md) · [06](06-executive-summary.md) · [Session summary](SESSION_SUMMARY.md)
+
 > Stage A output of the SaaS transformation plan (see `COBOARD_TASK.md`, Part 1).
 > Produced by: Scout (repo scan) + Analyst cross-check against `ARCHITECTURE.md`, `docs/reviews/HANDOFF.md`, and source.
 > Date: 2026-07-07 · Branch: `claude/coboard-saas-strategy-1c74cn`

@@ -1,5 +1,7 @@
 # 04 — Media & AI (Parts 14, 21)
 
+> 📚 Part of the SaaS transformation docs — see [README.md](README.md) for the full index: [00](00-discovery.md) · [01](01-audit.md) · [02](02-ux-a11y-platforms.md) · [03](03-privacy-security-family.md) · [04](04-media-ai.md) · [05](05-roadmap.md) · [06](06-executive-summary.md) · [Session summary](SESSION_SUMMARY.md)
+
 > Stage E output of the SaaS transformation plan (see `COBOARD_TASK.md`, Parts 14 + 21).
 > Date: 2026-07-07 · Authors: Analyst-Media (Sonnet) + Security Sentinel review.
 > Source of truth: code > docs. Verified against `app/src/services/{tts,nikud,image,ai,symbols}/`,
