@@ -45,7 +45,7 @@
     "runtime": "nodejs20"
   },
   "firestore": {
-    "rules": "docs/firestore.rules"
+    "rules": "firebase/firestore.rules"
   },
   "storage": {
     "rules": "firebase/storage.rules"

@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── פונקציות עזר ──
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnUid(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isApproved() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.approved == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function childMemberDoc(childId) {
+      return /databases/$(database)/documents/childAccess/$(childId)/members/$(request.auth.uid);
+    }
+
+    // חברות childAccess שלא פקעה (D-05): expiresAt אופציונלי.
+    // ברירת מחדל 0 (או שלילי) = גישה קבועה; ערך חיובי חייב להיות בעתיד.
+    // נקרא רק אחרי exists() (short-circuit) — get() לעולם לא רץ על מסמך חסר.
+    function childAccessNotExpired(childId) {
+      return get(childMemberDoc(childId)).data.get('expiresAt', 0) <= 0
+        || get(childMemberDoc(childId)).data.get('expiresAt', 0) > request.time.toMillis();
+    }
+
+    function hasChildAccess(childId) {
+      return isSignedIn()
+        && exists(childMemberDoc(childId))
+        && childAccessNotExpired(childId);
+    }
+
+    // בעלות על ילד נקבעת לפי קיום users/{uid}/children/{childId} תחת המשתמש המבקש.
+    // משמש למניעת privilege escalation: רק הבעלים יכול לכתוב ל-childAccess.
+    function ownsChildDoc(childId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/children/$(childId));
+    }
+
+    // ── רשומות משתמש ──
+    match /users/{uid} {
+      allow read: if isOwnUid(uid) || isAdmin();
+      allow create: if isOwnUid(uid)
+        && request.resource.data.status == 'pending';
+      allow update: if isOwnUid(uid)
+        && request.resource.data.status == resource.data.status;
+    }
+
+    // ── תוכן (boards, profiles, settings וכו') ──
+    // כתיבה: רק הבעלים המאושר. קריאה: הבעלים, או חבר childAccess של
+    // הילד המקושר למסמך (D-01, approach A). childId מקודם ל-top-level;
+    // מסמכים ללא childId (settings) — owner-only.
+    match /users/{uid}/{collection}/{document} {
+      allow write: if isOwnUid(uid) && isApproved();
+      allow read: if isApproved()
+        && (
+          isOwnUid(uid)
+          || (resource.data.get('childId', '') != ''
+              && hasChildAccess(resource.data.get('childId', '')))
+        );
+    }
+
+    // ── ילדים (2B) ──
+    match /users/{uid}/children/{childId} {
+      allow read, write: if isApproved()
+        && (isOwnUid(uid) || hasChildAccess(childId));
+    }
+
+    // ── גישת ילד (childAccess) ──
+    match /childAccess/{childId}/members/{memberId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == memberId || hasChildAccess(childId));
+      // כתיבה: רק הבעלים. הענקה/ביטול מתבצעים ע"י Cloud Functions (Admin SDK).
+      allow write: if isApproved()
+        && ownsChildDoc(childId);
+    }
+
+    // ── קודי שיתוף (shareInvites) ──
+    match /shareInvites/{code} {
+      allow read: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
+      allow create: if isApproved()
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ── Admin: קריאת כל רשומות users לאישור ──
+    match /users/{uid} {
+      allow list: if isAdmin();
+    }
+  }
+}
