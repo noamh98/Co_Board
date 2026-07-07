@@ -15,6 +15,8 @@ interface AuthGateProps {
   onSignIn: (email: string, password: string) => Promise<void>;
   onGoogleSignIn: () => Promise<void>;
   onRegister: (email: string, password: string, displayName: string) => Promise<void>;
+  /** D-04: שליחת מייל איפוס סיסמה. */
+  onPasswordReset?: (email: string) => Promise<void>;
   onSignOut: () => void;
   children: ReactNode;
 }
@@ -25,6 +27,7 @@ export function AuthGate({
   onSignIn,
   onGoogleSignIn,
   onRegister,
+  onPasswordReset,
   onSignOut,
   children,
 }: AuthGateProps) {
@@ -43,6 +46,7 @@ export function AuthGate({
         onSignIn={onSignIn}
         onGoogleSignIn={onGoogleSignIn}
         onRegister={onRegister}
+        onPasswordReset={onPasswordReset}
       />
     );
   }
