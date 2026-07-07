@@ -10,6 +10,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
   sendEmailVerification,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   signOut as fbSignOut,
   type Auth,
@@ -117,6 +118,23 @@ export async function sendVerificationEmail(): Promise<void> {
   await sendEmailVerification(auth.currentUser);
 }
 
+/**
+ * שלח מייל איפוס סיסמה (D-04).
+ * פרטיות tier-1: שגיאת auth/user-not-found נבלעת בשקט כדי למנוע account
+ * enumeration — הממשק לעולם לא חושף אם כתובת אימייל רשומה במערכת.
+ * שגיאות אחרות (רשת וכו') ממשיכות למעלה לטיפול ב-UI.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const { auth } = getFirebase();
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('user-not-found')) return;
+    throw err;
+  }
+}
+
 /** האם האימייל של המשתמש הנוכחי מאומת? */
 export function isEmailVerified(): boolean {
   const { auth } = getFirebase();
@@ -131,7 +149,7 @@ export async function getAdminClaim(): Promise<boolean> {
   return tokenResult.claims['admin'] === true;
 }
 
-/** קרא את status מ-Firestore users/{uid}. */
+/** קרא status מ-Firestore users/{uid}. */
 export async function getUserStatus(uid: string): Promise<UserStatus | null> {
   const { db } = getFirebase();
   try {
