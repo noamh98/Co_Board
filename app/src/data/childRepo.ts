@@ -38,6 +38,8 @@ export interface ChildAccessEntry {
   uid: string;
   role: ChildAccessRole;
   grantedAt: number;
+  /** פקיעת גישה אופציונלית (D-05) — millis. היעדר/0 = גישה קבועה; ערך בעבר = פקע. */
+  expiresAt?: number;
 }
 
 /** קוד שיתוף גישה לילד. חד-פעמי (used) + פג-תוקף (expiresAt). */
@@ -119,7 +121,7 @@ export async function createChild(
   return child;
 }
 
-// ── childAccess ──────────────────────────────────────────
+// ── childAccess ────────────────────────────────────────────────
 
 async function grantChildAccess(
   childId: string,
@@ -146,7 +148,23 @@ export async function getChildAccessEntries(childId: string): Promise<ChildAcces
   }
 }
 
-// ── Share Invites ─────────────────────────────────────────
+/**
+ * ביטול גישת חבר לילד (D-05). מתבצע דרך Cloud Function revokeChildAccess
+ * (Admin SDK) — הבעלים אינו כותב ישירות ל-childAccess של חבר אחר בחוקים
+ * (owner-only write נשמר; המחיקה עוקפת חוקים בצד השרת עם אימות בעלות).
+ */
+export async function revokeChildAccess(
+  childId: string,
+  memberUid: string,
+): Promise<void> {
+  const call = httpsCallable<{ childId: string; memberUid: string }, { success: boolean }>(
+    getFunctions(getApp(), FUNCTIONS_REGION),
+    'revokeChildAccess',
+  );
+  await call({ childId, memberUid });
+}
+
+// ── Share Invites ──────────────────────────────────────────────
 
 const TTL_48H = 48 * 60 * 60 * 1000;
 
