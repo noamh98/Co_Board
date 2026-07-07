@@ -41,6 +41,19 @@ function getFirebaseInstances(): { db: Firestore; auth: Auth } {
   return { db: _db!, auth: _auth! };
 }
 
+/**
+ * חילוץ childId מתוך גוף הישות (Board/Profile) לקידום top-level במסמך
+ * המסונכרן, כדי שחוקי Firestore יוכלו לאשר קריאה לפי ילד (D-01, approach A).
+ * מחזיר undefined כשאין childId (למשל settings) — ואז השדה לא נכתב.
+ */
+function sharedChildId(data: unknown): string | undefined {
+  if (data !== null && typeof data === 'object' && 'childId' in data) {
+    const value = (data as { childId?: unknown }).childId;
+    if (typeof value === 'string' && value !== '') return value;
+  }
+  return undefined;
+}
+
 export class FirebaseProvider implements SyncProvider {
   private _deviceId: string | null = null;
 
@@ -57,10 +70,12 @@ export class FirebaseProvider implements SyncProvider {
     await Promise.all(
       records.map((r) => {
         const ref = doc(db, 'users', uid, r.entityType, r.entityId);
+        const childId = sharedChildId(r.versioned.data);
         return setDoc(ref, {
           ...r.versioned,
           entityType: r.entityType,
           entityId: r.entityId,
+          ...(childId ? { childId } : {}),
         });
       }),
     );
