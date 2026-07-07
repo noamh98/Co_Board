@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { listTemplates } from '../../domain/boardTemplates';
 import { createProfileFromTemplate } from '../../data/bootstrap';
+import { requestPersistentStorage } from '../../services/storage/persistence';
 import type { GridSize } from '../../domain/models';
 import { GRID_MIN, GRID_MAX } from '../../domain/adaptivity';
 
@@ -59,6 +60,9 @@ export function QuickStartWizard({ onComplete, onClose }: Props) {
   const handleCreate = (): void => {
     setCreating(true);
     void (async () => {
+      // B-10: בקשת אחסון עמיד בעת השלמת האונבורדינג (מחווה של משתמש) — מגן על
+      // ה-IndexedDB מפני פינוי לפני שנכתב הפרופיל הראשון. לא חוסם, לעולם לא זורק.
+      await requestPersistentStorage();
       const profileId = await createProfileFromTemplate(
         name.trim(),
         selectedTemplate,
