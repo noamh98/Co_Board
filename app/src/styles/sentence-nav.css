@@ -1,4 +1,4 @@
-/* ── 6. SENTENCE BAR ─────────────────────────────────────────────── */
+/* SENTENCE BAR */
 .sentence {
   position: sticky;
   top: 0;
@@ -11,7 +11,6 @@
   border-bottom: 1px solid var(--cl-border);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
 }
-/* אזור המשפט — chip מעוגל בעיצוב Claude Design */
 .sentence__text {
   flex: 1;
   min-width: 160px;
@@ -36,7 +35,6 @@
   font-size: var(--tx-lg);
   font-weight: 500;
 }
-/* כפתור "הקראה" ירוק תלת-מימדי */
 .sentence__speak {
   height: 60px;
   min-width: 104px;
@@ -60,7 +58,6 @@
   outline: 3px solid var(--cl-scan-ring);
   outline-offset: 2px;
 }
-/* כפתורי מחק / נקה — ריבועים מעוגלים */
 .sentence__btn {
   width: 60px;
   height: 60px;
@@ -85,11 +82,10 @@
 }
 .sentence__btn--save {
   background: var(--cl-primary-lt);
-  color: var(--cl-primary);
+  color: var(--cl-primary-dk);
   border-color: var(--cl-primary);
 }
 
-/* Phone: sentence bar wraps — text on top, buttons below */
 @media (max-width: 600px) {
   .sentence {
     flex-wrap: wrap;
@@ -110,7 +106,7 @@
   .sentence__speak:active, .sentence__btn:active { transform: none; }
 }
 
-/* ── 7. NAV BAR ──────────────────────────────────────────────────── */
+/* NAV BAR */
 .navbar {
   display: flex;
   gap: var(--sp-2);
@@ -159,4 +155,3 @@
   .navbar__btn { transition: none; }
   .navbar__btn:not(:disabled):active { transform: none; }
 }
-
