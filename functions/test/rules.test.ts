@@ -53,7 +53,7 @@ beforeAll(async () => {
     projectId: PROJECT_ID,
     firestore: {
       rules: readFileSync(
-        resolve(__dirname, '../../docs/firestore.rules'),
+        resolve(__dirname, '../../firebase/firestore.rules'),
         'utf8',
       ),
     },
