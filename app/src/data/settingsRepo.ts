@@ -20,6 +20,7 @@ const KEY_TTS_RATE = 'ttsRate';
 const KEY_TTS_PITCH = 'ttsPitch';
 const KEY_TTS_PROVIDER = 'ttsProvider';
 const KEY_TTS_API_KEY = 'ttsApiKey'; // legacy — נמחק (לא נכתב יותר).
+const KEY_SYNC_ENABLED = 'syncEnabled';
 const KEY_SYNC_PHOTOS = 'syncPhotos';
 const KEY_DARK_MODE = 'darkMode';
 const KEY_LAST_SYNC_AT = 'lastSyncAt';
@@ -105,6 +106,20 @@ export async function getTtsApiKey(): Promise<string | null> {
 export async function setTtsApiKey(_key: string | null): Promise<void> {
   const db = await getDb();
   await db.delete(STORE_SETTINGS, KEY_TTS_API_KEY);
+}
+
+/**
+ * האם סנכרון ענן של לוחות/פרופילים מופעל (ברירת מחדל: false — מקומי בלבד).
+ * B-11 (R-03): ההעדפה נשמרת בין טעינות כדי שגיבוי ענן שהופעל לא "יישכח"
+ * בכל ריענון. אין כאן הפעלה אוטומטית של נתוני קטינים לענן — רק זכירת
+ * בחירה מפורשת של המשתמש.
+ */
+export async function getSyncEnabled(): Promise<boolean> {
+  const raw = await readValue(KEY_SYNC_ENABLED);
+  return raw === 'true';
+}
+export async function setSyncEnabled(enabled: boolean): Promise<void> {
+  await writeValue(KEY_SYNC_ENABLED, String(enabled));
 }
 
 /** האם לסנכרן תמונות אישיות לענן (ברירת מחדל: false — מקומי בלבד). */
