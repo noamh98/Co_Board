@@ -21,19 +21,22 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.admin == true;
     }
 
-    // חברות childAccess תקפה: מסמך החבר קיים *וגם* לא פקע.
-    // expiresAt אופציונלי (D-05): היעדרו = גישה קבועה; ערך בעבר = פקע → נחסם.
-    // get(...) קורא את מסמך החבר; אם חסר — exists() מחזיר false ונחסם (fail-closed).
     function childMemberDoc(childId) {
       return /databases/$(database)/documents/childAccess/$(childId)/members/$(request.auth.uid);
+    }
+
+    // חברות childAccess שלא פקעה (D-05): expiresAt אופציונלי.
+    // ברירת מחדל 0 (או שלילי) = גישה קבועה; ערך חיובי חייב להיות בעתיד.
+    // נקרא רק אחרי exists() (short-circuit) — get() לעולם לא רץ על מסמך חסר.
+    function childAccessNotExpired(childId) {
+      return get(childMemberDoc(childId)).data.get('expiresAt', 0) <= 0
+        || get(childMemberDoc(childId)).data.get('expiresAt', 0) > request.time.toMillis();
     }
 
     function hasChildAccess(childId) {
       return isSignedIn()
         && exists(childMemberDoc(childId))
-        && get(childMemberDoc(childId)).data.get('expiresAt', 0) <= 0
-           ? exists(childMemberDoc(childId))
-           : get(childMemberDoc(childId)).data.get('expiresAt', 0) > request.time.toMillis();
+        && childAccessNotExpired(childId);
     }
 
     // בעלות על ילד נקבעת לפי קיום users/{uid}/children/{childId} תחת המשתמש המבקש.
