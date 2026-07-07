@@ -29,6 +29,7 @@ import { authService } from './services/sync/authService';
 import {
   signInWithGoogle,
   sendVerificationEmail,
+  sendPasswordReset,
   getUserStatus,
   createUserRecord,
   getAdminClaim,
@@ -387,6 +388,7 @@ export function App() {
       }}
       onGoogleSignIn={onGoogleSignIn}
       onRegister={onRegister}
+      onPasswordReset={sendPasswordReset}
       onSignOut={onSignOut}
     >
       <div
