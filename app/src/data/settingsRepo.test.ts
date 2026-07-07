@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { resetDbForTests } from './db';
-import { createSettingsRepo } from './settingsRepo';
+import { createSettingsRepo, getSyncEnabled, setSyncEnabled } from './settingsRepo';
 import { DEFAULT_ACCESS_SETTINGS } from '../domain/accessSettings';
 
 function resetIndexedDb(): void {
@@ -86,5 +86,22 @@ describe('settingsRepo — accessSettings (FR-020)', () => {
     const out = await s.getAccessSettings();
     expect(out.dwellTimeMs).toBe(500);
     expect(out.dwellPreviewMs).toBe(DEFAULT_ACCESS_SETTINGS.dwellPreviewMs);
+  });
+});
+
+describe('settingsRepo — syncEnabled consent (B-11)', () => {
+  it('מחזיר false לפני כל שמירה (מקומי בלבד כברירת מחדל)', async () => {
+    expect(await getSyncEnabled()).toBe(false);
+  });
+
+  it('setSyncEnabled(true) נשמר ונקרא בין "טעינות" (round-trip)', async () => {
+    await setSyncEnabled(true);
+    expect(await getSyncEnabled()).toBe(true);
+  });
+
+  it('ניתן לכבות שוב', async () => {
+    await setSyncEnabled(true);
+    await setSyncEnabled(false);
+    expect(await getSyncEnabled()).toBe(false);
   });
 });
