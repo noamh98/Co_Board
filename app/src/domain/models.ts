@@ -115,6 +115,12 @@ export interface Board {
   kind?: 'grid' | 'scene';
   /** נתוני סצנה (I7) — רלוונטי כש-kind==='scene'. */
   scene?: SceneData;
+  /**
+   * מזהה ילד בענף (Firestore children/{childId}) — מקדם קריאה משותפת לחברי
+   * childAccess (D-01, approach A: קריאה ישירה ללא שכפול). אדיטיבי, אופציונלי,
+   * read-only לחברים; הכתיבה נשארת של הבעלים בלבד.
+   */
+  childId?: string;
 }
 
 /** אזור-לחיץ (hotspot) בלוח סצנה — מיקום/גודל באחוזים (0–100). */
@@ -170,6 +176,6 @@ export interface Profile {
   archived?: boolean;
   /** העדפות לפרופיל הילד — FR-001. */
   preferences?: ProfilePreferences;
-  /** מזהה ילד בענן — Firestore children/{childId} — 2B. */
+  /** מזהה ילד בענף — Firestore children/{childId} — 2B. */
   childId?: string;
 }

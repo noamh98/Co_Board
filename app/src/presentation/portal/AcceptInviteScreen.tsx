@@ -1,7 +1,14 @@
 // presentation/portal/AcceptInviteScreen.tsx — קבלת גישה לילד ע"י קוד שיתוף (2B).
+// הקוד הוא 32 תווי hex (data/childRepo.generateShareCode) — D-01.
 
 import { useState } from 'react';
 import { acceptShareInvite, type ChildRecord } from '../../data/childRepo';
+import {
+  isValidShareCode,
+  normalizeShareCode,
+  sanitizeShareCodeInput,
+  SHARE_CODE_LENGTH,
+} from '../../domain/shareCode';
 
 interface Props {
   uid: string;
@@ -15,15 +22,15 @@ export function AcceptInviteScreen({ uid, onAccepted, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleAccept(): Promise<void> {
-    const trimmed = code.trim();
-    if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) {
-      setError('קוד שיתוף חייב להיות 6 ספרות');
+    const normalized = normalizeShareCode(code);
+    if (!isValidShareCode(normalized)) {
+      setError('קוד שיתוף לא תקין — יש להזין את הקוד המלא כפי שהתקבל');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const child = await acceptShareInvite(trimmed, uid);
+      const child = await acceptShareInvite(normalized, uid);
       if (!child) throw new Error('קוד שיתוף לא נמצא');
       onAccepted(child);
     } catch (e) {
@@ -49,18 +56,20 @@ export function AcceptInviteScreen({ uid, onAccepted, onClose }: Props) {
         <p>הזן את קוד השיתוף שקיבלת מההורה:</p>
 
         <label className="login-panel__label" htmlFor="invite-code">
-          קוד שיתוף (6 ספרות)
+          קוד שיתוף
         </label>
         <input
           id="invite-code"
           className="login-panel__input"
           type="text"
-          inputMode="numeric"
-          maxLength={6}
+          maxLength={SHARE_CODE_LENGTH}
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          onChange={(e) => setCode(sanitizeShareCodeInput(e.target.value))}
           disabled={loading}
           dir="ltr"
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
           aria-describedby={error ? 'invite-error' : undefined}
         />
 
@@ -75,7 +84,7 @@ export function AcceptInviteScreen({ uid, onAccepted, onClose }: Props) {
             type="button"
             className="login-panel__btn login-panel__btn--primary"
             onClick={() => void handleAccept()}
-            disabled={loading || code.length !== 6}
+            disabled={loading || !isValidShareCode(code)}
           >
             {loading ? 'מאמת…' : 'קבל גישה'}
           </button>

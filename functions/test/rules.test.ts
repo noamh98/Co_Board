@@ -7,6 +7,8 @@
 //   2) משתמש שאינו חבר אינו יכול לקרוא children של בעלים אחר.
 //   3) חבר רגיל (clinician) אינו יכול לכתוב ל-childAccess (privilege escalation).
 //   4) משתמש לא-מאושר (ללא approved claim) אינו יכול לקרוא children — גם הבעלים.
+//   5) D-01: חבר childAccess מאושר *כן* קורא את מסמך הילד המשותף (positive).
+//   6) D-01: חבר childAccess קורא לוח משותף (top-level childId) אך אינו כותב.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -25,6 +27,7 @@ const CLINICIAN = 'clinician-uid';
 const STRANGER = 'stranger-uid';
 const CHILD = 'child-1';
 const CODE = 'ABCDEF0123456789';
+const BOARD = 'board-shared-1';
 
 let testEnv: RulesTestEnvironment;
 
@@ -94,6 +97,25 @@ beforeEach(async () => {
       status: 'approved',
       displayName: 'בעלים',
     });
+    // מסמך לוח מסונכרן עם childId ברמת המסמך (D-01, approach A).
+    await setDoc(doc(db, `users/${OWNER}/board/${BOARD}`), {
+      entityType: 'board',
+      entityId: BOARD,
+      childId: CHILD,
+      version: 1,
+      updatedAt: 1,
+      deviceId: 'seed-device',
+      data: { id: BOARD, name: 'לוח משותף', childId: CHILD },
+    });
+    // מסמך settings ללא childId — לוודא שחבר childAccess אינו קורא אותו.
+    await setDoc(doc(db, `users/${OWNER}/settings/pref`), {
+      entityType: 'settings',
+      entityId: 'pref',
+      version: 1,
+      updatedAt: 1,
+      deviceId: 'seed-device',
+      data: { key: 'pref', value: 1 },
+    });
   });
 });
 
@@ -140,5 +162,71 @@ describe('Firestore rules — hardening (B4)', () => {
   it('user can update own displayName without touching status', async () => {
     const db = approved(OWNER).firestore();
     await assertSucceeds(updateDoc(doc(db, `users/${OWNER}`), { displayName: 'שם חדש' }));
+  });
+});
+
+describe('Firestore rules — D-01 positive sharing read access', () => {
+  it('owner can read own child (sanity)', async () => {
+    const db = approved(OWNER).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('childAccess member (clinician) can read the shared child', async () => {
+    // D-01: מוזמן שקיבל גישה דרך childAccess חייב להצליח לקרוא את מסמך הילד המשותף.
+    const db = approved(CLINICIAN).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('childAccess member can read the child members list', async () => {
+    const db = approved(CLINICIAN).firestore();
+    await assertSucceeds(getDoc(doc(db, `childAccess/${CHILD}/members/${OWNER}`)));
+  });
+
+  it('unapproved childAccess member cannot read the shared child', async () => {
+    // גם חבר childAccess מחויב ב-isApproved — אישור חסר חוסם קריאה.
+    const db = unapproved(CLINICIAN).firestore();
+    await assertFails(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+});
+
+describe('Firestore rules — D-01 shared board content (approach A)', () => {
+  it('childAccess member (clinician) can read a shared board doc via top-level childId', async () => {
+    const db = approved(CLINICIAN).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
+  });
+
+  it('stranger cannot read the shared board doc', async () => {
+    const db = approved(STRANGER).firestore();
+    await assertFails(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
+  });
+
+  it('childAccess member cannot write the shared board doc (read-only)', async () => {
+    const db = approved(CLINICIAN).firestore();
+    await assertFails(
+      setDoc(doc(db, `users/${OWNER}/board/${BOARD}`), {
+        entityType: 'board',
+        entityId: BOARD,
+        childId: CHILD,
+        version: 2,
+        updatedAt: 2,
+        deviceId: 'clinician-device',
+        data: { id: BOARD, name: 'שינוי לא מורשה', childId: CHILD },
+      }),
+    );
+  });
+
+  it('childAccess member cannot read owner settings doc (no childId)', async () => {
+    const db = approved(CLINICIAN).firestore();
+    await assertFails(getDoc(doc(db, `users/${OWNER}/settings/pref`)));
+  });
+
+  it('owner can still read and write own board doc', async () => {
+    const db = approved(OWNER).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
+  });
+
+  it('unapproved childAccess member cannot read the shared board doc', async () => {
+    const db = unapproved(CLINICIAN).firestore();
+    await assertFails(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
   });
 });

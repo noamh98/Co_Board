@@ -48,9 +48,17 @@ service cloud.firestore {
     }
 
     // ── תוכן (boards, profiles, settings וכו') ─────────────
-    // גישה רק למשתמשים מאושרים + מייל מאומת (approved custom claim)
+    // כתיבה: רק הבעלים המאושר. קריאה: הבעלים, או חבר childAccess של
+    // הילד המקושר למסמך (D-01, approach A — קריאה ישירה ללא שכפול). childId
+    // מקודם ל-top-level ע"י firebaseProvider.push; מסמכים ללא childId (settings) — owner-only.
     match /users/{uid}/{collection}/{document} {
-      allow read, write: if isOwnUid(uid) && isApproved();
+      allow write: if isOwnUid(uid) && isApproved();
+      allow read: if isApproved()
+        && (
+          isOwnUid(uid)
+          || (resource.data.get('childId', '') != ''
+              && hasChildAccess(resource.data.get('childId', '')))
+        );
     }
 
     // ── ילדים (2B) ─────────────────────────────────────────
