@@ -7,6 +7,7 @@
 //   2) משתמש שאינו חבר אינו יכול לקרוא children של בעלים אחר.
 //   3) חבר רגיל (clinician) אינו יכול לכתוב ל-childAccess (privilege escalation).
 //   4) משתמש לא-מאושר (ללא approved claim) אינו יכול לקרוא children — גם הבעלים.
+//   5) D-01: חבר childAccess מאושר *כן* קורא את מסמך הילד המשותף (positive).
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -140,5 +141,29 @@ describe('Firestore rules — hardening (B4)', () => {
   it('user can update own displayName without touching status', async () => {
     const db = approved(OWNER).firestore();
     await assertSucceeds(updateDoc(doc(db, `users/${OWNER}`), { displayName: 'שם חדש' }));
+  });
+});
+
+describe('Firestore rules — D-01 positive sharing read access', () => {
+  it('owner can read own child (sanity)', async () => {
+    const db = approved(OWNER).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('childAccess member (clinician) can read the shared child', async () => {
+    // D-01: מוזמן שקיבל גישה דרך childAccess חייב להצליח לקרוא את מסמך הילד המשותף.
+    const db = approved(CLINICIAN).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
+  });
+
+  it('childAccess member can read the child members list', async () => {
+    const db = approved(CLINICIAN).firestore();
+    await assertSucceeds(getDoc(doc(db, `childAccess/${CHILD}/members/${OWNER}`)));
+  });
+
+  it('unapproved childAccess member cannot read the shared child', async () => {
+    // גם חבר childAccess מחויב ב-isApproved — אישור חסר חוסם קריאה.
+    const db = unapproved(CLINICIAN).firestore();
+    await assertFails(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
   });
 });
