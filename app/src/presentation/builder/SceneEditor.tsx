@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Board, CellAction, SceneRegion } from '../../domain/models';
 import { SceneView } from '../components/SceneView';
+import { sanitizeImage } from '../../services/image/imageService';
 
 export interface SceneEditorProps {
   board: Board;
@@ -32,6 +33,7 @@ export function SceneEditor({ board, onChange, onClose }: SceneEditorProps) {
     board.scene?.regions ?? [],
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [bgError, setBgError] = useState<string | null>(null);
 
   // Escape key → onClose
   useEffect(() => {
@@ -47,9 +49,17 @@ export function SceneEditor({ board, onChange, onClose }: SceneEditorProps) {
   const handleBgFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const uri = await blobToDataUri(file);
-    setBackgroundUri(uri);
-    onChange(buildBoard(board, uri, regions));
+    setBgError(null);
+    try {
+      // E-02: רקעי סצנה הם תצלומים אישיים (בית/חדר הילד). re-encode דרך canvas
+      // מסיר EXIF/GPS. fail-closed — בכשל לא שומרים את הבייטים המקוריים.
+      const sanitized = await sanitizeImage(file);
+      const uri = await blobToDataUri(sanitized);
+      setBackgroundUri(uri);
+      onChange(buildBoard(board, uri, regions));
+    } catch {
+      setBgError('עיבוד התמונה נכשל. נסו תמונה אחרת.');
+    }
   };
 
   const updateRegions = (next: SceneRegion[]) => {
@@ -197,6 +207,11 @@ export function SceneEditor({ board, onChange, onClose }: SceneEditorProps) {
             />
           )}
         </div>
+        {bgError && (
+          <p role="alert" style={{ margin: 0, fontSize: '0.85rem', color: 'var(--cl-danger)' }}>
+            {bgError}
+          </p>
+        )}
 
         {/* Two-column body: scene preview (inline-start) + region list (inline-end) */}
         <div
