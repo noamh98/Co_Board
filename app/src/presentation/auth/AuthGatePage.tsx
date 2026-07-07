@@ -6,9 +6,11 @@ interface Props {
   onSignIn: (email: string, password: string) => Promise<void>;
   onGoogleSignIn?: () => Promise<void>;
   onRegister: (email: string, password: string, displayName: string) => Promise<void>;
+  /** D-04: שליחת מייל איפוס סיסמה. */
+  onPasswordReset?: (email: string) => Promise<void>;
 }
 
-export function AuthGatePage({ onSignIn, onGoogleSignIn, onRegister }: Props) {
+export function AuthGatePage({ onSignIn, onGoogleSignIn, onRegister, onPasswordReset }: Props) {
   const [showRegister, setShowRegister] = useState(false);
 
   return (
@@ -28,6 +30,7 @@ export function AuthGatePage({ onSignIn, onGoogleSignIn, onRegister }: Props) {
           <LoginPanel
             onSignIn={onSignIn}
             onGoogleSignIn={onGoogleSignIn}
+            onPasswordReset={onPasswordReset}
             onGoToRegister={() => setShowRegister(true)}
           />
         )}

@@ -49,4 +49,31 @@ describe('LoginPanel', () => {
     render(<LoginPanel onSignIn={vi.fn()} onGoogleSignIn={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'כניסה עם Google' })).toBeTruthy();
   });
+
+  // ── D-04: איפוס סיסמה ──
+  it('קישור ”שכחתי סיסמה“ מוצג רק עם onPasswordReset', () => {
+    const { rerender } = render(<LoginPanel onSignIn={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'שכחתי סיסמה' })).toBeNull();
+    rerender(<LoginPanel onSignIn={vi.fn()} onPasswordReset={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'שכחתי סיסמה' })).toBeTruthy();
+  });
+
+  it('איפוס עם אימייל קורא onPasswordReset ומציג הודעה ניטרלית', async () => {
+    const onPasswordReset = vi.fn().mockResolvedValue(undefined);
+    render(<LoginPanel onSignIn={vi.fn()} onPasswordReset={onPasswordReset} />);
+    fireEvent.change(screen.getByLabelText('אימייל'), { target: { value: 'a@b.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'שכחתי סיסמה' }));
+    await waitFor(() => expect(onPasswordReset).toHaveBeenCalledWith('a@b.com'));
+    expect(screen.getByRole('status').textContent).toContain('אם הכתובת רשומה');
+  });
+
+  it('איפוס ללא אימייל מבקש להזין כתובת ולא קורא onPasswordReset', async () => {
+    const onPasswordReset = vi.fn().mockResolvedValue(undefined);
+    render(<LoginPanel onSignIn={vi.fn()} onPasswordReset={onPasswordReset} />);
+    fireEvent.click(screen.getByRole('button', { name: 'שכחתי סיסמה' }));
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('הזינו כתובת אימייל'),
+    );
+    expect(onPasswordReset).not.toHaveBeenCalled();
+  });
 });
