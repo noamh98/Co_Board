@@ -40,6 +40,11 @@ export interface AccessSettings {
   readingFont?: boolean;
   /** C-06 — ערכת "רגיעה חושית": פלטת chrome רכה/מונמכת. class .sensory-calm על <html>. */
   sensoryCalm?: boolean;
+  // ── Phase 2 (2.7 — בטיחות מצב-משחק, C-09) ──
+  /** C-09 — אישור לפני ניקוי שורת המשפט (מונע מחיקה בשוגג). ברירת-מחדל פעיל לבטיחות קטינים. */
+  confirmBeforeClear?: boolean;
+  /** C-09 — משוב רטט (haptics) במכשירים תומכים. feature-detected, opt-in (כבוי כברירת-מחדל). */
+  hapticFeedback?: boolean;
 }
 
 export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
@@ -61,4 +66,7 @@ export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
   // 2.3 — כבוי כברירת מחדל (אדיטיבי, opt-in):
   readingFont: false,
   sensoryCalm: false,
+  // 2.7 — בטיחות מצב-משחק (C-09): אישור-ניקוי פעיל כברירת-מחדל; רטט opt-in.
+  confirmBeforeClear: true,
+  hapticFeedback: false,
 };
