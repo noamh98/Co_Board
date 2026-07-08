@@ -118,17 +118,19 @@ async function applyBillingEvent(event: StripeEvent): Promise<void> {
         { merge: true },
       );
       break;
-    case 'customer.subscription.updated':
+    case 'customer.subscription.updated': {
+      const periodEnd = obj?.current_period_end;
       await ref.set(
         {
           plan: 'paid',
           planStatus: obj?.status ?? 'active',
-          currentPeriodEnd: obj?.current_period_end != null ? obj.current_period_end * 1000 : null,
+          currentPeriodEnd: periodEnd != null ? periodEnd * 1000 : null,
           updatedAt: now,
         },
         { merge: true },
       );
       break;
+    }
     case 'customer.subscription.deleted':
       await ref.set(
         { plan: 'free', planStatus: 'canceled', updatedAt: now },
