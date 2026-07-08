@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:tokens": "node scripts/check-token-drift.mjs",
+    "size": "node scripts/check-bundle-size.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
