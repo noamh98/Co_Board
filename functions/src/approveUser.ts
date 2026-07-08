@@ -8,6 +8,7 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { FUNCTIONS_REGION, LEGACY_MIGRATED_REGIONS } from './region';
+import { writeAuditEntry } from './auditLog';
 
 if (!getApps().length) initializeApp();
 
@@ -23,6 +24,7 @@ export const approveUser = onCall(
     if (!request.auth.token['admin']) {
       throw new HttpsError('permission-denied', 'נדרשות הרשאות מנהל');
     }
+    const adminUid = request.auth.uid;
 
     const { uid, status } = request.data as { uid: string; status: 'approved' | 'rejected' };
 
@@ -40,9 +42,18 @@ export const approveUser = onCall(
     await getAuth().setCustomUserClaims(uid, claims);
 
     // עדכן Firestore
-    await getFirestore().doc(`users/${uid}`).update({
+    const db = getFirestore();
+    await db.doc(`users/${uid}`).update({
       status,
       reviewedAt: FieldValue.serverTimestamp(),
+    });
+
+    // D-08: רשומת ביקורת — אישור/דחיית חשבון. פעולת-אדמין ללא ownerUid ⇒ קריאה ל-Admin
+    // בלבד (ראה firestore.rules). ללא PII (uids בלבד).
+    await writeAuditEntry(db, {
+      action: status === 'approved' ? 'user.approve' : 'user.reject',
+      actorUid: adminUid,
+      targetUid: uid,
     });
 
     return { success: true, uid, status };
