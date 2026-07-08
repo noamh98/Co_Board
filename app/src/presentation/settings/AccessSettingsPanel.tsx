@@ -4,6 +4,7 @@ import { FITZGERALD } from '../../domain/fitzgerald';
 import { Modal } from '../ui/Modal';
 import { Toggle } from '../ui/Toggle';
 import { Slider } from '../ui/Slider';
+import { AccessibilityStatement } from './AccessibilityStatement';
 
 // פאנל הגדרות גישה מוטורית (FR-020, PRD §4.7) — מחולק לסקשנים עם אייקונים.
 // controlled: onChange מעדכן את ה-state ב-App ושומר ב-settingsRepo.saveAccessSettings.
@@ -517,6 +518,8 @@ export function AccessSettingsPanel({
           </div>
         </div>
       </section>
+
+      <AccessibilityStatement />
     </Modal>
   );
 }
