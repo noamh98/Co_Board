@@ -3,7 +3,8 @@
 // (המוזמן לעולם לא קורא את shareInvites/{code} ישירות — רק הבעלים יכול).
 // זרימה: 1) טען shareInvites/{code} 2) ולידציה (קיים / לא פג / לא נוצל)
 //        3) הענק childAccess/{childId}/members/{uid} 4) סמן used:true
-//        5) החזר את רשומת הילד מ-users/{ownerUid}/children/{childId}.
+//        5) כתוב מצביע מתמיד users/{uid}/sharedChildren/{childId} (D-01 end-to-end)
+//        6) החזר את רשומת הילד מ-users/{ownerUid}/children/{childId} (עם ownerUid).
 // deploy: firebase deploy --only functions
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
@@ -70,6 +71,8 @@ export const acceptInvite = onCall(
       if (!childSnap.exists) {
         throw new HttpsError('not-found', 'רשומת הילד לא נמצאה');
       }
+      const childData = (childSnap.data() ?? {}) as Record<string, unknown>;
+      const childName = typeof childData.name === 'string' ? childData.name : '';
 
       // הענקת גישה ל-childAccess/{childId}/members/{uid}
       const memberRef = db.doc(`childAccess/${invite.childId}/members/${uid}`);
@@ -80,6 +83,18 @@ export const acceptInvite = onCall(
         grantedAt: now,
       });
 
+      // D-01 end-to-end: מצביע מתמיד תחת המשתמש המקבל — כדי שהילד המשותף ישרוד
+      // רענון. הלקוח קורא אותו ב-listSharedChildren ואז שולף את מסמך הילד מהבעלים.
+      // נכתב ע"י Admin SDK (עוקף חוקים); שדות מינימליים בלבד (ללא PII נוסף).
+      const pointerRef = db.doc(`users/${uid}/sharedChildren/${invite.childId}`);
+      tx.set(pointerRef, {
+        childId: invite.childId,
+        ownerUid: invite.ownerUid,
+        role: invite.role,
+        name: childName,
+        grantedAt: now,
+      });
+
       // סימון הקוד כמנוצל (חד-פעמי)
       tx.update(inviteRef, {
         used: true,
@@ -87,7 +102,8 @@ export const acceptInvite = onCall(
         acceptedAt: FieldValue.serverTimestamp(),
       });
 
-      return childSnap.data();
+      // מחזיר את רשומת הילד עם ownerUid, כדי שהלקוח יוכל לרנדר/לשלוף תוכן מיד.
+      return { ...childData, ownerUid: invite.ownerUid };
     });
 
     return child;
