@@ -1,17 +1,24 @@
 // data/backupValidation.ts — ולידציה ל-importBackup (Phase 3, H-IDB).
 // CR (E): backupRepo.importBackup כתב JSON ללא ולידציה ישר ל-stores — קלט זדוני/פגום
 // יכול להשחית את ה-DB. type-guards כאן מחווטים ב-backupRepo.importBackup (3.5).
+// 3.8 (D-10): הורחב לפורמט v2 הכולל symbols (הקלטות קול + סמלים) ו-media (תמונות אישיות).
 
 import type { Board, Profile } from '../domain/models';
+import type { SymbolEntry } from './symbolRepo';
+import type { SerializedMediaEntry } from './backupMedia';
 
 /** מבנה-העל של קובץ גיבוי בפועל — תואם BackupData ב-backupRepo.ts. */
 export interface BackupEnvelope {
-  backupFormat: 1;
+  backupFormat: 1 | 2;
   exportedAt: number;
   deviceId: string;
   boards: unknown[];
   profiles: unknown[];
   settings: Record<string, unknown>;
+  /** v2 (D-10): הקלטות קול אישיות + סמלים מותאמים. אופציונלי לתאימות עם v1. */
+  symbols?: unknown[];
+  /** v2 (D-10): תמונות אישיות (blob מקודד base64). אופציונלי לתאימות עם v1. */
+  media?: unknown[];
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -21,7 +28,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 /** בדיקת מעטפת: פורמט נתמך + שדות-על תקינים. זורק הודעת-עברית ברורה בכשל. */
 export function assertValidBackup(data: unknown): asserts data is BackupEnvelope {
   if (!isRecord(data)) throw new Error('קובץ הגיבוי אינו תקין');
-  if (data['backupFormat'] !== 1) {
+  if (data['backupFormat'] !== 1 && data['backupFormat'] !== 2) {
     throw new Error('פורמט הגיבוי אינו נתמך');
   }
   if (typeof data['exportedAt'] !== 'number') {
@@ -38,6 +45,12 @@ export function assertValidBackup(data: unknown): asserts data is BackupEnvelope
   if (!isRecord(data['settings'])) {
     throw new Error('שדה "settings" בגיבוי פגום');
   }
+  // v2: אם קיימים — חייבים להיות מערכים (הרשומות עצמן מסוננות ברמת ה-record).
+  for (const key of ['symbols', 'media'] as const) {
+    if (data[key] !== undefined && !Array.isArray(data[key])) {
+      throw new Error(`שדה "${key}" בגיבוי פגום`);
+    }
+  }
 }
 
 /** type-guard לרשומת board (מינימום: id+grid). הרחב לפי domain/models. */
@@ -48,4 +61,31 @@ export function isValidBoardRecord(v: unknown): v is Board {
 /** type-guard לרשומת profile (מינימום: id+homeBoardId). */
 export function isValidProfileRecord(v: unknown): v is Profile {
   return isRecord(v) && typeof v['id'] === 'string' && typeof v['homeBoardId'] === 'string';
+}
+
+/** type-guard לרשומת סמל/הקלטה (SymbolEntry — כל השדות מחרוזות/מספר, JSON-safe). */
+export function isValidSymbolRecord(v: unknown): v is SymbolEntry {
+  return (
+    isRecord(v) &&
+    typeof v['id'] === 'string' &&
+    typeof v['uri'] === 'string' &&
+    typeof v['mimeType'] === 'string' &&
+    typeof v['source'] === 'string' &&
+    typeof v['createdAt'] === 'number'
+  );
+}
+
+/** type-guard לרשומת מדיה מסודרת (blob מקודד base64). */
+export function isValidSerializedMedia(v: unknown): v is SerializedMediaEntry {
+  return (
+    isRecord(v) &&
+    typeof v['id'] === 'string' &&
+    typeof v['cellId'] === 'string' &&
+    typeof v['profileId'] === 'string' &&
+    typeof v['mimeType'] === 'string' &&
+    typeof v['dataBase64'] === 'string' &&
+    typeof v['encrypted'] === 'boolean' &&
+    typeof v['source'] === 'string' &&
+    typeof v['createdAt'] === 'number'
+  );
 }
