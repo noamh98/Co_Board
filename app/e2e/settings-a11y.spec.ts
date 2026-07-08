@@ -1,9 +1,8 @@
 // e2e/settings-a11y.spec.ts — פאנל הגדרות + סריקת נגישות axe (Phase 3.1, smoke flow #4).
 //
-// KNOWN-ISSUES שנותרו מנוטרלים במפורש:
-//  - color-contrast: --cl-primary (הכתום-קורל של המותג, presentation/ui/tokens.css)
-//    לא עומד ב-4.5:1 מול טקסט לבן על כפתורים/badges — שינוי טוקן צבע הוא החלטת
-//    מיתוג רוחבת-אפליקציה, לא באג נקודתי; דורש אישור מוצר/עיצוב.
+// color-contrast נאכף כעת גלובלית: אין יותר waiver. לאחר כיול ערכי הטוקנים
+// בערכת :root (presentation/ui/tokens.css) ל-≥4.5:1, כל צירוף טקסט/רקע עומד
+// ב-WCAG 1.4.3, ולכן KNOWN_PRE_EXISTING_RULES ריק ואינו מנטרל אף כלל.
 //
 // שודרג ב-Phase 2 task 2.2 (C-03/B-22): aria-required-parent ו-aria-required-children
 // כבר אינם מנוטרלים — BoardView עוטף כעת את התאים ב-role="row" (grid > row > gridcell),
@@ -13,7 +12,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { dismissOnboarding, unlockViaLongPress } from './helpers';
 
-const KNOWN_PRE_EXISTING_RULES = ['color-contrast'];
+const KNOWN_PRE_EXISTING_RULES: string[] = [];
 
 test('פאנל הגדרות נפתח ונסגר, וללא הפרות axe קריטיות/רציניות חדשות', async ({ page }) => {
   await page.goto('/');
