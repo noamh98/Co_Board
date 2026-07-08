@@ -1,97 +1,35 @@
-/* ── 2. DARK MODE — auto via OS ───────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   Co_Board — Theme overrides (dark / high-contrast) · Fitzgerald tints
+   ───────────────────────────────────────────────────────────────────
+   ⚠️ C-01 (Phase 2.1): צבעי chrome (--cl-*) לכל הערכות (בהיר/כהה/ניגודיות)
+   מוגדרים כעת אך ורק ב-app/src/presentation/ui/tokens.css. כאן נשארים רק
+   overrides של גווני Fitzgerald (--cat-*) לפי ערכה + כללי forced-colors ו-HC
+   שאינם משתני צבע. הגדרת --cl-* כאן תיכשל ב-CI (check-token-drift.mjs).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── DARK MODE — auto via OS (רק גווני Fitzgerald) ───────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not(.light-mode) {
-    --cl-bg:          #0F151D;
-    --cl-surface:     #18212C;
-    --cl-surface-alt: #212B37;
-    --cl-ink:         #ECF1F8;
-    --cl-muted:       #94A4B8;
-    --cl-border:      #2A3340;
-    --cl-primary:     #19805F;   /* F2: כהה דיו ל-4.5:1 עם טקסט לבן */
-    --cl-primary-dk:  #12624A;
-    --cl-primary-lt:  #162B20;
-    --cl-on-primary:  #FFFFFF;
-    --cl-overlay:     rgba(10, 16, 24, 0.6);
-    --cl-chip:        #212B37;
-    --cl-chip-border: #374556;
-    --cl-scan-ring:   #7AD4EE;
-    /* F2: tokens שנשמטו ממצב כהה — אחרת צ'יפים/סטטוס בהירים על רקע כהה */
-    --cl-accent:      #5FC0E0;
-    --cl-success:     #4FB58E;
-    --cl-success-bg:  #15301F;
-    --cl-warn:        #E0A23C;
-    --cl-error:       #F0837E;
-    --cl-error-bg:    #3A1F1E;
-    --cl-danger:      #F0837E;
     --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
     --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
     --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
     --cat-feelings-bg: #30221A;  --cat-feelings-bd: #B07A54;
     --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
     --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
-    --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
-    --muted: #94A4B8; --primary: #19805F;
   }
 }
 
-/* Manual dark mode toggle (class on <html>) */
+/* Manual dark mode toggle (class on <html>) — רק גווני Fitzgerald */
 .dark-mode {
-  --cl-bg:          #0F151D;
-  --cl-surface:     #18212C;
-  --cl-surface-alt: #212B37;
-  --cl-ink:         #ECF1F8;
-  --cl-muted:       #94A4B8;
-  --cl-border:      #2A3340;
-  --cl-primary:     #19805F;   /* F2: כהה דיו ל-4.5:1 עם טקסט לבן */
-  --cl-primary-dk:  #12624A;
-  --cl-primary-lt:  #162B20;
-  --cl-on-primary:  #FFFFFF;
-  --cl-overlay:     rgba(10, 16, 24, 0.6);
-  --cl-chip:        #212B37;
-  --cl-chip-border: #374556;
-  --cl-scan-ring:   #7AD4EE;
-  /* F2: tokens שנשמטו ממצב כהה — אחרת צ'יפים/סטטוס בהירים על רקע כהה */
-  --cl-accent:      #5FC0E0;
-  --cl-success:     #4FB58E;
-  --cl-success-bg:  #15301F;
-  --cl-warn:        #E0A23C;
-  --cl-error:       #F0837E;
-  --cl-error-bg:    #3A1F1E;
-  --cl-danger:      #F0837E;
   --cat-people-bg:   #1B2A3D;  --cat-people-bd:   #4F7CB0;
   --cat-actions-bg:  #162B20;  --cat-actions-bd:  #4A9068;
   --cat-food-bg:     #2E2914;  --cat-food-bd:     #A98E3F;
   --cat-feelings-bg: #30221A;  --cat-feelings-bd: #B07A54;
   --cat-places-bg:   #231F33;  --cat-places-bd:   #6962A8;
   --cat-objects-bg:  #142B27;  --cat-objects-bd:  #3E8E80;
-  --bg: #0F151D; --surface: #18212C; --ink: #ECF1F8;
-  --muted: #94A4B8; --primary: #19805F;
 }
 
-/* F4: ערכת ניגודיות גבוהה — שחור/לבן + גבולות חזקים. גווני Fitzgerald נשמרים בתאים. */
-.high-contrast {
-  --cl-bg:          #ffffff;
-  --cl-surface:     #ffffff;
-  --cl-surface-alt: #ffffff;
-  --cl-ink:         #000000;
-  --cl-muted:       #1a1a1a;
-  --cl-border:      #000000;
-  --cl-primary:     #0a3a2a;
-  --cl-primary-dk:  #062018;
-  --cl-primary-lt:  #d6efde;
-  --cl-on-primary:  #ffffff;
-  --cl-accent:      #004a66;
-  --cl-success:     #0a5a3a;
-  --cl-success-bg:  #ffffff;
-  --cl-warn:        #7a3d00;
-  --cl-error:       #8a0000;
-  --cl-error-bg:    #ffffff;
-  --cl-danger:      #8a0000;
-  --cl-chip:        #ffffff;
-  --cl-chip-border: #000000;
-  --cl-overlay:     rgba(0, 0, 0, 0.7);
-  --bg: #ffffff; --surface: #ffffff; --ink: #000000; --muted: #1a1a1a; --primary: #0a3a2a;
-}
+/* F4: ניגודיות גבוהה — עיבוי גבול לתאים/כפתורי מבוגר (צבעי chrome ב-authority) */
 .high-contrast .cell,
 .high-contrast .adultbar__btn {
   border-width: 2px;
@@ -108,4 +46,3 @@
     outline: 3px solid Highlight;
   }
 }
-

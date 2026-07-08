@@ -1,51 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════
    Co_Board — Design System + Responsive Layout (חלק 5A/5B)
+   ───────────────────────────────────────────────────────────────────
+   ⚠️ C-01 (Phase 2.1): צבעי ה-chrome (--cl-* — primary/bg/ink/surface/border…)
+   *הוסרו* מכאן. מקור-האמת היחיד לצבעי chrome הוא
+   app/src/presentation/ui/tokens.css (פלטת קורל, נטענת אחרונה ב-main.tsx).
+   כאן נשארים רק פרימיטיבים לא-צבעוניים (spacing/type/radius/shadow/z/safe-area/
+   transitions) + גווני Fitzgerald (--cat-*) שהם חלק מתקן הנגישות של ה-AAC.
+   הגדרת --cl-* כאן תיכשל ב-CI (scripts/check-token-drift.mjs).
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── 1. DESIGN TOKENS ─────────────────────────────────────────────── */
 :root {
-  /* Color palette — Claude Design 2026 (ראו mockup/claude-design-2026/) */
-  --cl-bg:          #ECF2FA;
-  --cl-surface:     #FFFFFF;
-  --cl-surface-alt: #F2F6FD;
-  --cl-ink:         #14202E;
-  --cl-muted:       #5A6A7A;
-  --cl-border:      #DBE3EF;
-  --cl-primary:     #1F7A5C;   /* "דבר" / ראשי — ירוק */
-  --cl-primary-dk:  #155F47;   /* צל כפתור "דבר" (speaksh) */
-  --cl-primary-lt:  #D6EFDE;
-  --cl-on-primary:  #FFFFFF;
-  --cl-accent:      #147FA8;   /* טבעת סריקה */
-  --cl-success:     #1F7A5C;
-  --cl-success-bg:  #D6EFDE;
-  --cl-warn:        #b45309;
-  --cl-error:       #D9534F;
-  --cl-error-bg:    #fdecec;
-  --cl-danger:      #D9534F;
-  --cl-overlay:     rgba(10, 16, 24, 0.5);
-
-  /* Surface accents (חדש — Claude Design) */
-  --cl-chip:        #F2F6FD;   /* רקע chip / סרגל משפט */
-  --cl-chip-border: #CBD9EC;
-  --cl-speak:       var(--cl-primary);
-  --cl-speak-sh:    var(--cl-primary-dk);
-  --cl-scan-ring:   #147FA8;
-  --cl-icon-bg:     #FFFFFF;   /* רקע לבן לאייקון בתוך אריח (גם במצב כהה — ARASAAC) */
-
-  /* Category tints — bg / border (תואם domain/fitzgerald) */
+  /* Category tints — bg / border (תואם domain/fitzgerald) — *לא chrome* */
   --cat-people-bg:   #DCEBFB;  --cat-people-bd:   #6AABF0;
   --cat-actions-bg:  #D6EFDE;  --cat-actions-bd:  #4FA877;
   --cat-food-bg:     #FBF1C9;  --cat-food-bd:     #D8AC3E;
   --cat-feelings-bg: #FBE3D4;  --cat-feelings-bd: #E0935F;
   --cat-places-bg:   #E6E3FA;  --cat-places-bd:   #8B86D6;
   --cat-objects-bg:  #D6F0EC;  --cat-objects-bd:  #3FA694;
-
-  /* Legacy aliases (backward compat) */
-  --bg:      var(--cl-bg);
-  --surface: var(--cl-surface);
-  --ink:     var(--cl-ink);
-  --muted:   var(--cl-muted);
-  --primary: var(--cl-primary);
 
   /* Spacing (4px grid) */
   --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;
@@ -98,4 +70,3 @@
   --ease:      0.15s ease;
   --ease-slow: 0.25s ease;
 }
-
