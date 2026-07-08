@@ -124,7 +124,7 @@ export function AccessSettingsPanel({
         <div className="settings-section__body">
           <Slider
             id="dwell-slider"
-            label='זמן השהייה (Dwell)'
+            label='זמן ההשהייה (Dwell)'
             value={settings.dwellTimeMs}
             min={0}
             max={3000}
@@ -371,6 +371,20 @@ export function AccessSettingsPanel({
             onChange={(v) => set({ preventSequentialDuplicates: v })}
             label="מניעת כפילויות ברצף"
             description="לחיצה חוזרת על אותה מילה לא תוסיף אותה שוב לשורת הקריאה."
+          />
+          <Toggle
+            id="reading-font"
+            checked={settings.readingFont ?? false}
+            onChange={(v) => set({ readingFont: v })}
+            label="גופן קריא (ידידותי דיסלקציה)"
+            description="מגדיל מרווח אותיות ושורות לקריאות טובה יותר (C-18)"
+          />
+          <Toggle
+            id="sensory-calm"
+            checked={settings.sensoryCalm ?? false}
+            onChange={(v) => set({ sensoryCalm: v })}
+            label="מצב רגיעה חושית"
+            description="פלטת צבעים רכה ומונמכת — מפחית עומס חושי (C-06)"
           />
         </div>
       </section>

@@ -1,6 +1,6 @@
-/* ═══════════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════════════════════
    Co_Board — Design Tokens (קורל / טרהקוטה) · Phase 2 (F6 ריברנד)
-   ───────────────────────────────────────────────────────────────────
+   ──────────────────────────────────────────────────────────────────────────────
    מקור-אמת יחיד לזהות-העיצוב החדשה. ממפה מחדש את משתני ה-chrome (--cl-*)
    לפלטת קורל — כך כל הרכיבים הקיימים מקבלים את הריברנד ללא עריכה פר-רכיב.
    חובה לייבא *אחרי* index.css ב-main.tsx כדי שינצח.
@@ -15,13 +15,18 @@
    • צבעי Fitzgerald (--cat-*/--cell-tint/--cell-ink) נקבעים ב-styles/tokens.css
      + domain/fitzgerald.ts — *אסור לגעת בהם כאן* (תקן נגישות AAC).
    • dark + high-contrast = שתי ערכות נוספות (חובה לנגישות).
-   ═══════════════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════════════════════════ */
 
-/* ── ערכת בהיר (ברירת מחדל) — קורל/חול חמים ────────────────────────── */
+/* ── ערכת בהיר (ברירת מחדל) — קורל/חול חמים ───────────────────────────── */
 :root {
   --co-brand:        #E8694C;
   --co-brand-strong: #CE5132;
   --co-brand-tint:   #FBE6DE;
+
+  /* גופנים (D-11): self-host / system stack — ללא Google Fonts (אין בקשת רשת לפני הסכמה).
+     שמות הגופנים נשמרים כדי ש-self-host עתידי (@font-face) יעבוד ללא שינוי צרכנים. */
+  --font-sans:    'Assistant', system-ui, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+  --font-reading: 'Atkinson Hyperlegible', 'Assistant', system-ui, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
 
   /* מיפוי-מחדש של chrome ה-Claude (כחול) → קורל */
   --cl-bg:          #F6EFE6;
@@ -67,7 +72,7 @@
   --co-shadow-sm: 0 2px 8px rgba(70, 45, 30, .06);
 }
 
-/* ── ערכת כהה (קורל-כהה) — auto לפי OS, אלא אם light-mode ידני ───────── */
+/* ── ערכת כהה (קורל-כהה) — auto לפי OS, אלא אם light-mode ידני ───────────── */
 @media (prefers-color-scheme: dark) {
   :root:not(.light-mode):not(.high-contrast) {
     --cl-bg:          #221B16;
@@ -112,7 +117,7 @@
   --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
 }
 
-/* ── ערכת ניגודיות גבוהה (קורל-HC) — שחור/לבן + מותג חזק ───────────── */
+/* ── ערכת ניגודיות גבוהה (קורל-HC) — שחור/לבן + מותג חזק ───────────────── */
 .high-contrast {
   --cl-bg:#000000; --cl-surface:#0A0A0A; --cl-surface-alt:#000000;
   --cl-ink:#FFFFFF; --cl-muted:#D8D8D8; --cl-border:#FFFFFF;
@@ -125,13 +130,27 @@
   --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
 }
 
+/* ── ערכת רגיעה חושית (sensory-calm, C-06) — פלטת chrome רכה/מונמכת, opt-in.
+   נבנית מעל ערכת הבהיר; לא נדרסים error/accent/success (יורשים מ-:root).
+   ניגודיות AA: לבן על --cl-primary #3F6A5A ≈ 6.1:1. לא פעילה עם high-contrast. ── */
+.sensory-calm:not(.high-contrast) {
+  --cl-bg:#EDF1EE; --cl-surface:#F7FAF8; --cl-surface-alt:#EFF4F1;
+  --cl-ink:#2E3A34; --cl-muted:#566159; --cl-border:#DCE5E0;
+  --cl-primary:#3F6A5A; --cl-primary-dk:#2F5344; --cl-primary-lt:#E2ECE7; --cl-on-primary:#FFFFFF;
+  --cl-chip:#EFF4F1; --cl-chip-border:#DCE5E0; --cl-icon-bg:#FFFFFF;
+  --cl-overlay:rgba(46,58,52,.45);
+  --co-brand:#3F6A5A; --co-brand-strong:#2F5344; --co-brand-tint:#E2ECE7;
+  --co-shadow:0 4px 14px rgba(46,58,52,.06); --co-shadow-sm:0 1px 5px rgba(46,58,52,.05);
+  --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
+}
+
 /* ── אריח: תווית עברית למעלה + סמל מתחת (F6, נאמן לסרטון האפליקציה) ───── */
 /* DOM של CellButton: <icon> ואז <label>. order:-1 מקפיץ את התווית למעלה — שינוי CSS בלבד. */
 .cell__label { order: -1; }
 /* גודל התמונה במשבצת (F7) — סקופ דרך --cell-img-scale (CellButton מזריק מההגדרות). */
 .cell__icon { max-height: calc(70% * var(--cell-img-scale, 1)); }
 
-/* ── utility classes (להחלפת inline-styles מפוזרים — F6/A1) ──────────── */
+/* ── utility classes (להחלפת inline-styles מפוזרים — F6/A1) ───────────── */
 .flex-col { display: flex; flex-direction: column; }
 .row      { display: flex; align-items: center; }
 .gap-1 { gap: var(--sp-1); } .gap-2 { gap: var(--sp-2); } .gap-3 { gap: var(--sp-3); }
@@ -205,7 +224,7 @@
   font-size: var(--tx-xs); font-weight: 700; padding: 2px 10px; border-radius: var(--r-full);
 }
 
-/* ── יצירה חכמה (SmartCreatePanel) — hero ───────────────────────────── */
+/* ── יצירה חכמה (SmartCreatePanel) — hero ─────────────────────────────── */
 .smart-create { display: flex; flex-direction: column; gap: var(--sp-3); }
 .smart-create__desc {
   border-color: var(--cl-primary);
@@ -226,7 +245,7 @@
 .smart-create__state--error   { color: var(--cl-error); }
 .smart-create__state--success { color: var(--cl-success); }
 
-/* ── ספריית לוחות — קבוצות (group labels) ───────────────────────────── */
+/* ── ספריית לוחות — קבוצות (group labels) ───────────────────────────────── */
 .library-group__label {
   display: flex; align-items: center; gap: var(--sp-2);
   font-weight: 800; font-size: var(--tx-md); color: var(--cl-ink);
