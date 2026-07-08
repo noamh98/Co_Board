@@ -1,5 +1,6 @@
 // presentation/portal/ChildrenDashboard.tsx — דשבורד ילדים בפורטל המבוגר (2B).
 // רשימת ילדים (עצמיים + משותפים) + הוספת ילד + שיתוף וגישה מאוחד (D-05).
+// 3.1 (B-07): initialInviteCode פותח אוטומטית את מסך קבלת ההזמנה מ-deep-link.
 
 import { useEffect, useState } from 'react';
 import type { ProfilePreferences } from '../../domain/models';
@@ -18,6 +19,10 @@ import { AcceptInviteScreen } from './AcceptInviteScreen';
 interface Props {
   uid: string;
   onClose: () => void;
+  /** 3.1 (B-07): קוד הזמנה מ-deep-link — פותח אוטומטית את מסך קבלת ההזמנה. */
+  initialInviteCode?: string;
+  /** 3.1 (B-07): נקרא כשזרימת ההזמנה הסתיימה (קבלה/ביטול) — לניקוי ה-URL/state. */
+  onInviteConsumed?: () => void;
 }
 
 /** ילד משותף = נושא ownerUid של בעלים אחר (D-01) — קריאה בלבד. */
@@ -25,7 +30,12 @@ function isSharedChild(child: ChildRecord, uid: string): boolean {
   return !!child.ownerUid && child.ownerUid !== uid;
 }
 
-export function ChildrenDashboard({ uid, onClose }: Props) {
+export function ChildrenDashboard({
+  uid,
+  onClose,
+  initialInviteCode,
+  onInviteConsumed,
+}: Props) {
   const [children, setChildren] = useState<ChildRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +50,11 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [uid]);
+
+  // 3.1 (B-07): deep-link עם קוד → פתיחה-אוטומטית של מסך קבלת ההזמנה.
+  useEffect(() => {
+    if (initialInviteCode) setAcceptingInvite(true);
+  }, [initialInviteCode]);
 
   async function load(): Promise<void> {
     setLoading(true);
@@ -91,6 +106,12 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
     const updated = { ...child, preferences: prefs };
     await saveChild(uid, updated);
     setChildren((prev) => prev.map((c) => (c.childId === childId ? updated : c)));
+  }
+
+  // 3.1 (B-07): סגירת זרימת ההזמנה — מודיע לקורא לניקוי ה-URL/state.
+  function closeAcceptInvite(): void {
+    setAcceptingInvite(false);
+    onInviteConsumed?.();
   }
 
   return (
@@ -209,13 +230,14 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
       {acceptingInvite && (
         <AcceptInviteScreen
           uid={uid}
+          initialCode={initialInviteCode}
           onAccepted={() => {
             // D-01: רענון מלא — מושך את המצביע המתמיד (sharedChildren) + ownerUid,
-            // כך שהילד המשותף שורד רענון ומוצג read-only.
-            setAcceptingInvite(false);
+            // כך שהילד המשותף יורד רענון ומוצג read-only.
+            closeAcceptInvite();
             void load();
           }}
-          onClose={() => setAcceptingInvite(false)}
+          onClose={closeAcceptInvite}
         />
       )}
     </div>

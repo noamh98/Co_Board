@@ -68,6 +68,11 @@ interface AppModalsProps {
   phrases: PhraseEntry[];
   onLoadPhrase: (cells: Cell[]) => void;
   onDeletePhrase: (id: string) => void;
+
+  /** 3.1 (B-07): קוד הזמנה מ-deep-link → נמסר לפורטל לפתיחת מסך קבלת ההזמנה. */
+  initialInviteCode?: string;
+  /** 3.1 (B-07): נקרא כשזרימת ההזמנה הסתיימה — לניקוי ה-URL/state ב-App. */
+  onInviteConsumed?: () => void;
 }
 
 export function AppModals({
@@ -104,6 +109,8 @@ export function AppModals({
   phrases,
   onLoadPhrase,
   onDeletePhrase,
+  initialInviteCode,
+  onInviteConsumed,
 }: AppModalsProps) {
   const closePanel = (): void => setOpenPanel(null);
 
@@ -165,7 +172,12 @@ export function AppModals({
       {/* פורטל ילדים — רק כשמאושר + מחובר */}
       {openPanel === 'portal' && authUser?.uid && (
         <Suspense fallback={null}>
-          <ChildrenDashboard uid={authUser.uid} onClose={closePanel} />
+          <ChildrenDashboard
+            uid={authUser.uid}
+            onClose={closePanel}
+            initialInviteCode={initialInviteCode}
+            onInviteConsumed={onInviteConsumed}
+          />
         </Suspense>
       )}
 
