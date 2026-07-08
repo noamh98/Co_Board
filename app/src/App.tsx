@@ -95,7 +95,11 @@ export function App() {
     initNavStack,
   });
 
-  const theme = useThemeClasses(bootstrap.accessSettings.highContrast ?? false);
+  const theme = useThemeClasses(
+    bootstrap.accessSettings.highContrast ?? false,
+    bootstrap.accessSettings.readingFont ?? false,
+    bootstrap.accessSettings.sensoryCalm ?? false,
+  );
   hydrateDarkModeRef.current = theme.hydrate;
 
   const sentenceState = useSentence();
@@ -145,7 +149,7 @@ export function App() {
     [],
   );
 
-  // Phase 1.7 (U-1): הרשמה לערוץ שגיאות-משתמש — כשל בפעולה מציג toast במקום להיבלע.
+  // Phase 1.7 (U-1): הרשמה לערוץ שגיאות-משתמש — כל בפעולה מציג toast במקום להיבלע.
   useEffect(
     () =>
       onNotifyError((message) => {
