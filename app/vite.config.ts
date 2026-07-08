@@ -8,14 +8,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'לוח תקשורת',
         short_name: 'לוח תקשורת',
         description: 'אפליקציית AAC עברית — תקשורת תומכת וחליפית',
         lang: 'he',
         dir: 'rtl',
-        theme_color: '#1F7A5C',
+        theme_color: '#E8694C',
         background_color: '#ECF2FA',
         display: 'standalone',
         orientation: 'any',

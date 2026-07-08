@@ -8,6 +8,14 @@
     />
     <meta name="theme-color" content="#E8694C" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <!-- C-07 (iOS PWA): apple-touch-icon + מטא-תגי web-app כדי שהתקנה ל"מסך הבית"
+         תיתן אייקון וכותרת נכונים, ותרוץ במסך-מלא (standalone) ב-Safari.
+         iOS מתעלם מ-theme-color/manifest, לכן חובה בתגים ייעודיים אלה. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="לוח תקשורת" />
     <!-- D-11 (פרטיות): גופנים מוגשים עצמית / מ-system stack. אין בקשת Google Fonts
          לפני הסכמה — הגופן נשלט דרך הטוקן --font-sans (styles authority). -->
     <title>לוח תקשורת</title>
