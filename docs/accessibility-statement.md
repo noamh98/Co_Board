@@ -1,4 +1,4 @@
-'ve<!--
+<!--
   Accessibility Statement — Co_Board
   הצהרת נגישות לפי תקן ישראלי ת"י 5568 (המאמץ את WCAG 2.0 רמה AA).
 
