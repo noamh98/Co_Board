@@ -1,5 +1,6 @@
 // presentation/portal/AcceptInviteScreen.tsx — קבלת גישה לילד ע"י קוד שיתוף (2B).
 // הקוד הוא 32 תווי hex (data/childRepo.generateShareCode) — D-01.
+// 3.1 (B-07): initialCode אופציונלי לזריעת הקלט מ-deep-link (/invite/<code>).
 
 import { useState } from 'react';
 import { acceptShareInvite, type ChildRecord } from '../../data/childRepo';
@@ -14,10 +15,12 @@ interface Props {
   uid: string;
   onAccepted: (child: ChildRecord) => void;
   onClose: () => void;
+  /** 3.1 (B-07): קוד ראשוני מ-deep-link — מזין את השדה מראש. */
+  initialCode?: string;
 }
 
-export function AcceptInviteScreen({ uid, onAccepted, onClose }: Props) {
-  const [code, setCode] = useState('');
+export function AcceptInviteScreen({ uid, onAccepted, onClose, initialCode }: Props) {
+  const [code, setCode] = useState(() => sanitizeShareCodeInput(initialCode ?? ''));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
