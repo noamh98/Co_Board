@@ -59,12 +59,15 @@ service cloud.firestore {
     // כתיבה: רק הבעלים המאושר. קריאה: הבעלים, או חבר childAccess של
     // הילד המקושר למסמך (D-01, approach A). childId מקודם ל-top-level;
     // מסמכים ללא childId (settings) — owner-only.
+    // sharedChildren מוחרג ממסלול childAccess — מצביע נושא childId אך
+    // הוא owner-only (מונע דליפת מצביע בין חברי childAccess של אותו ילד).
     match /users/{uid}/{collection}/{document} {
       allow write: if isOwnUid(uid) && isApproved();
       allow read: if isApproved()
         && (
           isOwnUid(uid)
-          || (resource.data.get('childId', '') != ''
+          || (collection != 'sharedChildren'
+              && resource.data.get('childId', '') != ''
               && hasChildAccess(resource.data.get('childId', '')))
         );
     }
