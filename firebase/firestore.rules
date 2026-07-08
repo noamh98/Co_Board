@@ -46,6 +46,35 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(request.auth.uid)/children/$(childId));
     }
 
+    // ── עזרי משפחה (families) ──
+    // חבר משפחה = הבעלים או uid ברשימת memberUids. משמש לשער קריאה.
+    function isFamilyMember(fam) {
+      return isSignedIn()
+        && (fam.ownerUid == request.auth.uid
+            || request.auth.uid in fam.get('memberUids', []));
+    }
+
+    // יצירת משפחה נקייה: הבעלים = המבקש, plan נכפה ל-'free', ואין שדות-חיוב
+    // מנוהלים (רק Admin SDK דרך ה-webhook רשאי לקבוע אותם). מונע self-upgrade.
+    function familyCreateClean(uid) {
+      return request.resource.data.ownerUid == uid
+        && request.resource.data.get('plan', 'free') == 'free'
+        && !('planStatus' in request.resource.data)
+        && !('billingCustomerId' in request.resource.data)
+        && !('billingSubscriptionId' in request.resource.data);
+    }
+
+    // שדות-החיוב חייבים להישאר ללא-שינוי בעדכון לקוח (money-path). רק Admin SDK
+    // (עוקף כללים) משנה אותם דרך billingWebhook. מונע self-upgrade ל-paid.
+    function familyBillingUnchanged() {
+      return request.resource.data.get('plan', 'free') == resource.data.get('plan', 'free')
+        && request.resource.data.get('planStatus', '') == resource.data.get('planStatus', '')
+        && request.resource.data.get('billingProvider', '') == resource.data.get('billingProvider', '')
+        && request.resource.data.get('billingCustomerId', '') == resource.data.get('billingCustomerId', '')
+        && request.resource.data.get('billingSubscriptionId', '') == resource.data.get('billingSubscriptionId', '')
+        && request.resource.data.get('currentPeriodEnd', 0) == resource.data.get('currentPeriodEnd', 0);
+    }
+
     // ── רשומות משתמש ──
     match /users/{uid} {
       allow read: if isOwnUid(uid) || isAdmin();
@@ -57,7 +86,7 @@ service cloud.firestore {
 
     // ── תוכן (boards, profiles, settings וכו') ──
     // כתיבה: רק הבעלים המאושר. קריאה: הבעלים, או חבר childAccess של
-    // הילד המקושר למסמך (D-01, approach A). childId מקודם ל-top-level;
+    // הילד המקושר למסמך (D-01, approach A). childId מקודד ל-top-level;
     // מסמכים ללא childId (settings) — owner-only.
     // sharedChildren מוחרג ממסלול childAccess — מצביע נושא childId אך
     // הוא owner-only (מונע דליפת מצביע בין חברי childAccess של אותו ילד).
@@ -82,7 +111,7 @@ service cloud.firestore {
     match /childAccess/{childId}/members/{memberId} {
       allow read: if isSignedIn()
         && (request.auth.uid == memberId || hasChildAccess(childId));
-      // כתיבה: רק הבעלים. הענקה/ביטול מתבצעים ע"י Cloud Functions (Admin SDK).
+      // כתיבה: רק הבעלים. ההענקה/ביטול מתבצעים ע"י Cloud Functions (Admin SDK).
       allow write: if isApproved()
         && ownsChildDoc(childId);
     }
@@ -94,6 +123,21 @@ service cloud.firestore {
       allow create: if isApproved()
         && request.resource.data.ownerUid == request.auth.uid;
       allow delete: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ── משפחות + עוגן חיוב (families) — 2.5 / B-02 ──
+    // קריאה: חברי המשפחה המאושרים בלבד. יצירה: הבעלים בלבד, plan נכפה 'free'.
+    // עדכון: הבעלים בלבד, שדות-חיוב immutable מהלקוח. שדות-החיוב עצמם משתנים
+    // אך ורק דרך billingWebhook (Admin SDK, עוקף כללים) לאחר אימות חתימת הספק.
+    match /families/{familyId} {
+      allow read: if isApproved() && isFamilyMember(resource.data);
+      allow create: if isApproved() && familyCreateClean(request.auth.uid);
+      allow update: if isApproved()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && familyBillingUnchanged();
+      allow delete: if isApproved()
         && resource.data.ownerUid == request.auth.uid;
     }
 
