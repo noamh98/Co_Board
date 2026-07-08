@@ -1,10 +1,10 @@
 // functions/test/billingWebhook.test.ts — בדיקות אימות חתימת ה-webhook (2.5 / B-02).
-// בודק את הפונקציה הטהורה verifyStripeSignature ללא emulator/רשת.
+// בודק את הפונקציה הטהורה verifyStripeSignature ללא emulator/רשת/firebase-init.
 // דגש-אבטחה: חתימה חסרה/שגויה/מזויפת/ישנה חייבת להידחות לפני כל כתיבה.
 
 import { createHmac } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
-import { verifyStripeSignature, SIGNATURE_TOLERANCE_SEC } from '../src/billingWebhook';
+import { verifyStripeSignature, SIGNATURE_TOLERANCE_SEC } from '../src/billingSignature';
 
 const SECRET = 'whsec_test_secret';
 const PAYLOAD = JSON.stringify({ type: 'checkout.session.completed', id: 'evt_1' });
