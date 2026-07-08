@@ -60,6 +60,7 @@ import { usePrediction } from './presentation/app/usePrediction';
 import { useCellDispatcher } from './presentation/app/useCellDispatcher';
 import { useLockMode } from './presentation/app/useLockMode';
 import { OnboardingFlow } from './presentation/onboarding/OnboardingFlow';
+import { parseInviteDeepLink } from './domain/deepLink';
 
 // E3: פאנלי מבוגר כבדים נטענים lazily (code-splitting) — לא בבנדל הראשוני של מסך הילד.
 const BuilderView = lazy(() =>
@@ -69,6 +70,13 @@ const BuilderView = lazy(() =>
 /** מה שמוקרא: ניקוד אם קיים, אחרת הטקסט הגלוי. */
 function vocalize(c: Cell): string {
   return c.vocalization ?? c.nikud ?? c.label;
+}
+
+/** 3.1 (B-07): קריאת קוד הזמנה מ-deep-link ב-URL (סינכרוני, נטול-רשת). */
+function readInviteFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const target = parseInviteDeepLink(window.location.pathname, window.location.search);
+  return target ? target.code : null;
 }
 
 export function App() {
@@ -112,10 +120,12 @@ export function App() {
     boardNav.setNavStack(createNavStack(homeBoardId));
 
   const [builderMode, setBuilderMode] = useState(false);
-  // כשנכנסים ל-builder דרך "+ לוח חדש" מהספריה — לפתוח מיד את NewBoardChooser.
+  // כשנכנסים ל-builder דרך "+ לוח חדש" מהספרייה — לפתוח מיד את NewBoardChooser.
   const [newBoardFromLibrary, setNewBoardFromLibrary] = useState(false);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [openPanel, setOpenPanel] = useState<PanelId | null>(null);
+  // 3.1 (B-07): קוד הזמנה מ-deep-link — נקרא פעם אחת ב-boot מתוך ה-URL.
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(readInviteFromUrl);
   const [modelingActive, setModelingActive] = useState(false);
   const [modelingSession, setModelingSession] = useState<ModelingSession | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
@@ -156,7 +166,7 @@ export function App() {
     [],
   );
 
-  // Phase 1.7 (U-1): הרשמה לערוץ שגיאות-משתמש — כל בפעולה מציג toast במקום להיבלע.
+  // Phase 1.7 (U-1): הרשמה לעורץ שגיאות-משתמש — כל בפעולה מציג toast במקום להיבלע.
   useEffect(
     () =>
       onNotifyError((message) => {
@@ -166,6 +176,22 @@ export function App() {
       }),
     [],
   );
+
+  // 3.1 (B-07): deep-link פעיל + משתמש מאומת → פתיחת פורטל הילדים למסך קבלת ההזמנה.
+  useEffect(() => {
+    if (pendingInviteCode && bootstrap.authUser?.uid) {
+      setOpenPanel('portal');
+    }
+  }, [pendingInviteCode, bootstrap.authUser?.uid]);
+
+  // 3.1 (B-07): סיום זרימת ההזמנה — מנקה את הקוד הממתין ואת ה-URL (מונע דליפת קוד
+  // ההזמנה להיסטוריה/סימניות). הניקוי הוא replaceState כדי לא להוסיף רשומת היסטוריה.
+  const onInviteConsumed = (): void => {
+    setPendingInviteCode(null);
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', '/');
+    }
+  };
 
   const onChangeAccess = (next: typeof bootstrap.accessSettings): void => {
     bootstrap.setAccessSettings(next);
@@ -248,21 +274,21 @@ export function App() {
     },
   });
 
-  // פתיחת לוח מהספריה: שורש מחסנית ניווט חדשה בלוח שנבחר, מעבר לתצוגת לוח.
+  // פתיחת לוח מהספרייה: שורש מחסנית ניווט חדשה בלוח שנבחר, מעבר לתצוגת לוח.
   const onOpenBoardFromLibrary = (boardId: string): void => {
     boardNav.setNavStack(createNavStack(boardId));
     sentenceState.setSentence([]);
     lockMode.setView('board');
   };
 
-  // "+ לוח חדש" מהספריה → נכנס ל-builder ופותח את NewBoardChooser הקיים (בלי שכפול).
+  // "+ לוח חדש" מהספרייה → נכנס ל-builder ופותח את NewBoardChooser הקיים (בלי שכפול).
   const onNewBoardFromLibrary = (): void => {
     lockMode.setView('board');
     setNewBoardFromLibrary(true);
     setBuilderMode(true);
   };
 
-  // ארכוב לוח מהספריה (מחיקה רכה, הפיכה) — עם אישור (ConfirmDialog, 2.3), ועדכון
+  // ארכוב לוח מהספרייה (מחיקה רכה, הפיכה) — עם אישור (ConfirmDialog, 2.3), ועדכון
   // מיידי של allBoards.
   const [archiveTarget, setArchiveTarget] = useState<{ id: string; label: string } | null>(null);
 
@@ -653,9 +679,11 @@ export function App() {
           phrases={sentenceState.phrases}
           onLoadPhrase={onLoadPhrase}
           onDeletePhrase={sentenceState.deletePhraseById}
+          initialInviteCode={pendingInviteCode ?? undefined}
+          onInviteConsumed={onInviteConsumed}
         />
 
-        {/* 2.3: ConfirmDialog נגיש במקום window.confirm — ארכוב לוח מהספריה. */}
+        {/* 2.3: ConfirmDialog נגיש במקום window.confirm — ארכוב לוח מהספרייה. */}
         {archiveTarget && (
           <ConfirmDialog
             title="העברה לארכיון"
