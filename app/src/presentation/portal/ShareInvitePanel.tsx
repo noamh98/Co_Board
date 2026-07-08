@@ -2,6 +2,7 @@
 // שני חלקים באותו דיאלוג: (א) יצירת קוד הזמנה + QR לסריקה (TTL 48 שעות, D-01);
 // (ב) רשימת "מי מורשה" + ביטול גישה (D-05, אוחד לכאן מ-AccessListPanel).
 // קוד אקראי חזק (32 תווי hex). ללא dialog מקונן — הכול section אחד.
+// 3.1 (B-07): כפתור "העתק קישור" משתף deep-link מלא (<origin>/invite/<code>).
 
 import { useEffect, useState } from 'react';
 import {
@@ -11,6 +12,7 @@ import {
   type ChildAccessRole,
   type ChildAccessEntry,
 } from '../../data/childRepo';
+import { buildInviteLink } from '../../domain/deepLink';
 import { QrCodeView } from './QrCodeView';
 
 interface Props {
@@ -33,12 +35,18 @@ function formatExpiry(expiresAt: number | undefined): string | null {
   return `בתוקף עד ${d.toLocaleDateString('he-IL')}`;
 }
 
+/** בסיס הקישור לשיתוף — origin נוכחי (נטול-רשת; ריק ב-SSR/בדיקות). */
+function currentOrigin(): string {
+  return typeof window !== 'undefined' ? window.location.origin : '';
+}
+
 export function ShareInvitePanel({ childId, childName, ownerUid, onClose }: Props) {
   const [role, setRole] = useState<ChildAccessRole>('clinician');
   const [code, setCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [entries, setEntries] = useState<ChildAccessEntry[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -82,6 +90,18 @@ export function ShareInvitePanel({ childId, childName, ownerUid, onClose }: Prop
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // fallback: אין הרשאת clipboard — הקוד מוצג לבחירה ידנית.
+    }
+  }
+
+  // 3.1 (B-07): העתקת קישור-עומק מלא — הנמען פותח אותו ונוחת ישר על מסך קבלת ההזמנה.
+  async function handleCopyLink(): Promise<void> {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(buildInviteLink(currentOrigin(), code));
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // fallback: אין הרשאת clipboard — נשלח את הקוד ידנית או דרך ה-QR.
     }
   }
 
@@ -152,12 +172,21 @@ export function ShareInvitePanel({ childId, childName, ownerUid, onClose }: Prop
                 >
                   {copied ? '✓ הועתק' : 'העתק'}
                 </button>
+                <button
+                  type="button"
+                  className="login-panel__btn"
+                  onClick={() => void handleCopyLink()}
+                  aria-label="העתק קישור הזמנה"
+                >
+                  {linkCopied ? '✓ הקישור הועתק' : 'העתק קישור'}
+                </button>
               </div>
               <div className="share-invite__qr">
                 <QrCodeView value={code} label={`קוד QR לשיתוף — ${childName}`} />
               </div>
               <p className="auth-screen__body--muted">
-                סרוק את הקוד או שלח את המספר לאיש הצוות — הוא יזין אותו בלחצן "קבל גישה".
+                שלח את הקישור לאיש הצוות — פתיחתו תיקח אותו ישר למסך "קבל גישה" עם הקוד
+                מוזן. לחלופין סרוק את קוד ה-QR או הזן את המספר ידנית.
               </p>
             </>
           )}
