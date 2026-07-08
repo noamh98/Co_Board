@@ -35,6 +35,18 @@ export const BoardView = memo(function BoardView({
     return out;
   }, [board, level]);
 
+  // B-22/C-03: קיבוץ התאים לשורות לפי placement.row כדי לספק היררכיית ARIA תקינה
+  // (grid > row > gridcell). שומר על האינדקס הגלובלי המקורי עבור scanIndices.
+  const rows = useMemo(() => {
+    const map = new Map<number, { p: CellPlacement; cell: Cell; index: number }[]>();
+    rendered.forEach((item, index) => {
+      const arr = map.get(item.p.row) ?? [];
+      arr.push({ ...item, index });
+      map.set(item.p.row, arr);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+  }, [rendered]);
+
   // E2: ניקוד מחושב פעם אחת ברמת הלוח (deduped לפי label), לא קריאה לכל תא בנפרד.
   const [nikudMap, setNikudMap] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -68,30 +80,36 @@ export const BoardView = memo(function BoardView({
         gridTemplateRows: `repeat(${board.grid.rows}, 1fr)`,
       }}
     >
-      {rendered.map(({ p, cell }, i) => {
-        const cls = [
-          modelingHighlights?.has(p.cellId) ? 'cell--modeling-highlight' : '',
-          (scanIndices?.includes(i) ?? false) ? 'cell--scan-highlight' : '',
-        ]
-          .filter(Boolean)
-          .join(' ');
-        return (
-          <div
-            key={p.cellId}
-            role="gridcell"
-            className={cls || undefined}
-            // RTL: col=0 הוא הימני ביותר (הקונטיינר dir=rtl).
-            style={{ gridColumn: p.col + 1, gridRow: p.row + 1 }}
-          >
-            <CellButton
-              cell={cell}
-              onCell={onCell}
-              settings={accessSettings}
-              displayLabel={labelFor(cell)}
-            />
-          </div>
-        );
-      })}
+      {rows.map(([rowIndex, items]) => (
+        // .board-row משתמש ב-display:contents (board.css) — הרובריקה קיימת בעץ
+        // הנגישות אך אינה משנה את מיקום ה-CSS grid של התאים.
+        <div key={`row-${rowIndex}`} role="row" className="board-row">
+          {items.map(({ p, cell, index }) => {
+            const cls = [
+              modelingHighlights?.has(p.cellId) ? 'cell--modeling-highlight' : '',
+              (scanIndices?.includes(index) ?? false) ? 'cell--scan-highlight' : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <div
+                key={p.cellId}
+                role="gridcell"
+                className={cls || undefined}
+                // RTL: col=0 הוא הימני ביותר (הקונטיינר dir=rtl).
+                style={{ gridColumn: p.col + 1, gridRow: p.row + 1 }}
+              >
+                <CellButton
+                  cell={cell}
+                  onCell={onCell}
+                  settings={accessSettings}
+                  displayLabel={labelFor(cell)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 });
