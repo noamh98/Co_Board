@@ -1,14 +1,14 @@
 // e2e/accessibility-statement.spec.ts — הצהרת נגישות v1 (Phase 2 task 2.10, C-17).
 //
 // מוודא שסקשן "הצהרת נגישות" מוצג בפאנל ההגדרות עם רמת ההתאמה החלקית
-// והמגבלה הידועה (color-contrast), ומריץ סריקת axe על הסקשן.
-// כלל color-contrast מנוטרל במפורש — זו בדיוק המגבלה הידועה שההצהרה מצהירה עליה.
+// והמגבלה הידועה, ומריץ סריקת axe על הסקשן.
+// color-contrast נאכף כעת גלובלית (אין waiver) — לאחר כיול הטוקנים ל-4.5:1.
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { dismissOnboarding, unlockViaLongPress } from './helpers';
 
-const KNOWN_PRE_EXISTING_RULES = ['color-contrast'];
+const KNOWN_PRE_EXISTING_RULES: string[] = [];
 
 test('הצהרת הנגישות מוצגת בפאנל ההגדרות עם רמת התאמה חלקית ומגבלה ידועה', async ({
   page,
