@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { backupRepo } from './backupRepo';
-import { resetDbForTests, getDb, STORE_BOARDS } from './db';
+import { resetDbForTests, getDb, STORE_BOARDS, STORE_MEDIA, STORE_SYMBOLS } from './db';
 import type { Board } from '../domain/models';
+import type { MediaEntry } from './mediaRepo';
+import type { SymbolEntry } from './symbolRepo';
 
 function resetIdb(): void {
   (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
@@ -19,13 +21,35 @@ const sampleBoard: Board = {
   placements: [],
 };
 
+function makeMedia(overrides?: Partial<MediaEntry>): MediaEntry {
+  return {
+    id: 'media-1',
+    cellId: 'cell-1',
+    profileId: 'profile-a',
+    mimeType: 'image/webp',
+    blob: new Blob(['שלום-media'], { type: 'image/webp' }),
+    encrypted: false,
+    source: 'gallery',
+    createdAt: 1000,
+    ...overrides,
+  };
+}
+
+const sampleRecording: SymbolEntry = {
+  id: 'rec-1',
+  uri: 'data:audio/webm;base64,AAAA',
+  mimeType: 'audio/webm',
+  source: 'recording',
+  createdAt: 2000,
+};
+
 describe('exportBackup / importBackup — round-trip', () => {
-  it('יצוא וייבוא שומר לוחות ופרופילים', async () => {
+  it('ייצוא ויבוא שומר לוחות ופרופילים', async () => {
     const db = await getDb();
     await db.put(STORE_BOARDS, sampleBoard);
 
     const backup = await backupRepo.exportBackup('dev-test');
-    expect(backup.backupFormat).toBe(1);
+    expect(backup.backupFormat).toBe(2);
     expect(backup.boards.some((b) => b.id === 'b1')).toBe(true);
 
     resetIdb();
@@ -48,6 +72,83 @@ describe('exportBackup / importBackup — round-trip', () => {
       ...backup,
       boards: [sampleBoard, { garbage: true }],
       profiles: [{ garbage: true }],
+    });
+    const db = await getDb();
+    const loaded = await db.get(STORE_BOARDS, 'b1') as Board;
+    expect(loaded.name).toBe('לוח בדיקה');
+  });
+});
+
+describe('exportBackup / importBackup — מדיה + קול (D-10)', () => {
+  it('מייצא ומייבא תמונה אישית (תוכן ה-blob נשמר)', async () => {
+    const db = await getDb();
+    await db.put(STORE_MEDIA, makeMedia());
+
+    const backup = await backupRepo.exportBackup('dev-test');
+    expect(backup.media).toHaveLength(1);
+    expect(backup.media[0].id).toBe('media-1');
+    expect(typeof backup.media[0].dataBase64).toBe('string');
+    expect(backup.media[0].dataBase64.length).toBeGreaterThan(0);
+
+    resetIdb();
+    await backupRepo.importBackup(backup);
+    const db2 = await getDb();
+    const restored = await db2.get(STORE_MEDIA, 'media-1') as MediaEntry;
+    expect(restored.profileId).toBe('profile-a');
+    expect(await restored.blob.text()).toBe('שלום-media');
+  });
+
+  it('שומר את דגל encrypted כפי-שהוא ללא פענוח (D-02)', async () => {
+    const db = await getDb();
+    await db.put(STORE_MEDIA, makeMedia({ id: 'enc-1', encrypted: true }));
+
+    const backup = await backupRepo.exportBackup('dev-test');
+    const entry = backup.media.find((m) => m.id === 'enc-1');
+    expect(entry?.encrypted).toBe(true);
+
+    resetIdb();
+    await backupRepo.importBackup(backup);
+    const db2 = await getDb();
+    const restored = await db2.get(STORE_MEDIA, 'enc-1') as MediaEntry;
+    expect(restored.encrypted).toBe(true);
+  });
+
+  it('מייצא ומייבא הקלטת קול/סמל (STORE_SYMBOLS)', async () => {
+    const db = await getDb();
+    await db.put(STORE_SYMBOLS, sampleRecording);
+
+    const backup = await backupRepo.exportBackup('dev-test');
+    expect(backup.symbols.some((s) => s.id === 'rec-1' && s.source === 'recording')).toBe(true);
+
+    resetIdb();
+    await backupRepo.importBackup(backup);
+    const db2 = await getDb();
+    const restored = await db2.get(STORE_SYMBOLS, 'rec-1') as SymbolEntry;
+    expect(restored.mimeType).toBe('audio/webm');
+    expect(restored.uri).toBe(sampleRecording.uri);
+  });
+
+  it('importBackup מסנן רשומות מדיה/סמל פגומות', async () => {
+    const backup = await backupRepo.exportBackup('dev-test');
+    resetIdb();
+    await backupRepo.importBackup({
+      ...backup,
+      media: [{ garbage: true }],
+      symbols: [{ garbage: true }],
+    });
+    const db = await getDb();
+    expect(await db.getAll(STORE_MEDIA)).toHaveLength(0);
+    expect(await db.getAll(STORE_SYMBOLS)).toHaveLength(0);
+  });
+
+  it('תאימות-לאחור: גיבוי v1 (ללא media/symbols) עדיין נטען', async () => {
+    await backupRepo.importBackup({
+      backupFormat: 1,
+      exportedAt: 123,
+      deviceId: 'legacy',
+      boards: [sampleBoard],
+      profiles: [],
+      settings: {},
     });
     const db = await getDb();
     const loaded = await db.get(STORE_BOARDS, 'b1') as Board;
