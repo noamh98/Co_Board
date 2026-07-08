@@ -54,6 +54,21 @@ function sharedChildId(data: unknown): string | undefined {
   return undefined;
 }
 
+/** מצביע לילד משותף (users/{uid}/sharedChildren/{childId}) — נכתב ע"י acceptInvite CF. */
+interface SharedPointer {
+  ownerUid?: string;
+  childId?: string;
+}
+
+/** מסמך יישות מסונכרן כפי שנשמר ב-Firestore (push). */
+interface SyncedDoc {
+  entityId?: string;
+  data?: unknown;
+  version?: number;
+  updatedAt?: number;
+  deviceId?: string;
+}
+
 export class FirebaseProvider implements SyncProvider {
   private _deviceId: string | null = null;
 
@@ -105,6 +120,59 @@ export class FirebaseProvider implements SyncProvider {
             deviceId: data.deviceId as string,
           } satisfies Versioned<unknown>,
         });
+      }
+    }
+
+    // D-01 end-to-end: משוך גם תוכן board/profile של ילדים *משותפים* מתת-העץ
+    // של הבעלים, כדי שהתוכן יגיע ל-IndexedDB המקומי וירונדר. read-only —
+    // מסמכים אלה אינם נכנסים ל-outbox ולכן לעולם לא נכתבים חזרה לבעלים.
+    const sharedRecords = await this.pullSharedRecords(db, uid);
+    results.push(...sharedRecords);
+
+    return results;
+  }
+
+  /**
+   * משיכת מסמכי board/profile של ילדים משותפים (D-01). לא-אינקרמנטלי בכוונה
+   * (ללא מסנן updatedAt) — כדי שילד משזה עתה שותף (שהלוח שלו ישן) יימשך בכל
+   * זאת לפחות פעם אחת. הכשל בילד/יישות בודד נבלע בשקט (גישה עלולה לפקוע/להישלל).
+   */
+  private async pullSharedRecords(db: Firestore, uid: string): Promise<SyncRecord[]> {
+    const results: SyncRecord[] = [];
+
+    let pointers: SharedPointer[];
+    try {
+      const ptrSnap = await getDocs(collection(db, 'users', uid, 'sharedChildren'));
+      pointers = ptrSnap.docs.map((d) => d.data() as SharedPointer);
+    } catch {
+      return results;
+    }
+
+    const sharedTypes = ['board', 'profile'] as const;
+    for (const ptr of pointers) {
+      if (!ptr.ownerUid || !ptr.childId) continue;
+      for (const entityType of sharedTypes) {
+        try {
+          const col = collection(db, 'users', ptr.ownerUid, entityType);
+          const q = query(col, where('childId', '==', ptr.childId));
+          const snap = await getDocs(q);
+          for (const d of snap.docs) {
+            const data = d.data() as SyncedDoc;
+            if (typeof data.entityId !== 'string') continue;
+            results.push({
+              entityType,
+              entityId: data.entityId,
+              versioned: {
+                data: data.data as unknown,
+                version: (data.version ?? 1) as number,
+                updatedAt: (data.updatedAt ?? 0) as number,
+                deviceId: (data.deviceId ?? 'shared-owner') as string,
+              } satisfies Versioned<unknown>,
+            });
+          }
+        } catch {
+          // גישה משותפת עלולה לפקוע/להישלל — דלג בשקט, אל תשבור סנכרון.
+        }
       }
     }
     return results;
