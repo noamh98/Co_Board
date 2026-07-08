@@ -3,10 +3,11 @@
 // כאן רק הזרימה המלאה: אישור → הגדרות → ערוך לוח → builder נטען → חזרה ללוח הילד.
 
 import { test, expect } from '@playwright/test';
-import { unlockViaLongPress } from './helpers';
+import { dismissOnboarding, unlockViaLongPress } from './helpers';
 
 test('"ערוך לוח" מההגדרות פותח את ה-builder, וחזרה יוצאת חזרה ללוח', async ({ page }) => {
   await page.goto('/');
+  await dismissOnboarding(page);
   await unlockViaLongPress(page);
 
   await page.getByRole('button', { name: 'הגדרות' }).click();
