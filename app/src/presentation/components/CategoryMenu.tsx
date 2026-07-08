@@ -1,6 +1,7 @@
 // תפריט קטגוריות — קפיצה ישירה לכל לוח בספרייה (זמין גם במצב משתמש נעול).
 // FR-002: גישה לכל הקטגוריות, לא רק לאלו המקושרות מלוח הבית.
 
+import { useEffect } from 'react';
 import type { Board } from '../../domain/models';
 import { localSymbolPath, symbolIdFor } from '../../domain/symbolMap';
 
@@ -24,6 +25,15 @@ export function CategoryMenu({
   onSelect: (boardId: string) => void;
   onClose: () => void;
 }) {
+  // C-16 — סגירה במקש Escape (נגישות מקלדת לדיאלוג מודאלי).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div
       className="catmenu-overlay"
