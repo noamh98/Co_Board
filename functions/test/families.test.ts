@@ -68,11 +68,12 @@ beforeEach(async () => {
       createdAt: 1,
     });
     // משפחת paid — לבדיקת immutability של שדות-חיוב מהלקוח.
+    // planStatus מזורע כ-past_due כדי שניסיון-לקוח לשנותו ל-active יהיה שינוי אמיתי שנחסם.
     await setDoc(doc(db, `families/${FAM_PAID}`), {
       ownerUid: OWNER,
       memberUids: [OWNER],
       plan: 'paid',
-      planStatus: 'active',
+      planStatus: 'past_due',
       billingProvider: 'stripe',
       billingCustomerId: 'cus_test_123',
       billingSubscriptionId: 'sub_test_123',
@@ -190,7 +191,7 @@ describe('families — update (billing immutable from client)', () => {
     );
   });
 
-  it('owner cannot downgrade planStatus to dodge past_due', async () => {
+  it('owner cannot flip planStatus to dodge past_due', async () => {
     const db = approved(OWNER).firestore();
     await assertFails(
       updateDoc(doc(db, `families/${FAM_PAID}`), { planStatus: 'active' }),
