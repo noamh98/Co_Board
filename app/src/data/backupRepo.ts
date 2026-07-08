@@ -1,18 +1,44 @@
 // data/backupRepo.ts — גיבוי ייצוא/ייבוא JSON + היסטוריית גרסאות לשחזור (FR-022).
 // עובד 100% offline. מחיקה = ארכוב (אינווריאנט HANDOFF §4).
+// 3.8 (D-10, GDPR Art.20): הייצוא הושלם — כולל מדיה (תמונות אישיות) וקול (הקלטות/סמלים).
 
-import { getDb, STORE_BOARDS, STORE_PROFILES, STORE_SETTINGS, STORE_VERSIONS } from './db';
+import {
+  getDb,
+  STORE_BOARDS,
+  STORE_PROFILES,
+  STORE_SETTINGS,
+  STORE_VERSIONS,
+  STORE_MEDIA,
+  STORE_SYMBOLS,
+} from './db';
 import type { Board, Profile } from '../domain/models';
-import { assertValidBackup, isValidBoardRecord, isValidProfileRecord } from './backupValidation';
+import type { SymbolEntry } from './symbolRepo';
+import type { MediaEntry } from './mediaRepo';
+import {
+  serializeMediaEntry,
+  deserializeMediaEntry,
+  type SerializedMediaEntry,
+} from './backupMedia';
+import {
+  assertValidBackup,
+  isValidBoardRecord,
+  isValidProfileRecord,
+  isValidSymbolRecord,
+  isValidSerializedMedia,
+} from './backupValidation';
 
 export interface BackupData {
-  /** גרסת פורמט הגיבוי (לא DB_VERSION) */
-  backupFormat: 1;
+  /** גרסת פורמט הגיבוי (לא DB_VERSION). v2 (D-10): נוספו media + symbols. */
+  backupFormat: 2;
   exportedAt: number;
   deviceId: string;
   boards: Board[];
   profiles: Profile[];
   settings: Record<string, unknown>;
+  /** הקלטות קול אישיות + סמלים מותאמים (uri, JSON-safe). */
+  symbols: SymbolEntry[];
+  /** תמונות אישיות — blob מקודד base64 (D-10 ניידות). */
+  media: SerializedMediaEntry[];
 }
 
 export interface VersionSnapshot {
@@ -31,22 +57,28 @@ const MAX_VERSIONS_PER_ENTITY = 20;
 function createBackupRepo() {
   async function exportBackup(deviceId: string): Promise<BackupData> {
     const db = await getDb();
-    const [boards, profiles, settingsEntries] = await Promise.all([
+    const [boards, profiles, settingsEntries, mediaEntries, symbols] = await Promise.all([
       db.getAll(STORE_BOARDS) as Promise<Board[]>,
       db.getAll(STORE_PROFILES) as Promise<Profile[]>,
       db.getAll(STORE_SETTINGS),
+      db.getAll(STORE_MEDIA) as Promise<MediaEntry[]>,
+      db.getAll(STORE_SYMBOLS) as Promise<SymbolEntry[]>,
     ]);
     const settings: Record<string, unknown> = {};
     for (const entry of settingsEntries) {
       settings[(entry as { key: string }).key] = (entry as { value: unknown }).value;
     }
+    // D-10: קידוד blobs של מדיה ל-base64 (JSON אינו תומך ב-Blob). D-02: ciphertext כפי-שהוא.
+    const media = await Promise.all(mediaEntries.map(serializeMediaEntry));
     return {
-      backupFormat: 1,
+      backupFormat: 2,
       exportedAt: Date.now(),
       deviceId,
       boards,
       profiles,
       settings,
+      symbols,
+      media,
     };
   }
 
@@ -57,9 +89,14 @@ function createBackupRepo() {
     const boards = raw.boards.filter(isValidBoardRecord);
     const profiles = raw.profiles.filter(isValidProfileRecord);
     const settings = raw.settings;
+    const symbols = (raw.symbols ?? []).filter(isValidSymbolRecord);
+    const media = (raw.media ?? []).filter(isValidSerializedMedia).map(deserializeMediaEntry);
 
     const db = await getDb();
-    const tx = db.transaction([STORE_BOARDS, STORE_PROFILES, STORE_SETTINGS], 'readwrite');
+    const tx = db.transaction(
+      [STORE_BOARDS, STORE_PROFILES, STORE_SETTINGS, STORE_SYMBOLS, STORE_MEDIA],
+      'readwrite',
+    );
 
     for (const board of boards) {
       tx.objectStore(STORE_BOARDS).put(board);
@@ -69,6 +106,12 @@ function createBackupRepo() {
     }
     for (const [key, value] of Object.entries(settings)) {
       tx.objectStore(STORE_SETTINGS).put({ key, value });
+    }
+    for (const symbol of symbols) {
+      tx.objectStore(STORE_SYMBOLS).put(symbol);
+    }
+    for (const entry of media) {
+      tx.objectStore(STORE_MEDIA).put(entry);
     }
     await tx.done;
   }
