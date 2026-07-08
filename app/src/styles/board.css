@@ -1,4 +1,4 @@
-/* ── 8. BOARD GRID ─────────────────────────────────────────────────────────── */
+/* ── 8. BOARD GRID ────────────────────────────────────────────────────────────────────────── */
 .board {
   flex: 1;
   display: grid;
@@ -11,8 +11,12 @@
 @media (max-width: 600px) {
   .board { gap: 6px; padding: var(--sp-2) var(--sp-3); }
 }
+/* B-22/C-03: עוטף role="row" סביב תאים כדי לספק היררכיית ARIA תקינה (grid > row > gridcell).
+   display:contents מסיר את תיבת הרובריקה מהפריסה — התאים ממשיכים להתמקם ישירות ב-CSS grid
+   של .board לפי grid-column/grid-row, כך שהמראה זהה לחלוטין. */
+.board-row { display: contents; }
 
-/* ── 9. CELL BUTTON (Claude Design 2026) ─────────────────────────────────── */
+/* ── 9. CELL BUTTON (Claude Design 2026) ──────────────────────────────────────────────── */
 .cell {
   width: 100%;
   height: 100%;
