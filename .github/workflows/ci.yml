@@ -27,6 +27,8 @@ jobs:
       # 3.6: דוח כיסוי (v8) — בלי סף שנכשל, למעקב מגמה בלבד; מריץ את אותה סוויטה כמו npm test.
       - run: npm run test:coverage
       - run: npm run build
+      # 2.11 (§18.3): תקציב bundle-size (gzip) — מפיל את ה-build על רגרסיית משקל אמיתית. חייב לרוץ אחרי build.
+      - run: npm run size
 
   # 3.1: e2e smoke (Playwright) + סריקת נגישות axe, מול build פרודקשן אמיתי.
   e2e:
