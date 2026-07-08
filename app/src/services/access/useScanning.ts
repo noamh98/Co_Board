@@ -1,6 +1,7 @@
 // services/access/useScanning.ts — hook סריקת מתגים (I3). מחבר את scanEngine ל-UI.
-// סריקה לינארית מעל רשימת התאים הגלויים. אוטו (interval) או ידני (Space מקדם / Enter בוחר).
+// סריקה ליניארית מעל רשימת התאים הגלויים. אוטו (interval) או ידני (Space מקדם / Enter בוחר).
 // סריקה שמיעתית: onHighlight נקרא בכל הדגשה (App מקריא את התווית).
+// C-15 — קלט מתג/מקלדת עובר במגן דחייה (debounce) המונע הפעלה כפולה בשוגג עקב רעד.
 
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -12,6 +13,7 @@ import {
   type ScanMode,
   type ScanState,
 } from '../../domain/scanning/scanEngine';
+import { createDebounceGuard, acceptInput } from '../../domain/scanning/debounce';
 
 interface UseScanningOpts {
   enabled: boolean;
@@ -23,18 +25,34 @@ interface UseScanningOpts {
   mode?: ScanMode;
   /** I3 — מספר עמודות הגריד (ל-row-column בלבד). */
   gridCols?: number;
+  /** C-15 — חלון דחיית-קלט למתג (ms). 0 = ללא דחייה. מונע הפעלה כפולה עקב רעד. */
+  debounceMs?: number;
   onSelect: (index: number) => void;
   onHighlight?: (index: number) => void;
 }
 
 export function useScanning(opts: UseScanningOpts): { highlightedIndices: number[] } {
-  const { enabled, itemCount, speedMs, auditory, mode = 'linear', gridCols = 1, onSelect, onHighlight } = opts;
+  const {
+    enabled,
+    itemCount,
+    speedMs,
+    auditory,
+    mode = 'linear',
+    gridCols = 1,
+    debounceMs = 0,
+    onSelect,
+    onHighlight,
+  } = opts;
   const [state, setState] = useState<ScanState | null>(null);
   const cfgRef = useRef<ScanConfig | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const onHighlightRef = useRef(onHighlight);
   onHighlightRef.current = onHighlight;
+  // C-15 — מונה דחיית-קלט; נשמר בין רינדורים. הקלט הראשון תמיד מתקבל.
+  const guardRef = useRef(createDebounceGuard());
+  const debounceMsRef = useRef(debounceMs);
+  debounceMsRef.current = debounceMs;
 
   // אתחול/איפוס בכל שינוי הפעלה, מספר תאים, מצב סריקה או עמודות
   useEffect(() => {
@@ -73,6 +91,7 @@ export function useScanning(opts: UseScanningOpts): { highlightedIndices: number
   }, [state, enabled, auditory]);
 
   // מקלדת/מתג: Enter בוחר; במצב ידני Space מקדם; במצב אוטו גם Space בוחר.
+  // C-15 — כל קלט מתג עובר במגן דחייה: הפעלה חוזרת מהירה מדי (רעד) נדחית.
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent): void => {
@@ -80,16 +99,20 @@ export function useScanning(opts: UseScanningOpts): { highlightedIndices: number
       const manual = speedMs <= 0;
       const isSelect = e.key === 'Enter' || (!manual && e.key === ' ');
       const isAdvance = manual && e.key === ' ';
+      if (!isSelect && !isAdvance) return;
+      e.preventDefault();
+      // מגן דחיית-קלט (C-15): מסנן הפעלה כפולה בשוגג עקב רעד.
+      const res = acceptInput(guardRef.current, Date.now(), debounceMsRef.current);
+      guardRef.current = res.guard;
+      if (!res.accepted) return;
       if (isSelect) {
-        e.preventDefault();
         setState((s) => {
           if (!s || !cfgRef.current) return s;
           const r = select(cfgRef.current, s);
           if (r.selectedIndex !== null) onSelectRef.current(r.selectedIndex);
           return r.state;
         });
-      } else if (isAdvance) {
-        e.preventDefault();
+      } else {
         setState((s) => (s && cfgRef.current ? advance(cfgRef.current, s) : s));
       }
     };
