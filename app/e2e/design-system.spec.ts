@@ -7,7 +7,7 @@
 //     מחילים/מסירים class על <html>.
 
 import { test, expect } from '@playwright/test';
-import { unlockViaLongPress } from './helpers';
+import { dismissOnboarding, unlockViaLongPress } from './helpers';
 
 test('D-11: אין בקשת גופנים לצד-שלישי (Google Fonts)', async ({ page }) => {
   await page.goto('/');
@@ -20,6 +20,7 @@ test('C-18/C-06: טוגלים מחילים ערכות reading-font / sensory-cal
   const html = page.locator('html');
 
   await page.goto('/');
+  await dismissOnboarding(page);
   await unlockViaLongPress(page);
   await page.getByRole('button', { name: 'הגדרות' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
