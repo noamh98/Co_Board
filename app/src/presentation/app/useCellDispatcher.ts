@@ -20,6 +20,7 @@ import {
 } from '../../domain/modelingSession';
 import { appendWord } from '../../domain/sentence';
 import { speakCell, type SpeakOptions, type TtsLike } from '../../services/tts/ttsService';
+import { triggerHaptic } from '../../services/haptics/hapticsService';
 import { analyticsService } from '../../services/analytics/analyticsService';
 import type { SymbolRepo } from '../../data/symbolRepo';
 import {
@@ -43,6 +44,8 @@ interface CellDispatcherParams {
   preventDupRef: React.RefObject<boolean>;
   predictionsRef: React.RefObject<string[]>;
   addPredictedWord: (word: string) => void;
+  /** 2.7 (C-09) — ערך עדכני של hapticFeedback (ref, בלי stale closure ב-onCell). */
+  hapticEnabledRef: React.RefObject<boolean>;
 }
 
 export function useCellDispatcher({
@@ -60,6 +63,7 @@ export function useCellDispatcher({
   preventDupRef,
   predictionsRef,
   addPredictedWord,
+  hapticEnabledRef,
 }: CellDispatcherParams) {
   return useCallback(
     (cell: Cell): void => {
@@ -77,6 +81,9 @@ export function useCellDispatcher({
       if (action.type === 'speak') {
         setSentence((s) => appendWord(s, cell, preventDupRef.current ?? false));
         void speakCell(cell, symbolRepoRef.current, ttsRef.current, speakOpts());
+        // 2.7 (C-09) — משוב רטט על הוספת מילה. fire-and-forget, אחרי ההשמעה,
+        // כדי לא לעכב את "הלחיצה הראשונה מדברת".
+        triggerHaptic(hapticEnabledRef.current ?? false, 'wordAdded');
         if (ctx && currentBoard) {
           analyticsService.trackCellPress(
             ctx.activeProfile.id,
@@ -148,6 +155,7 @@ export function useCellDispatcher({
       preventDupRef,
       predictionsRef,
       addPredictedWord,
+      hapticEnabledRef,
     ],
   );
 }
