@@ -2,13 +2,21 @@
 // חולץ מ-App.tsx כלשונו: seed, PIN, קונטקסט פעיל, TTS, NikudService, auth listeners,
 // prune-ים ו-hydration של הגדרות. סמנטיקת דגל ה-alive נשמרת אחד-לאחד.
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   type ActiveContext,
   ensureSeeded,
   loadActiveContext,
 } from '../../data/bootstrap';
-import { createSettingsRepo, getSyncPhotos, getDarkMode } from '../../data/settingsRepo';
+import {
+  createSettingsRepo,
+  getSyncPhotos,
+  getDarkMode,
+  getOnboardingDone,
+  setOnboardingDone as saveOnboardingDone,
+  setOnboardingPersona as saveOnboardingPersona,
+  type OnboardingPersona,
+} from '../../data/settingsRepo';
 import {
   type AccessSettings,
   DEFAULT_ACCESS_SETTINGS,
@@ -66,6 +74,9 @@ export function useAppBootstrap({
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(!import.meta.env.VITE_FIREBASE_API_KEY);
   const [syncPhotos, setSyncPhotosState] = useState(false);
+  // 2.4 (C-05): ברירת מחדל true = "לא להציג" עד שנטען הערך האמיתי — מונע הבהוב ההדרכה
+  // ומונע הופעתה בבדיקות/הפעלות שכבר השלימו. מתהפך ל-false רק בהפעלה ראשונה.
+  const [onboardingDone, setOnboardingDone] = useState(true);
 
   const symbolRepoRef = useRef<SymbolRepo>(createSymbolRepo());
   /** קוד מטפל שמור — נטען מראש ל-opt-in PIN מתקדם (כרגע השחרור בלחיצה-ארוכה בלבד). */
@@ -78,6 +89,13 @@ export function useAppBootstrap({
   // callbacks עדכניים דרך ref — האפקט רץ פעם אחת אך תמיד קורא לגרסה הנוכחית.
   const cbRef = useRef({ hydrateTts, hydrateDarkMode, initNavStack, setHasHeVoice });
   cbRef.current = { hydrateTts, hydrateDarkMode, initNavStack, setHasHeVoice };
+
+  // 2.4 (C-05): סימון השלמת ההדרכה — מעדכן state ומתמיד ב-IDB (+ פרסונה אם נבחרה).
+  const completeOnboarding = useCallback((persona: OnboardingPersona | null): void => {
+    setOnboardingDone(true);
+    void saveOnboardingDone(true);
+    if (persona) void saveOnboardingPersona(persona);
+  }, []);
 
   // אתחול: seed, PIN, קונטקסט פעיל, TTS, NikudService, auth listener
   useEffect(() => {
@@ -106,12 +124,14 @@ export function useAppBootstrap({
       const pitch = await settingsRepo.getTtsPitch();
       const photosEnabled = await getSyncPhotos();
       const dark = await getDarkMode();
+      const obDone = await getOnboardingDone();
       const loaded = await loadActiveContext();
       if (alive) {
         setAccessSettings(access);
         cbRef.current.hydrateTts(voiceURI, rate, pitch);
         setSyncPhotosState(photosEnabled);
         cbRef.current.hydrateDarkMode(dark);
+        setOnboardingDone(obDone);
         setCtx(loaded);
         cbRef.current.initNavStack(loaded.activeProfile.homeBoardId);
       }
@@ -195,5 +215,7 @@ export function useAppBootstrap({
     storedPinRef,
     nikudRef,
     sessionIdRef,
+    onboardingDone,
+    completeOnboarding,
   };
 }

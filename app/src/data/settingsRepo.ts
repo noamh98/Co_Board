@@ -24,6 +24,8 @@ const KEY_SYNC_ENABLED = 'syncEnabled';
 const KEY_SYNC_PHOTOS = 'syncPhotos';
 const KEY_DARK_MODE = 'darkMode';
 const KEY_LAST_SYNC_AT = 'lastSyncAt';
+const KEY_ONBOARDING_DONE = 'onboardingDone';
+const KEY_ONBOARDING_PERSONA = 'onboardingPersona';
 
 const DEFAULT_TTS_RATE = 1.0;
 const DEFAULT_TTS_PITCH = 1.0;
@@ -109,9 +111,9 @@ export async function setTtsApiKey(_key: string | null): Promise<void> {
 }
 
 /**
- * האם סנכרון ענן של לוחות/פרופילים מופעל (ברירת מחדל: false — מקומי בלבד).
- * B-11 (R-03): ההעדפה נשמרת בין טעינות כדי שגיבוי ענן שהופעל לא "יישכח"
- * בכל ריענון. אין כאן הפעלה אוטומטית של נתוני קטינים לענן — רק זכירת
+ * האם סנכרון ענף של לוחות/פרופילים מופעל (ברירת מחדל: false — מקומי בלבד).
+ * B-11 (R-03): ההעדפה נשמרת בין טעינות כדי שגיבוי ענף שהופעל לא "יישכח"
+ * בכל ריענון. אין כאן הפעלה אוטומטית של נתוני קטינים לענף — רק זכירת
  * בחירה מפורשת של המשתמש.
  */
 export async function getSyncEnabled(): Promise<boolean> {
@@ -122,7 +124,7 @@ export async function setSyncEnabled(enabled: boolean): Promise<void> {
   await writeValue(KEY_SYNC_ENABLED, String(enabled));
 }
 
-/** האם לסנכרן תמונות אישיות לענן (ברירת מחדל: false — מקומי בלבד). */
+/** האם לסנכרן תמונות אישיות לענף (ברירת מחדל: false — מקומי בלבד). */
 export async function getSyncPhotos(): Promise<boolean> {
   const raw = await readValue(KEY_SYNC_PHOTOS);
   return raw === 'true';
@@ -146,6 +148,27 @@ export async function getDarkMode(): Promise<boolean> {
 }
 export async function setDarkMode(enabled: boolean): Promise<void> {
   await writeValue(KEY_DARK_MODE, String(enabled));
+}
+
+/** פרסונת ההדרכה שנבחרה באונבורדינג (C-05): משפחה / מטפל/ת / בית ספר. */
+export type OnboardingPersona = 'family' | 'therapist' | 'school';
+
+/** האם הושלמה הדרכת הפתיחה (C-05). ברירת מחדל: false — מוצגת פעם אחת בהתקנה. */
+export async function getOnboardingDone(): Promise<boolean> {
+  const raw = await readValue(KEY_ONBOARDING_DONE);
+  return raw === 'true';
+}
+export async function setOnboardingDone(done: boolean): Promise<void> {
+  await writeValue(KEY_ONBOARDING_DONE, String(done));
+}
+
+/** הפרסונה שנבחרה בהדרכה (C-05). null אם לא נבחרה/ההדרכה לא הושלמה. */
+export async function getOnboardingPersona(): Promise<OnboardingPersona | null> {
+  const raw = await readValue(KEY_ONBOARDING_PERSONA);
+  return raw === 'family' || raw === 'therapist' || raw === 'school' ? raw : null;
+}
+export async function setOnboardingPersona(persona: OnboardingPersona): Promise<void> {
+  await writeValue(KEY_ONBOARDING_PERSONA, persona);
 }
 
 export function createSettingsRepo(): SettingsRepo {

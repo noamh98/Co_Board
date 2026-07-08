@@ -11,12 +11,13 @@
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { unlockViaLongPress } from './helpers';
+import { dismissOnboarding, unlockViaLongPress } from './helpers';
 
 const KNOWN_PRE_EXISTING_RULES = ['color-contrast'];
 
 test('פאנל הגדרות נפתח ונסגר, וללא הפרות axe קריטיות/רציניות חדשות', async ({ page }) => {
   await page.goto('/');
+  await dismissOnboarding(page);
   await unlockViaLongPress(page);
 
   await page.getByRole('button', { name: 'הגדרות' }).click();
@@ -38,6 +39,7 @@ test('פאנל הגדרות נפתח ונסגר, וללא הפרות axe קרי�
 
 test('לוח הילד ללא הפרות axe קריטיות/רציניות חדשות', async ({ page }) => {
   await page.goto('/');
+  await dismissOnboarding(page);
   await expect(page.getByRole('button', { name: 'אני', exact: true })).toBeVisible();
 
   const results = await new AxeBuilder({ page })

@@ -1,10 +1,11 @@
 // e2e/lock-unlock.spec.ts — שחרור/נעילה בלחיצה-ארוכה (Phase 3.1, smoke flow #2).
 
 import { test, expect } from '@playwright/test';
-import { unlockViaLongPress } from './helpers';
+import { dismissOnboarding, unlockViaLongPress } from './helpers';
 
 test('לחיצה ארוכה משחררת למצב עריכה, נעילה חוזרת ללוח הילד', async ({ page }) => {
   await page.goto('/');
+  await dismissOnboarding(page);
   await expect(page.getByRole('button', { name: 'אני', exact: true })).toBeVisible();
 
   // לחיצה קצרה — לא אמורה לשחרר.

@@ -1,9 +1,11 @@
 // e2e/board.spec.ts — טעינת הלוח + לחיצת תא → הקראה (Phase 3.1, smoke flow #1).
 
 import { test, expect } from '@playwright/test';
+import { dismissOnboarding } from './helpers';
 
 test('הלוח נטען נעול, ולחיצת תא מוסיפה למשפט', async ({ page }) => {
   await page.goto('/');
+  await dismissOnboarding(page);
 
   await expect(
     page.locator('button[aria-label^="שחרור למצב עריכה"]'),
