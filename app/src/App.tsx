@@ -237,6 +237,7 @@ export function App() {
     auditory: !!bootstrap.accessSettings.scanAuditory,
     mode: bootstrap.accessSettings.scanMode ?? 'linear',
     gridCols: boardNav.currentBoard?.grid?.cols ?? 1,
+    debounceMs: bootstrap.accessSettings.switchDebounceMs ?? 0,
     onSelect: (i) => {
       const c = boardNav.visibleCells[i];
       if (c) onCell(c);
