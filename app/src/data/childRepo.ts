@@ -1,6 +1,7 @@
 // data/childRepo.ts — ניהול תתי-פרופילי ילד ב-Firestore (2B).
 // Schema: users/{uid}/children/{childId}
 // childAccess: childAccess/{childId}/members/{uid}
+// מצביע משותף: users/{uid}/sharedChildren/{childId} (D-01, נכתב ע"י acceptInvite CF)
 // אינווריאנט: מחיקה = archivedAt (לא הסרה).
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
@@ -29,6 +30,12 @@ export interface ChildRecord {
   createdAt: number;
   /** null = פעיל (נכתב במפורש כדי שהשאילתה archivedAt==null תתפוס ילדים חדשים, A5). */
   archivedAt?: number | null;
+  /**
+   * מזהה בעלים כאשר זהו ילד *משותף* שהתקבל דרך childAccess (D-01). מוגדר רק
+   * ברשומות שהוחזרו מ-listSharedChildren; ילדים עצמיים אינם נושאים ownerUid.
+   * read-only לחבר — הכתיבה נשארת של הבעלים בלבד.
+   */
+  ownerUid?: string;
 }
 
 export type ChildAccessRole = 'parent' | 'clinician' | 'staff';
@@ -40,6 +47,15 @@ export interface ChildAccessEntry {
   grantedAt: number;
   /** פקיעת גישה אופציונלית (D-05) — millis. היעדר/0 = גישה קבועה; ערך בעבר = פקע. */
   expiresAt?: number;
+}
+
+/** מצביע לילד משותף שהתקבל (D-01). נכתב ע"י acceptInvite CF תחת המשתמש המקבל. */
+export interface SharedChildPointer {
+  childId: string;
+  ownerUid: string;
+  role: ChildAccessRole;
+  name: string;
+  grantedAt: number;
 }
 
 /** קוד שיתוף גישה לילד. חד-פעמי (used) + פג-תוקף (expiresAt). */
@@ -89,6 +105,38 @@ export async function listChildren(uid: string): Promise<ChildRecord[]> {
   }
 }
 
+/**
+ * רשימת ילדים *משותפים* שהמשתמש קיבל אליהם גישה (D-01 end-to-end).
+ * קורא את מצביעי users/{uid}/sharedChildren/* ואז שולף כל מסמך ילד מתת-העץ
+ * של הבעלים (users/{ownerUid}/children/{childId}) — חוקי Firestore מתירים
+ * דרך hasChildAccess. מדלג בשקט על ילד שגישתו פקעה/נשללה או offline,
+ * כך שכשל בילד משותף אחד לא שובר את כל הרשימה. מסנן ילדים מאורכבים.
+ */
+export async function listSharedChildren(uid: string): Promise<ChildRecord[]> {
+  let pointers: SharedChildPointer[];
+  try {
+    const col = collection(getDb(), 'users', uid, 'sharedChildren');
+    const snap = await getDocs(col);
+    pointers = snap.docs.map((d) => d.data() as SharedChildPointer);
+  } catch {
+    return [];
+  }
+
+  const shared: ChildRecord[] = [];
+  for (const ptr of pointers) {
+    if (!ptr.ownerUid || !ptr.childId) continue;
+    try {
+      const child = await getChild(ptr.ownerUid, ptr.childId);
+      if (child && !child.archivedAt) {
+        shared.push({ ...child, ownerUid: ptr.ownerUid });
+      }
+    } catch {
+      // גישה עשויה לפקוע/להישלל בין קריאת המצביע לשליפת הילד — דלג בשקט.
+    }
+  }
+  return shared;
+}
+
 export async function archiveChild(uid: string, childId: string): Promise<void> {
   const ref = childPath(uid, childId);
   const snap = await getDoc(ref);
@@ -121,7 +169,7 @@ export async function createChild(
   return child;
 }
 
-// ── childAccess ────────────────────────────────────────────────
+// ── childAccess ──────────────────────────────────────────────────────────────
 
 async function grantChildAccess(
   childId: string,
@@ -164,7 +212,7 @@ export async function revokeChildAccess(
   await call({ childId, memberUid });
 }
 
-// ── Share Invites ──────────────────────────────────────────────
+// ── Share Invites ─────────────────────────────────────────────────────────────
 
 const TTL_48H = 48 * 60 * 60 * 1000;
 

@@ -1,9 +1,15 @@
 // presentation/portal/ChildrenDashboard.tsx — דשבורד ילדים בפורטל המבוגר (2B).
-// רשימת ילדים + הוספת ילד + שיתוף גישה + ניהול הרשאות (D-05).
+// רשימת ילדים (עצמיים + משותפים) + הוספת ילד + שיתוף גישה + ניהול הרשאות (D-05).
 
 import { useEffect, useState } from 'react';
 import type { ProfilePreferences } from '../../domain/models';
-import { listChildren, createChild, saveChild, type ChildRecord } from '../../data/childRepo';
+import {
+  listChildren,
+  listSharedChildren,
+  createChild,
+  saveChild,
+  type ChildRecord,
+} from '../../data/childRepo';
 import { ChildCard } from './ChildCard';
 import { ChildPreferencesPanel } from './ChildPreferencesPanel';
 import { ShareInvitePanel } from './ShareInvitePanel';
@@ -13,6 +19,11 @@ import { AcceptInviteScreen } from './AcceptInviteScreen';
 interface Props {
   uid: string;
   onClose: () => void;
+}
+
+/** ילד משותף = נושא ownerUid של בעלים אחר (D-01) — קריאה בלבד. */
+function isSharedChild(child: ChildRecord, uid: string): boolean {
+  return !!child.ownerUid && child.ownerUid !== uid;
 }
 
 export function ChildrenDashboard({ uid, onClose }: Props) {
@@ -36,8 +47,19 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const list = await listChildren(uid);
-      setChildren(list.filter((c) => !c.archivedAt));
+      // D-01 end-to-end: ממזג ילדים עצמיים + משותפים (dedupe לפי childId; עצמי גובר).
+      const [own, shared] = await Promise.all([
+        listChildren(uid),
+        listSharedChildren(uid),
+      ]);
+      const byId = new Map<string, ChildRecord>();
+      for (const c of own) {
+        if (!c.archivedAt) byId.set(c.childId, c);
+      }
+      for (const c of shared) {
+        if (!byId.has(c.childId)) byId.set(c.childId, c);
+      }
+      setChildren([...byId.values()]);
     } catch {
       setError('שגיאה בטעינת ילדים — בדוק חיבור לרשת');
     } finally {
@@ -66,6 +88,8 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
   async function handlePrefsChange(childId: string, prefs: ProfilePreferences): Promise<void> {
     const child = children.find((c) => c.childId === childId);
     if (!child) return;
+    // בטיחות: לא כותבים העדפות לילד משותף (הכתיבה שייכת לבעלים בלבד).
+    if (isSharedChild(child, uid)) return;
     const updated = { ...child, preferences: prefs };
     await saveChild(uid, updated);
     setChildren((prev) => prev.map((c) => (c.childId === childId ? updated : c)));
@@ -92,6 +116,7 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
               <ChildCard
                 key={child.childId}
                 child={child}
+                readOnly={isSharedChild(child, uid)}
                 onOpenPreferences={(cid) => setPrefsChild(children.find((c) => c.childId === cid) ?? null)}
                 onShareAccess={(cid) => setShareChild(children.find((c) => c.childId === cid) ?? null)}
                 onManageAccess={(cid) => setAccessChild(children.find((c) => c.childId === cid) ?? null)}
@@ -196,12 +221,11 @@ export function ChildrenDashboard({ uid, onClose }: Props) {
       {acceptingInvite && (
         <AcceptInviteScreen
           uid={uid}
-          onAccepted={(child) => {
-            setChildren((prev) => {
-              if (prev.some((c) => c.childId === child.childId)) return prev;
-              return [...prev, child];
-            });
+          onAccepted={() => {
+            // D-01: רענון מלא — מושך את המצביע המתמיד (sharedChildren) + ownerUid,
+            // כך שהילד המשותף שורד רענון ומוצג read-only.
             setAcceptingInvite(false);
+            void load();
           }}
           onClose={() => setAcceptingInvite(false)}
         />

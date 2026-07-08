@@ -9,7 +9,8 @@
 //   4) משתמש לא-מאושר (ללא approved claim) אינו יכול לקרוא children — גם הבעלים.
 //   5) D-01: חבר childAccess מאושר *כן* קורא את מסמך הילד המשותף (positive).
 //   6) D-01: חבר childAccess קורא לוח משותף (top-level childId) אך אינו כותב.
-//   7) D-05: חבר עם expiresAt בעבר נחסם; חבר עם expiresAt בעתיד/ללא expiresAt מורשה.
+//   7) D-01: מצביע sharedChildren קריא רק לבעליו (המשתמש המקבל).
+//   8) D-05: חבר עם expiresAt בעבר נחסם; חבר עם expiresAt בעתיד/ללא expiresAt מורשה.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -136,6 +137,14 @@ beforeEach(async () => {
       deviceId: 'seed-device',
       data: { key: 'pref', value: 1 },
     });
+    // D-01 end-to-end: מצביע sharedChildren תחת המשתמש המקבל (נכתב ע"י acceptInvite CF).
+    await setDoc(doc(db, `users/${CLINICIAN}/sharedChildren/${CHILD}`), {
+      childId: CHILD,
+      ownerUid: OWNER,
+      role: 'clinician',
+      name: 'ילד לדוגמה',
+      grantedAt: 1,
+    });
   });
 });
 
@@ -248,6 +257,39 @@ describe('Firestore rules — D-01 shared board content (approach A)', () => {
   it('unapproved childAccess member cannot read the shared board doc', async () => {
     const db = unapproved(CLINICIAN).firestore();
     await assertFails(getDoc(doc(db, `users/${OWNER}/board/${BOARD}`)));
+  });
+});
+
+describe('Firestore rules — D-01 sharedChildren pointer (owner-scoped)', () => {
+  it('accepting user can read own sharedChildren pointer', async () => {
+    const db = approved(CLINICIAN).firestore();
+    await assertSucceeds(getDoc(doc(db, `users/${CLINICIAN}/sharedChildren/${CHILD}`)));
+  });
+
+  it('stranger cannot read another user sharedChildren pointer', async () => {
+    const db = approved(STRANGER).firestore();
+    await assertFails(getDoc(doc(db, `users/${CLINICIAN}/sharedChildren/${CHILD}`)));
+  });
+
+  it('owner cannot read the clinician sharedChildren pointer (own-subtree scoped)', async () => {
+    const db = approved(OWNER).firestore();
+    await assertFails(getDoc(doc(db, `users/${CLINICIAN}/sharedChildren/${CHILD}`)));
+  });
+
+  it('a forged pointer is harmless: child read still gated by childAccess', async () => {
+    // כתיבת מצביע לתת-העץ העצמי מותרת (own-subtree) אך אינה מעניקה גישה —
+    // קריאת הילד המשותף עדיין נחסמת ללא מסמך childAccess (STRANGER אינו חבר).
+    const db = approved(STRANGER).firestore();
+    await assertSucceeds(
+      setDoc(doc(db, `users/${STRANGER}/sharedChildren/${CHILD}`), {
+        childId: CHILD,
+        ownerUid: OWNER,
+        role: 'clinician',
+        name: 'מזויף',
+        grantedAt: 1,
+      }),
+    );
+    await assertFails(getDoc(doc(db, `users/${OWNER}/children/${CHILD}`)));
   });
 });
 
