@@ -11,6 +11,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { FUNCTIONS_REGION, LEGACY_MIGRATED_REGIONS } from './region';
+import { writeAuditEntryInTransaction } from './auditLog';
 
 if (!getApps().length) initializeApp();
 
@@ -100,6 +101,17 @@ export const acceptInvite = onCall(
         used: true,
         acceptedBy: uid,
         acceptedAt: FieldValue.serverTimestamp(),
+      });
+
+      // D-08: רשומת ביקורת — הענקת גישה. אטומית עם ההענקה (בתוך אותה טרנזקציה).
+      // owner-scoped (ownerUid = בעלי הילד) כדי שהבעלים יוכל לקרוא "מי קיבל גישה".
+      writeAuditEntryInTransaction(db, tx, {
+        action: 'access.grant',
+        actorUid: uid,
+        targetUid: uid,
+        childId: invite.childId,
+        ownerUid: invite.ownerUid,
+        role: invite.role,
       });
 
       // מחזיר את רשומת הילד עם ownerUid, כדי שהלקוח יוכל לרנדר/לשלוף תוכן מיד.
