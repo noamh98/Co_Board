@@ -141,6 +141,16 @@ service cloud.firestore {
         && resource.data.ownerUid == request.auth.uid;
     }
 
+    // ── יומן ביקורת (auditLog) — 3.4 / D-08 ──
+    // נכתב אך ורק ע"י Cloud Functions (Admin SDK, עוקף כללים). לקוחות: קריאה-בלבד,
+    // מוגבלת לבעלי הרשומה (ownerUid == המבקש) או Admin. רשומה ללא ownerUid (פעולת
+    // אדמין) נקראת ל-Admin בלבד. כל כתיבת-לקוח נחסמת — היומן חסין-שיבוש (tamper-proof).
+    match /auditLog/{entryId} {
+      allow read: if isAdmin()
+        || (isApproved() && resource.data.get('ownerUid', '') == request.auth.uid);
+      allow write: if false;
+    }
+
     // ── Admin: קריאת כל רשומות users לאישור ──
     match /users/{uid} {
       allow list: if isAdmin();
