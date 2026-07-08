@@ -1,4 +1,4 @@
-// presentation/portal/ChildCard.tsx — כרטיסית ילד בפורטל המבוגר (2B).
+// presentation/portal/ChildCard.tsx — כרטיסיית ילד בפורטל המבוגר (2B).
 
 import type { ChildRecord } from '../../data/childRepo';
 
@@ -6,10 +6,9 @@ interface Props {
   child: ChildRecord;
   onOpenPreferences: (childId: string) => void;
   onShareAccess: (childId: string) => void;
-  onManageAccess: (childId: string) => void;
   /**
    * ילד משותף שהתקבל דרך childAccess (D-01) — קריאה בלבד. פעולות owner-only
-   * (הגדרות/שיתוף/ניהול גישה) מוסתרות; הכתיבה נשארת של הבעלים בלבד.
+   * (הגדרות/שיתוף וגישה) מוסתרות; הכתיבה נשארת של הבעלים בלבד.
    */
   readOnly?: boolean;
 }
@@ -18,7 +17,6 @@ export function ChildCard({
   child,
   onOpenPreferences,
   onShareAccess,
-  onManageAccess,
   readOnly = false,
 }: Props) {
   return (
@@ -47,14 +45,7 @@ export function ChildCard({
             className="login-panel__btn"
             onClick={() => onShareAccess(child.childId)}
           >
-            שתף גישה
-          </button>
-          <button
-            type="button"
-            className="login-panel__btn"
-            onClick={() => onManageAccess(child.childId)}
-          >
-            מי מורשה
+            שיתוף וגישה
           </button>
         </div>
       )}
