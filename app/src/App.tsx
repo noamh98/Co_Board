@@ -57,6 +57,7 @@ import { useSentence } from './presentation/app/useSentence';
 import { usePrediction } from './presentation/app/usePrediction';
 import { useCellDispatcher } from './presentation/app/useCellDispatcher';
 import { useLockMode } from './presentation/app/useLockMode';
+import { OnboardingFlow } from './presentation/onboarding/OnboardingFlow';
 
 // E3: פאנלי מבוגר כבדים נטענים lazily (code-splitting) — לא בבנדל הראשוני של מסך הילד.
 const BuilderView = lazy(() =>
@@ -73,7 +74,7 @@ export function App() {
 
   // ref-trampoline: useAppBootstrap צריך hydrateDarkMode/initNavStack מ-hooks
   // שנקראים אחריו (theme תלוי ב-accessSettings, boardNav תלוי ב-ctx — שניהם פרי
-  // bootstrap עצמו). ה-wrapper היציב (useCallback, תלויות ריקות) מוענק ל-bootstrap
+  // bootstrap עצמו). ה-wrapper היציב (useCallback, תלויות ריקות) מועבק ל-bootstrap
   // פעם אחת; ה-ref מתעדכן בכל רינדור לאחר שהיעד האמיתי נוצר.
   const hydrateDarkModeRef = useRef<(enabled: boolean) => void>(() => {});
   const hydrateDarkMode = useCallback(
@@ -646,6 +647,16 @@ export function App() {
           <div className="app__toast app__toast--error" role="alert">
             {errorToast}
           </div>
+        )}
+
+        {/* 2.4 (C-05/C-10): הדרכת פתיחה — פרסונה + סיור מדולג + תזכורת קוד הורה.
+            אינה חוסמת את "לחיצה ראשונה מדברת": מוצגת פעם אחת וניתנת לדילוג מיידי. */}
+        {!bootstrap.onboardingDone && (
+          <OnboardingFlow
+            hasCaregiverPin={bootstrap.storedPinRef.current !== ''}
+            onComplete={bootstrap.completeOnboarding}
+            onOpenPinSettings={() => setOpenPanel('settings')}
+          />
         )}
       </div>
     </AuthGate>
