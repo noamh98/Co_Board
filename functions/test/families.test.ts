@@ -2,6 +2,9 @@
 // דורש: Firestore emulator + @firebase/rules-unit-testing + vitest.
 // הרצה: npm run test:rules (רשום ב-functions/package.json).
 //
+// ⚠️ projectId ייחודי: vitest מריץ קבצי-בדיקה במקביל. rules.test.ts גם נוגע ב-Firestore,
+//    ושיתוף projectId היה גורם ל-clearFirestore של קובץ אחד למחוק זרעים של השני. בידוד פרויקט.
+//
 // כיסוי:
 //   חיובי — הבעלים קורא/יוצר/מעדכן(שדה לא-חיובי)/מוחק; חבר memberUids קורא.
 //   שלילי — זר אינו קורא; בעלים אינו יכול לשדרג plan/לשנות שדות-חיוב (money-path);
@@ -19,7 +22,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-const PROJECT_ID = 'co-board-rules-test';
+const PROJECT_ID = 'co-board-families-test';
 const OWNER = 'fam-owner-uid';
 const MEMBER = 'fam-member-uid';
 const STRANGER = 'fam-stranger-uid';
