@@ -4,13 +4,14 @@
 //        3) הרשאה: רק בעלי הילד (מי שמחזיק users/{caller}/children/{childId}) רשאי לבטל
 //        4) מחיקת childAccess/{childId}/members/{memberUid}.
 // אבטחה: מונע privilege-escalation (חבר רגיל לא יכול לבטל אחרים), ומונע self-lockout
-//        של הבעלים (אי-אפשר לבטל את גישת עצמך). מטפל ב-R-08 (over-access קליני).
+//        של הבעלים (אי-אפשר לבטל את גישתך). מטפל ב-R-08 (over-access קליני).
 // deploy: firebase deploy --only functions
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { FUNCTIONS_REGION, LEGACY_MIGRATED_REGIONS } from './region';
+import { writeAuditEntry } from './auditLog';
 
 if (!getApps().length) initializeApp();
 
@@ -51,6 +52,16 @@ export const revokeChildAccess = onCall(
 
     // מחיקה אידמפוטנטית — מחיקת חבר שכבר אינו קיים אינה שגיאה.
     await db.doc(`childAccess/${childId}/members/${memberUid}`).delete();
+
+    // D-08: רשומת ביקורת — ביטול גישה. owner-scoped (ownerUid = הבעלים המבקש)
+    // כדי שהבעלים יוכל לקרוא "מי איבד/ניגש לנתוני הילד". ללא PII (uids/childId בלבד).
+    await writeAuditEntry(db, {
+      action: 'access.revoke',
+      actorUid: callerUid,
+      targetUid: memberUid,
+      childId,
+      ownerUid: callerUid,
+    });
 
     return { success: true, childId, memberUid };
   },
