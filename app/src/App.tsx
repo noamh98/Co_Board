@@ -45,6 +45,8 @@ import { SceneView } from './presentation/components/SceneView';
 import { useScanning } from './services/access/useScanning';
 import { notifyError, onNotifyError } from './services/notify/notifyService';
 import { ConfirmDialog } from './presentation/ui/ConfirmDialog';
+import { shouldConfirmClear } from './domain/playSafety';
+import { triggerHaptic } from './services/haptics/hapticsService';
 import { AuthGate } from './presentation/app/AuthGate';
 import { AppModals } from './presentation/app/AppModals';
 import type { PanelId } from './presentation/state/panelState';
@@ -110,7 +112,7 @@ export function App() {
     boardNav.setNavStack(createNavStack(homeBoardId));
 
   const [builderMode, setBuilderMode] = useState(false);
-  // כשנכנסים ל-builder דרך "+ לוח חדש" מהספרייה — לפתוח מיד את NewBoardChooser.
+  // כשנכנסים ל-builder דרך "+ לוח חדש" מהספריה — לפתוח מיד את NewBoardChooser.
   const [newBoardFromLibrary, setNewBoardFromLibrary] = useState(false);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [openPanel, setOpenPanel] = useState<PanelId | null>(null);
@@ -132,6 +134,10 @@ export function App() {
   // F7: ערך עדכני של מניעת-כפילויות (ref — בלי stale closure ב-onCell/addPredictedWord).
   const preventDupRef = useRef(false);
   preventDupRef.current = bootstrap.accessSettings.preventSequentialDuplicates ?? false;
+
+  // 2.7 (C-09) — ערך עדכני של hapticFeedback ל-onCell/speakSentence (ref, בלי stale closure).
+  const hapticRef = useRef(false);
+  hapticRef.current = bootstrap.accessSettings.hapticFeedback ?? false;
 
   const prediction = usePrediction({
     enabled: bootstrap.accessSettings.predictionEnabled ?? false,
@@ -206,11 +212,14 @@ export function App() {
     preventDupRef,
     predictionsRef: prediction.predictionsRef,
     addPredictedWord: prediction.addPredictedWord,
+    hapticEnabledRef: hapticRef,
   });
 
   const speakSentence = (): void => {
     if (sentenceState.sentence.length === 0) return;
     tts.speak(sentenceState.sentence.map(vocalize).join(' '));
+    // 2.7 (C-09) — משוב רטט על השמעת המשפט (מגודר-הגדרה + feature-detected).
+    triggerHaptic(hapticRef.current, 'sentenceSpoken');
     // I2 — למידה מקומית מהאמירה שנאמרה (n-gram פרטי).
     prediction.learnFromSentence(sentenceState.sentence.map((c) => c.label));
   };
@@ -238,23 +247,26 @@ export function App() {
     },
   });
 
-  // פתיחת לוח מהספרייה: שורש מחסנית ניווט חדשה בלוח שנבחר, מעבר לתצוגת לוח.
+  // פתיחת לוח מהספריה: שורש מחסנית ניווט חדשה בלוח שנבחר, מעבר לתצוגת לוח.
   const onOpenBoardFromLibrary = (boardId: string): void => {
     boardNav.setNavStack(createNavStack(boardId));
     sentenceState.setSentence([]);
     lockMode.setView('board');
   };
 
-  // "+ לוח חדש" מהספרייה → נכנס ל-builder ופותח את NewBoardChooser הקיים (בלי שכפול).
+  // "+ לוח חדש" מהספריה → נכנס ל-builder ופותח את NewBoardChooser הקיים (בלי שכפול).
   const onNewBoardFromLibrary = (): void => {
     lockMode.setView('board');
     setNewBoardFromLibrary(true);
     setBuilderMode(true);
   };
 
-  // ארכוב לוח מהספרייה (מחיקה רכה, הפיכה) — עם אישור (ConfirmDialog, 2.3), ועדכון
+  // ארכוב לוח מהספריה (מחיקה רכה, הפיכה) — עם אישור (ConfirmDialog, 2.3), ועדכון
   // מיידי של allBoards.
   const [archiveTarget, setArchiveTarget] = useState<{ id: string; label: string } | null>(null);
+
+  // 2.7 (C-09) — אישור לפני ניקוי שורת המשפט (מגודר-הגדרה, ברירת-מחדל פעיל).
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const onArchiveBoard = (boardId: string): void => {
     const target = bootstrap.ctx?.allBoards[boardId];
@@ -359,7 +371,7 @@ export function App() {
 
   const adult = canManageProfiles(lockMode.mode);
   const canBack = boardNav.navStack ? navCanGoBack(boardNav.navStack) : false;
-  // ספרייה כ"בית" של המבוגר: רק במצב מבוגר, מחוץ ל-builder, כשבחרנו תצוגת ספרייה.
+  // ספריה כ"בית" של המבוגר: רק במצב מבוגר, מחוץ ל-builder, כשבחרנו תצוגת ספריה.
   const inLibrary = adult && !builderMode && lockMode.view === 'library';
 
   // מחוון uid קצר לתצוגה ב-header
@@ -440,7 +452,19 @@ export function App() {
                 onPrint={() => window.print()}
                 onSpeak={speakSentence}
                 onDeleteWord={() => sentenceState.setSentence((s) => s.slice(0, -1))}
-                onClear={() => sentenceState.setSentence([])}
+                onClear={() => {
+                  if (
+                    shouldConfirmClear(
+                      bootstrap.accessSettings.confirmBeforeClear,
+                      sentenceState.sentence.length > 0,
+                    )
+                  ) {
+                    setConfirmClear(true);
+                  } else {
+                    sentenceState.setSentence([]);
+                    triggerHaptic(hapticRef.current, 'cleared');
+                  }
+                }}
                 onHome={() => {
                   if (bootstrap.ctx) boardNav.setNavStack(navHome(bootstrap.ctx.activeProfile.homeBoardId));
                 }}
@@ -578,7 +602,7 @@ export function App() {
           )}
         </main>
 
-        {/* I13 — הדפסת הלוח (לואו-טק). מוסתר בהדפסה עצמה ובתצוגת ספרייה. */}
+        {/* I13 — הדפסת הלוח (לאו-טק). מוסתר בהדפסה עצמה ובתצוגת ספריה. */}
         {adult && !builderMode && !inLibrary && (
           <button
             type="button"
@@ -630,7 +654,7 @@ export function App() {
           onDeletePhrase={sentenceState.deletePhraseById}
         />
 
-        {/* 2.3: ConfirmDialog נגיש במקום window.confirm — ארכוב לוח מהספרייה. */}
+        {/* 2.3: ConfirmDialog נגיש במקום window.confirm — ארכוב לוח מהספריה. */}
         {archiveTarget && (
           <ConfirmDialog
             title="העברה לארכיון"
@@ -642,7 +666,23 @@ export function App() {
           />
         )}
 
-        {/* Phase 1.7 (U-1): toast שגיאה גלובלי — מוצג בכל תצוגה, כולל ספרייה ומודאלים. */}
+        {/* 2.7 (C-09): אישור לפני ניקוי שורת המשפט — מונע מחיקה בשוגג ע"י הילד. */}
+        {confirmClear && (
+          <ConfirmDialog
+            title="ניקוי שורת המשפט"
+            message="לנקות את כל המילים בשורת המשפט? אפשר להתחיל מחדש."
+            confirmLabel="נקה"
+            danger
+            onConfirm={() => {
+              sentenceState.setSentence([]);
+              triggerHaptic(hapticRef.current, 'cleared');
+              setConfirmClear(false);
+            }}
+            onCancel={() => setConfirmClear(false)}
+          />
+        )}
+
+        {/* Phase 1.7 (U-1): toast שגיאה גלובלי — מוצג בכל תצוגה, כולל ספריה ומודאלים. */}
         {errorToast && (
           <div className="app__toast app__toast--error" role="alert">
             {errorToast}

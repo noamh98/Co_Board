@@ -151,6 +151,20 @@ export function AccessSettingsPanel({
             label="ניגודיות גבוהה"
             description="שחור/לבן עם גבולות חזקים — שומר על קוד הצבע של התאים (F4)"
           />
+          <Toggle
+            id="confirm-before-clear"
+            checked={settings.confirmBeforeClear ?? true}
+            onChange={(v) => set({ confirmBeforeClear: v })}
+            label="אישור לפני ניקוי שורת המשפט"
+            description="מונע מחיקה בשוגג של כל המשפט — מציג דיאלוג אישור (C-09)"
+          />
+          <Toggle
+            id="haptic-feedback"
+            checked={settings.hapticFeedback ?? false}
+            onChange={(v) => set({ hapticFeedback: v })}
+            label="משוב רטט (Haptics)"
+            description="רטט קצר במכשירים תומכים — בעת הוספת מילה, השמעה וניקוי (C-09)"
+          />
         </div>
       </section>
 
