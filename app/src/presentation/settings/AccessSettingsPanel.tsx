@@ -213,6 +213,16 @@ export function AccessSettingsPanel({
             format={(v) => (v === 0 ? 'ידני' : `${v} מ"ש`)}
             onChange={(v) => set({ scanSpeedMs: v })}
           />
+          <Slider
+            id="switch-debounce"
+            label="השהיית מתג (מניעת רעד)"
+            value={settings.switchDebounceMs ?? 150}
+            min={0}
+            max={500}
+            step={50}
+            format={(v) => (v === 0 ? 'כבוי' : `${v} מ"ש`)}
+            onChange={(v) => set({ switchDebounceMs: v })}
+          />
           <Toggle
             id="prediction-enabled"
             checked={settings.predictionEnabled ?? false}
