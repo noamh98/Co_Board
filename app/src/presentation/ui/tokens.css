@@ -1,6 +1,6 @@
-/* ══════════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
    Co_Board — Design Tokens (קורל / טרהקוטה) · Phase 2 (F6 ריברנד)
-   ──────────────────────────────────────────────────────────────────────────────
+   ───────────────────────────────────────────────────────────────────────────────────────────────────────────
    מקור-אמת יחיד לזהות-העיצוב החדשה. ממפה מחדש את משתני ה-chrome (--cl-*)
    לפלטת קורל — כך כל הרכיבים הקיימים מקבלים את הריברנד ללא עריכה פר-רכיב.
    חובה לייבא *אחרי* index.css ב-main.tsx כדי שינצח.
@@ -15,12 +15,12 @@
    • צבעי Fitzgerald (--cat-*/--cell-tint/--cell-ink) נקבעים ב-styles/tokens.css
      + domain/fitzgerald.ts — *אסור לגעת בהם כאן* (תקן נגישות AAC).
    • dark + high-contrast = שתי ערכות נוספות (חובה לנגישות).
-   ══════════════════════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 
-/* ── ערכת בהיר (ברירת מחדל) — קורל/חול חמים ───────────────────────────── */
+/* ── ערכת בהיר (ברירת מחדל) — קורל/חול חמים ──────────────────────────────────── */
 :root {
-  --co-brand:        #E8694C;
-  --co-brand-strong: #CE5132;
+  --co-brand:        #AA4D38;
+  --co-brand-strong: #9E3E26;
   --co-brand-tint:   #FBE6DE;
 
   /* גופנים (D-11): self-host / system stack — ללא Google Fonts (אין בקשת רשת לפני הסכמה).
@@ -33,10 +33,10 @@
   --cl-surface:     #FFFFFF;
   --cl-surface-alt: #FBF6EF;
   --cl-ink:         #33271F;
-  --cl-muted:       #7A6A5E;
+  --cl-muted:       #78685D;
   --cl-border:      #EAE0D4;
-  --cl-primary:     #E8694C;  /* כתום-קורל = צבע המותג (השמעה/בית/CTA/פוקוס) */
-  --cl-primary-dk:  #CE5132;
+  --cl-primary:     #AA4D38;  /* כתום-קורל = צבע המותג (השמעה/בית/CTA/פוקוס) · מכויל AA: לבן-עליו 5.49:1 */
+  --cl-primary-dk:  #9E3E26;  /* גוון כהה למותג · לבן-עליו 6.62:1, כטקסט על tint 5.51:1 */
   --cl-primary-lt:  #FBE6DE;
   --cl-on-primary:  #FFFFFF;
   --cl-chip:        #FBF6EF;
@@ -44,15 +44,15 @@
   --cl-icon-bg:     #FFFFFF;
 
   /* danger (ניקוי) — אדום נפרד מהמותג */
-  --cl-error:    #C0392B;
+  --cl-error:    #BC372A;
   --cl-error-bg: #FCE3DE;
-  --cl-danger:   #C0392B;
-  --cl-warn:     #B45309;
+  --cl-danger:   #BC372A;
+  --cl-warn:     #AE5008;
 
   /* accent (טבעת סריקה) — נשמר טורקיז להבחנה מהמותג (affordance נגישות מובחן) */
-  --cl-accent:   #147FA8;
+  --cl-accent:   #12749A;
   --cl-scan-ring:#147FA8;
-  --cl-success:    #2E7D5B;
+  --cl-success:    #2B7656;
   --cl-success-bg: #DDF0E4;
 
   /* overlay למודלים/גיליונות תחתונים */
@@ -72,7 +72,7 @@
   --co-shadow-sm: 0 2px 8px rgba(70, 45, 30, .06);
 }
 
-/* ── ערכת כהה (קורל-כהה) — auto לפי OS, אלא אם light-mode ידני ───────────── */
+/* ── ערכת כהה (קורל-כהה) — auto לפי OS, אלא אם light-mode ידני ───────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not(.light-mode):not(.high-contrast) {
     --cl-bg:          #221B16;
@@ -117,7 +117,7 @@
   --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
 }
 
-/* ── ערכת ניגודיות גבוהה (קורל-HC) — שחור/לבן + מותג חזק ───────────────── */
+/* ── ערכת ניגודיות גבוהה (קורל-HC) — שחור/לבן + מותג חזק ───────────────────── */
 .high-contrast {
   --cl-bg:#000000; --cl-surface:#0A0A0A; --cl-surface-alt:#000000;
   --cl-ink:#FFFFFF; --cl-muted:#D8D8D8; --cl-border:#FFFFFF;
@@ -224,7 +224,7 @@
   font-size: var(--tx-xs); font-weight: 700; padding: 2px 10px; border-radius: var(--r-full);
 }
 
-/* ── יצירה חכמה (SmartCreatePanel) — hero ─────────────────────────────── */
+/* ── יצירה חכמה (SmartCreatePanel) — hero ──────────────────────────────────── */
 .smart-create { display: flex; flex-direction: column; gap: var(--sp-3); }
 .smart-create__desc {
   border-color: var(--cl-primary);
@@ -245,7 +245,7 @@
 .smart-create__state--error   { color: var(--cl-error); }
 .smart-create__state--success { color: var(--cl-success); }
 
-/* ── ספריית לוחות — קבוצות (group labels) ───────────────────────────────── */
+/* ── ספריית לוחות — קבוצות (group labels) ─────────────────────────────────────── */
 .library-group__label {
   display: flex; align-items: center; gap: var(--sp-2);
   font-weight: 800; font-size: var(--tx-md); color: var(--cl-ink);
