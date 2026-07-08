@@ -5,7 +5,7 @@
 // גודל תמונה במשבצת, וגודל כפתורי שורת הקריאה. כולן אדיטיביות עם ברירות-מחדל.
 
 export interface AccessSettings {
-  /** זמן השהייה להפעלה ללא לחיצה (Dwell). 0 = כבוי. */
+  /** זמן ההשהייה להפעלה ללא לחיצה (Dwell). 0 = כבוי. */
   dwellTimeMs: number;
   /** הפעלה בשחרור המגע (Activate on Release) במקום בלחיצה. */
   activateOnRelease: boolean;
@@ -35,6 +35,11 @@ export interface AccessSettings {
   cellImageScale?: number;
   /** גודל כפתורי שורת הקריאה (השמעה/מחיקה/ניקוי) (%). 100 = ברירת מחדל. טווח 50–200. */
   sentenceButtonScale?: number;
+  // ── Phase 2 (2.3 — מערכת עיצוב / נגישות קריאה) ──
+  /** C-18 — גופן קריא ידידותי-דיסלקציה (מרווח אותיות/שורות מוגדל). class .reading-font על <html>. */
+  readingFont?: boolean;
+  /** C-06 — ערכת "רגיעה חושית": פלטת chrome רכה/מונמכת. class .sensory-calm על <html>. */
+  sensoryCalm?: boolean;
 }
 
 export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
@@ -53,4 +58,7 @@ export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
   preventSequentialDuplicates: false,
   cellImageScale: 100,
   sentenceButtonScale: 100,
+  // 2.3 — כבוי כברירת מחדל (אדיטיבי, opt-in):
+  readingFont: false,
+  sensoryCalm: false,
 };
