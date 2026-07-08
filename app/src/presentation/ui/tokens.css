@@ -5,10 +5,15 @@
    לפלטת קורל — כך כל הרכיבים הקיימים מקבלים את הריברנד ללא עריכה פר-רכיב.
    חובה לייבא *אחרי* index.css ב-main.tsx כדי שינצח.
 
+   ⚠️ C-01: זהו קובץ ה-authority היחיד למשתני צבע ה-chrome (--cl-*).
+   אסור להגדיר --cl-* בשום קובץ CSS אחר — רק לצרוך אותם דרך var(--cl-*).
+   בדיקת scripts/check-token-drift.mjs (npm run lint:tokens) מפילה את
+   ה-build אם מגדירים --cl-* במקום אחר.
+
    כללים:
    • רק CSS-vars + logical properties (margin-inline / inset-inline-*) — RTL + theming.
-   • צבעי Fitzgerald (--cell-tint / --cell-ink) נקבעים ב-domain/fitzgerald.ts ו-CellButton —
-     *אסור לגעת בהם כאן* (תקן נגישות AAC). tokens.css נוגע רק ב-chrome.
+   • צבעי Fitzgerald (--cat-*/--cell-tint/--cell-ink) נקבעים ב-styles/tokens.css
+     + domain/fitzgerald.ts — *אסור לגעת בהם כאן* (תקן נגישות AAC).
    • dark + high-contrast = שתי ערכות נוספות (חובה לנגישות).
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -37,12 +42,20 @@
   --cl-error:    #C0392B;
   --cl-error-bg: #FCE3DE;
   --cl-danger:   #C0392B;
+  --cl-warn:     #B45309;
 
   /* accent (טבעת סריקה) — נשמר טורקיז להבחנה מהמותג (affordance נגישות מובחן) */
   --cl-accent:   #147FA8;
   --cl-scan-ring:#147FA8;
   --cl-success:    #2E7D5B;
   --cl-success-bg: #DDF0E4;
+
+  /* overlay למודלים/גיליונות תחתונים */
+  --cl-overlay:  rgba(51, 39, 31, 0.5);
+
+  /* השמעה — נגזר מהמותג כך שיעקוב אחרי כל ערכה ללא הגדרה חוזרת */
+  --cl-speak:    var(--cl-primary);
+  --cl-speak-sh: var(--cl-primary-dk);
 
   /* aliases legacy */
   --bg: var(--cl-bg); --surface: var(--cl-surface); --ink: var(--cl-ink);
@@ -73,10 +86,12 @@
     --cl-error:    #F0837E;
     --cl-error-bg: #3A1F1E;
     --cl-danger:   #F0837E;
+    --cl-warn:     #E0A23C;
     --cl-accent:   #5FC0E0;
     --cl-scan-ring:#7AD4EE;
     --cl-success:    #4FB58E;
     --cl-success-bg: #15301F;
+    --cl-overlay:  rgba(10, 8, 6, 0.6);
     --co-brand-tint: #3A261D;
     --co-shadow:    0 8px 24px rgba(0, 0, 0, .45);
     --co-shadow-sm: 0 2px 8px rgba(0, 0, 0, .30);
@@ -90,20 +105,22 @@
   --cl-ink:#F3EAE2; --cl-muted:#B6A89C; --cl-border:#3D3128;
   --cl-primary:#F0825F; --cl-primary-dk:#F39C7D; --cl-primary-lt:#3A261D;
   --cl-on-primary:#2B221C; --cl-chip:#2B221C; --cl-chip-border:#3D3128; --cl-icon-bg:#F3EAE2;
-  --cl-error:#F0837E; --cl-error-bg:#3A1F1E; --cl-danger:#F0837E;
+  --cl-error:#F0837E; --cl-error-bg:#3A1F1E; --cl-danger:#F0837E; --cl-warn:#E0A23C;
   --cl-accent:#5FC0E0; --cl-scan-ring:#7AD4EE; --cl-success:#4FB58E; --cl-success-bg:#15301F;
+  --cl-overlay:rgba(10,8,6,.6);
   --co-brand-tint:#3A261D; --co-shadow:0 8px 24px rgba(0,0,0,.45); --co-shadow-sm:0 2px 8px rgba(0,0,0,.3);
   --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
 }
 
-/* ── ערכת ניגודיות גבוהה (קורל-HC) — שחור/לבן + מותג חזק ─────────────── */
+/* ── ערכת ניגודיות גבוהה (קורל-HC) — שחור/לבן + מותג חזק ───────────── */
 .high-contrast {
   --cl-bg:#000000; --cl-surface:#0A0A0A; --cl-surface-alt:#000000;
   --cl-ink:#FFFFFF; --cl-muted:#D8D8D8; --cl-border:#FFFFFF;
   --cl-primary:#FF7A57; --cl-primary-dk:#FF9C7E; --cl-primary-lt:#341A10; --cl-on-primary:#000000;
   --cl-chip:#000000; --cl-chip-border:#FFFFFF; --cl-icon-bg:#FFFFFF;
-  --cl-error:#FF8A7A; --cl-error-bg:#3A0F0A; --cl-danger:#FF8A7A;
+  --cl-error:#FF8A7A; --cl-error-bg:#3A0F0A; --cl-danger:#FF8A7A; --cl-warn:#FFB86B;
   --cl-accent:#6FC0FF; --cl-scan-ring:#6FC0FF; --cl-success:#66E08A; --cl-success-bg:#00210F;
+  --cl-overlay:rgba(0,0,0,.7);
   --co-brand:#FF7A57; --co-brand-strong:#FF9C7E; --co-brand-tint:#341A10;
   --bg:var(--cl-bg); --surface:var(--cl-surface); --ink:var(--cl-ink); --muted:var(--cl-muted); --primary:var(--cl-primary);
 }

@@ -22,6 +22,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      # 2.1 (C-01): שומר-drift של טוקני chrome (--cl-*) — מפיל אם מוגדרים מחוץ לקובץ ה-authority.
+      - run: npm run lint:tokens
       # 3.6: דוח כיסוי (v8) — בלי סף שנכשל, למעקב מגמה בלבד; מריץ את אותה סוויטה כמו npm test.
       - run: npm run test:coverage
       - run: npm run build
