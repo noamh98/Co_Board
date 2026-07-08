@@ -24,6 +24,8 @@ export interface AccessSettings {
   scanSpeedMs?: number;
   /** I3 — סריקה שמיעתית (הקראת התווית בעת הדגשה). */
   scanAuditory?: boolean;
+  /** C-15 — חלון דחיית-קלט למתג סריקה (ms) — מונע הפעלה כפולה בשוגג עקב רעד. 0 = כבוי. */
+  switchDebounceMs?: number;
   /** I2 — שורת ניבוי מילה הבאה פעילה. */
   predictionEnabled?: boolean;
   /** I9 — גודל תא מינימלי (px, ≥44 לנגישות WCAG). */
@@ -57,6 +59,8 @@ export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
   scanMode: 'linear',
   scanSpeedMs: 1200,
   scanAuditory: true,
+  // 2.9 — דחיית-קלט מתג (C-15): ברירת-מחדל מגן שמרני; מסנן הפעלה כפולה עקב רעד.
+  switchDebounceMs: 150,
   predictionEnabled: false,
   cellMinPx: 92, // תואם ל-CSS (--cell-min) — מונע רגרסיה; ניתן להקטין עד 44 (WCAG).
   // F7 — ברירות-מחדל שמרניות (אין שינוי התנהגות עד שהמטפל מכוון):
