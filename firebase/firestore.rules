@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── פונקציות עזר ───────────────────────────────────────────────
+    // ── פונקציות עזר ──
     function isSignedIn() {
       return request.auth != null;
     }
@@ -46,24 +46,19 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(request.auth.uid)/children/$(childId));
     }
 
-    // ── רשומות משתמש ───────────────────────────────────────────────
+    // ── רשומות משתמש ──
     match /users/{uid} {
-      // קריאת רשומה עצמית בלבד (לבדיקת status)
       allow read: if isOwnUid(uid) || isAdmin();
-      // יצירה: רק בעל החשבון, status חייב להיות 'pending'
       allow create: if isOwnUid(uid)
         && request.resource.data.status == 'pending';
-      // עדכון: המשתמש יכול לעדכן שדות שאינם status (כגון displayName).
-      // status הוא immutable מהלקוח — 'approved'/'rejected' נכתב רק ע"י Cloud Function
-      // (Admin SDK), ומשתמש מאושר אינו יכול להוריד את עצמו חזרה ל-'pending'.
       allow update: if isOwnUid(uid)
         && request.resource.data.status == resource.data.status;
     }
 
-    // ── תוכן (boards, profiles, settings וכו') ─────────────
+    // ── תוכן (boards, profiles, settings וכו') ──
     // כתיבה: רק הבעלים המאושר. קריאה: הבעלים, או חבר childAccess של
-    // הילד המקושר למסמך (D-01, approach A — קריאה ישירה ללא שכפול). childId
-    // מקודם ל-top-level ע"י firebaseProvider.push; מסמכים ללא childId (settings) — owner-only.
+    // הילד המקושר למסמך (D-01, approach A). childId מקודם ל-top-level;
+    // מסמכים ללא childId (settings) — owner-only.
     match /users/{uid}/{collection}/{document} {
       allow write: if isOwnUid(uid) && isApproved();
       allow read: if isApproved()
@@ -74,40 +69,32 @@ service cloud.firestore {
         );
     }
 
-    // ── ילדים (2B) ───────────────────────────────────────────────
+    // ── ילדים (2B) ──
     match /users/{uid}/children/{childId} {
-      // גישה לבעלים ולמי שרשום ב-childAccess — בשני המקרים נדרש אישור (isApproved).
-      // הבעלים אינו פטור מבדיקת האישור (B4).
       allow read, write: if isApproved()
         && (isOwnUid(uid) || hasChildAccess(childId));
     }
 
-    // ── גישת ילד (childAccess) ───────────────────────────────────
+    // ── גישת ילד (childAccess) ──
     match /childAccess/{childId}/members/{memberId} {
       allow read: if isSignedIn()
         && (request.auth.uid == memberId || hasChildAccess(childId));
-      // כתיבה: רק הבעלים של הילד (מי שמחזיק users/{uid}/children/{childId}).
-      // חבר רגיל (clinician/staff) אינו יכול להוסיף/לשנות חברים — מניעת privilege escalation (B4).
-      // הענקת גישה למוזמן מתבצעת ע"י Cloud Function acceptInvite (Admin SDK, עוקף חוקים).
-      // ביטול גישה (D-05) מתבצע ע"י Cloud Function revokeChildAccess (Admin SDK).
+      // כתיבה: רק הבעלים. הענקה/ביטול מתבצעים ע"י Cloud Functions (Admin SDK).
       allow write: if isApproved()
         && ownsChildDoc(childId);
     }
 
-    // ── קודי שיתוף (shareInvites) ───────────────────────────────
-    // קריאה לבעלים בלבד. המוזמן לעולם לא קורא את המסמך ישירות —
-    // המימוש מתבצע דרך Cloud Function acceptInvite (Admin SDK, עוקף חוקים).
+    // ── קודי שיתוף (shareInvites) ──
     match /shareInvites/{code} {
       allow read: if isSignedIn()
         && resource.data.ownerUid == request.auth.uid;
       allow create: if isApproved()
         && request.resource.data.ownerUid == request.auth.uid;
-      // עדכון (used:true) נכתב רק ע"י Cloud Function; הלקוח רשאי רק למחוק קוד שלו.
       allow delete: if isSignedIn()
         && resource.data.ownerUid == request.auth.uid;
     }
 
-    // ── Admin: קריאת כל רשומות users לאישור ────────────────
+    // ── Admin: קריאת כל רשומות users לאישור ──
     match /users/{uid} {
       allow list: if isAdmin();
     }
