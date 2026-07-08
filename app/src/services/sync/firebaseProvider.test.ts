@@ -45,8 +45,10 @@ vi.mock('../../data/firebaseEnv', () => ({
 
 import { FirebaseProvider } from './firebaseProvider';
 
+// שטוח בכוונה: איחוד MockQuery & MockCollection היה מקריס את __type ל-never
+// (הצומת 'query' & 'collection'), ולכן ההשוואה נגד מחרוזת נכשלה ב-TS2367.
 function pathOf(arg: unknown): string {
-  const a = arg as Partial<MockQuery & MockCollection>;
+  const a = arg as { __type?: string; path?: string; col?: { path?: string } };
   if (a?.__type === 'query') return a.col?.path ?? '';
   if (a?.__type === 'collection') return a.path ?? '';
   return '';
