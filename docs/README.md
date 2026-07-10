@@ -24,6 +24,10 @@ This directory contains the complete technical due diligence, assessments, and i
 - **For product/design:** [`02-ux-a11y-platforms.md`](02-ux-a11y-platforms.md) for UX/a11y gaps, then [`05-roadmap.md`](05-roadmap.md) Phase 2–3.
 - **For security/counsel:** [`03-privacy-security-family.md`](03-privacy-security-family.md) for regulatory § tables, then [`04-media-ai.md`](04-media-ai.md) §14.3 voice-cloning safeguards.
 
+### Execution Status
+
+See [`ROADMAP-STATUS.md`](ROADMAP-STATUS.md) for the live done/not-done tracking against `05-roadmap.md`, including what is blocked on console access, counsel, hardware, or product decisions. Update it in every PR that closes a roadmap task.
+
 ### Session Handoff
 
 See [`SESSION_SUMMARY.md`](SESSION_SUMMARY.md) for engagement execution notes, key assumptions, open [TBD]s, gotchas, and next-stage guidance.

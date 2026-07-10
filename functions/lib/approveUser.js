@@ -10,6 +10,7 @@ const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
 const firestore_1 = require("firebase-admin/firestore");
 const region_1 = require("./region");
+const auditLog_1 = require("./auditLog");
 if (!(0, app_1.getApps)().length)
     (0, app_1.initializeApp)();
 // 3.4: איחוד regions — פרוס גם ב-us-central1 (ישן) וגם ב-europe-west1 (חדש) בו-זמנית,
@@ -22,6 +23,7 @@ exports.approveUser = (0, https_1.onCall)({ region: [region_1.FUNCTIONS_REGION, 
     if (!request.auth.token['admin']) {
         throw new https_1.HttpsError('permission-denied', 'נדרשות הרשאות מנהל');
     }
+    const adminUid = request.auth.uid;
     const { uid, status } = request.data;
     if (!uid || !['approved', 'rejected'].includes(status)) {
         throw new https_1.HttpsError('invalid-argument', 'uid ו-status נדרשים');
@@ -35,9 +37,17 @@ exports.approveUser = (0, https_1.onCall)({ region: [region_1.FUNCTIONS_REGION, 
     };
     await (0, auth_1.getAuth)().setCustomUserClaims(uid, claims);
     // עדכן Firestore
-    await (0, firestore_1.getFirestore)().doc(`users/${uid}`).update({
+    const db = (0, firestore_1.getFirestore)();
+    await db.doc(`users/${uid}`).update({
         status,
         reviewedAt: firestore_1.FieldValue.serverTimestamp(),
+    });
+    // D-08: רשומת ביקורת — אישור/דחיית חשבון. פעולת-אדמין ללא ownerUid ⇒ קריאה ל-Admin
+    // בלבד (ראה firestore.rules). ללא PII (uids בלבד).
+    await (0, auditLog_1.writeAuditEntry)(db, {
+        action: status === 'approved' ? 'user.approve' : 'user.reject',
+        actorUid: adminUid,
+        targetUid: uid,
     });
     return { success: true, uid, status };
 });

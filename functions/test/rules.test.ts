@@ -145,6 +145,26 @@ beforeEach(async () => {
       name: 'ילד לדוגמה',
       grantedAt: 1,
     });
+    // B-17 (4.8): מסמך דגלי-תכונה — קריא לכל מחובר, כתיבת-לקוח חסומה.
+    await setDoc(doc(db, 'config/flags'), { newBuilder: true });
+  });
+});
+
+describe('Firestore rules — B-17 feature flags (config/flags)', () => {
+  it('any signed-in user (even unapproved) can read config/flags', async () => {
+    await assertSucceeds(getDoc(doc(approved(STRANGER).firestore(), 'config/flags')));
+    await assertSucceeds(getDoc(doc(unapproved(STRANGER).firestore(), 'config/flags')));
+  });
+
+  it('unauthenticated read of config/flags is denied', async () => {
+    const db = testEnv.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(db, 'config/flags')));
+  });
+
+  it('client writes to config/flags are denied (admin/console only)', async () => {
+    const db = approved(OWNER).firestore();
+    await assertFails(setDoc(doc(db, 'config/flags'), { newBuilder: false }));
+    await assertFails(updateDoc(doc(db, 'config/flags'), { newBuilder: false }));
   });
 });
 

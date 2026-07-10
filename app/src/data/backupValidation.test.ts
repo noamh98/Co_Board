@@ -21,10 +21,20 @@ describe('assertValidBackup (3.5, CR-E)', () => {
     expect(() => assertValidBackup([1, 2, 3])).toThrow('קובץ הגיבוי אינו תקין');
   });
 
-  it('זורק על backupFormat שגוי', () => {
-    expect(() => assertValidBackup({ ...validEnvelope, backupFormat: 2 })).toThrow(
+  it('זורק על backupFormat שגוי; פורמט 2 (D-10) נתמך', () => {
+    expect(() => assertValidBackup({ ...validEnvelope, backupFormat: 99 })).toThrow(
       'פורמט הגיבוי אינו נתמך',
     );
+    expect(() => assertValidBackup({ ...validEnvelope, backupFormat: 2 })).not.toThrow();
+  });
+
+  it('D-10: זורק כש-media/symbols קיימים ואינם מערך', () => {
+    expect(() =>
+      assertValidBackup({ ...validEnvelope, backupFormat: 2, media: 'not-array' }),
+    ).toThrow('שדה "media" בגיבוי פגום');
+    expect(() =>
+      assertValidBackup({ ...validEnvelope, backupFormat: 2, symbols: {} }),
+    ).toThrow('שדה "symbols" בגיבוי פגום');
   });
 
   it('זורק כשחסר exportedAt/deviceId', () => {

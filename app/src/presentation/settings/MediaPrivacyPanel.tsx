@@ -42,12 +42,12 @@ export function MediaPrivacyPanel({
   return (
     <section className="privacy-toggle" dir="rtl" aria-labelledby="media-privacy-title">
       <h3 className="privacy-toggle__title" id="media-privacy-title">
-        תמונות אישיות — פרטיות וסנכרון
+        תמונות והקלטות אישיות — פרטיות וסנכרון
       </h3>
       <p className="privacy-toggle__desc">
-        תמונות אישיות (בני משפחה וכו׳) נשמרות{' '}
+        תמונות אישיות והקלטות קול (בני משפחה וכו׳) נשמרות{' '}
         <strong>מקומית בלבד</strong> כברירת מחדל.
-        הפעלת סנכרון תעלה תמונות <strong>מוצפנות</strong> לענן —
+        הפעלת סנכרון תעלה אותן <strong>מוצפנות</strong> לענן —
         רק אנשי צוות מורשים יכולים לגשת.
       </p>
 
@@ -61,7 +61,7 @@ export function MediaPrivacyPanel({
           style={{ marginTop: 3, flexShrink: 0 }}
         />
         <span>
-          סנכרן תמונות לענן{' '}
+          סנכרן תמונות והקלטות לענן{' '}
           {!isAuthenticated && (
             <span style={{ color: '#b45309', fontSize: '0.85rem' }}>
               (נדרשת כניסה לחשבון)
