@@ -7,6 +7,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { enforceRateLimit } from './rateLimit';
 import { FUNCTIONS_REGION } from './region';
+import { sanitizeTopic, filterInappropriateWords } from './contentFilter';
 
 if (!getApps().length) initializeApp();
 
@@ -65,7 +66,9 @@ export const aiBoard = onCall(
       throw new HttpsError('unimplemented', 'עריכת-AI שיחתית עדיין לא זמינה (Phase 4)');
     }
 
-    const topic = typeof data.topic === 'string' ? data.topic.trim() : '';
+    // E-06 (4.7): סניטציה לפני שרבוב ל-prompt — מסיר תווי בקרה ותווי-תיחום שמאפשרים
+    // "בריחה" מהמרכאות בהוראה. הגבלת האורך נשארת ההגנה הראשית.
+    const topic = typeof data.topic === 'string' ? sanitizeTopic(data.topic) : '';
     const count = Math.min(MAX_COUNT, Math.max(1, Math.floor(data.count ?? 0)));
     if (!topic) throw new HttpsError('invalid-argument', 'topic נדרש');
     if (topic.length > MAX_TOPIC_LEN)
@@ -129,6 +132,7 @@ export const aiBoard = onCall(
       parsed = repaired;
     }
 
-    return { words: parsed.words ?? [] };
+    // E-10 (4.7): קו הגנה אחרון — פלט ה-AI מוצג לילד; מילים בלתי-הולמות מסוננות בשרת.
+    return { words: filterInappropriateWords(parsed.words ?? []) };
   },
 );

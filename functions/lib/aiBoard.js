@@ -10,6 +10,7 @@ const params_1 = require("firebase-functions/params");
 const app_1 = require("firebase-admin/app");
 const rateLimit_1 = require("./rateLimit");
 const region_1 = require("./region");
+const contentFilter_1 = require("./contentFilter");
 if (!(0, app_1.getApps)().length)
     (0, app_1.initializeApp)();
 const GEMINI_API_KEY = (0, params_1.defineSecret)('GEMINI_API_KEY');
@@ -49,7 +50,9 @@ exports.aiBoard = (0, https_1.onCall)({ region: region_1.FUNCTIONS_REGION, secre
         // TODO(Phase 4): patch-diff על לוח קיים
         throw new https_1.HttpsError('unimplemented', 'עריכת-AI שיחתית עדיין לא זמינה (Phase 4)');
     }
-    const topic = typeof data.topic === 'string' ? data.topic.trim() : '';
+    // E-06 (4.7): סניטציה לפני שרבוב ל-prompt — מסיר תווי בקרה ותווי-תיחום שמאפשרים
+    // "בריחה" מהמרכאות בהוראה. הגבלת האורך נשארת ההגנה הראשית.
+    const topic = typeof data.topic === 'string' ? (0, contentFilter_1.sanitizeTopic)(data.topic) : '';
     const count = Math.min(MAX_COUNT, Math.max(1, Math.floor(data.count ?? 0)));
     if (!topic)
         throw new https_1.HttpsError('invalid-argument', 'topic נדרש');
@@ -108,6 +111,7 @@ exports.aiBoard = (0, https_1.onCall)({ region: region_1.FUNCTIONS_REGION, secre
             throw new https_1.HttpsError('internal', 'Gemini החזיר תגובה לא תקינה');
         parsed = repaired;
     }
-    return { words: parsed.words ?? [] };
+    // E-10 (4.7): קו הגנה אחרון — פלט ה-AI מוצג לילד; מילים בלתי-הולמות מסוננות בשרת.
+    return { words: (0, contentFilter_1.filterInappropriateWords)(parsed.words ?? []) };
 });
 //# sourceMappingURL=aiBoard.js.map

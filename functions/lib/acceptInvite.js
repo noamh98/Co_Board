@@ -4,7 +4,8 @@
 // (המוזמן לעולם לא קורא את shareInvites/{code} ישירות — רק הבעלים יכול).
 // זרימה: 1) טען shareInvites/{code} 2) ולידציה (קיים / לא פג / לא נוצל)
 //        3) הענק childAccess/{childId}/members/{uid} 4) סמן used:true
-//        5) החזר את רשומת הילד מ-users/{ownerUid}/children/{childId}.
+//        5) כתוב מצביע מתמיד users/{uid}/sharedChildren/{childId} (D-01 end-to-end)
+//        6) החזר את רשומת הילד מ-users/{ownerUid}/children/{childId} (עם ownerUid).
 // deploy: firebase deploy --only functions
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.acceptInvite = void 0;
@@ -12,6 +13,7 @@ const https_1 = require("firebase-functions/v2/https");
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const region_1 = require("./region");
+const auditLog_1 = require("./auditLog");
 if (!(0, app_1.getApps)().length)
     (0, app_1.initializeApp)();
 // defense-in-depth: role מועתק מההזמנה ל-childAccess — לא לכתוב ערך שרירותי
@@ -53,6 +55,8 @@ exports.acceptInvite = (0, https_1.onCall)({ region: [region_1.FUNCTIONS_REGION,
         if (!childSnap.exists) {
             throw new https_1.HttpsError('not-found', 'רשומת הילד לא נמצאה');
         }
+        const childData = (childSnap.data() ?? {});
+        const childName = typeof childData.name === 'string' ? childData.name : '';
         // הענקת גישה ל-childAccess/{childId}/members/{uid}
         const memberRef = db.doc(`childAccess/${invite.childId}/members/${uid}`);
         tx.set(memberRef, {
@@ -61,13 +65,35 @@ exports.acceptInvite = (0, https_1.onCall)({ region: [region_1.FUNCTIONS_REGION,
             role: invite.role,
             grantedAt: now,
         });
+        // D-01 end-to-end: מצביע מתמיד תחת המשתמש המקבל — כדי שהילד המשותף ישרוד
+        // רענון. הלקוח קורא אותו ב-listSharedChildren ואז שולף את מסמך הילד מהבעלים.
+        // נכתב ע"י Admin SDK (עוקף חוקים); שדות מינימליים בלבד (ללא PII נוסף).
+        const pointerRef = db.doc(`users/${uid}/sharedChildren/${invite.childId}`);
+        tx.set(pointerRef, {
+            childId: invite.childId,
+            ownerUid: invite.ownerUid,
+            role: invite.role,
+            name: childName,
+            grantedAt: now,
+        });
         // סימון הקוד כמנוצל (חד-פעמי)
         tx.update(inviteRef, {
             used: true,
             acceptedBy: uid,
             acceptedAt: firestore_1.FieldValue.serverTimestamp(),
         });
-        return childSnap.data();
+        // D-08: רשומת ביקורת — הענקת גישה. אטומית עם ההענקה (בתוך אותה טרנזקציה).
+        // owner-scoped (ownerUid = בעלי הילד) כדי שהבעלים יוכל לקרוא "מי קיבל גישה".
+        (0, auditLog_1.writeAuditEntryInTransaction)(db, tx, {
+            action: 'access.grant',
+            actorUid: uid,
+            targetUid: uid,
+            childId: invite.childId,
+            ownerUid: invite.ownerUid,
+            role: invite.role,
+        });
+        // מחזיר את רשומת הילד עם ownerUid, כדי שהלקוח יוכל לרנדר/לשלוף תוכן מיד.
+        return { ...childData, ownerUid: invite.ownerUid };
     });
     return child;
 });
