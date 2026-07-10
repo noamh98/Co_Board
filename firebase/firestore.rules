@@ -151,6 +151,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── דגלי תכונה (config/flags) — 4.8 / B-17 ──
+    // מסמך יחיד { flagName: boolean }. קריאה: כל משתמש מחובר (גם טרם-אישור — דגלים
+    // עשויים לשלוט בזרימת ההרשמה). כתיבה: קונסולה/Admin SDK בלבד (עוקף כללים) —
+    // כל כתיבת-לקוח נחסמת.
+    match /config/flags {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // ── Admin: קריאת כל רשומות users לאישור ──
     match /users/{uid} {
       allow list: if isAdmin();
