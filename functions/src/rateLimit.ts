@@ -2,8 +2,18 @@
 // משותף ל-ttsProxy ו-aiBoard. מטרה: חסימת חיוב בלתי-מוגבל אם מפתח/טוקן דולף.
 // Ponytail: fixed-window אטומי בטרנזקציה אחת — מינימום שעובד, בלי תלות חיצונית.
 
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
+
+/**
+ * E-15 (4.6): מסמכי rate-limit נשארו לנצח — cruft שגדל עם כל uid×action.
+ * expiresAt מציב תאריך-תפוגה שמדיניות TTL של Firestore מוחקת אוטומטית.
+ * הפעלת המדיניות (חד-פעמי, מחוץ לקוד):
+ *   gcloud firestore fields ttls update expiresAt \
+ *     --collection-group=rateLimits --enable-ttl
+ * עד ההפעלה השדה פשוט קיים ואינו מזיק. 24h חסד אחרי סוף החלון — מספיק לכל windowMs בשימוש.
+ */
+const TTL_GRACE_MS = 24 * 60 * 60 * 1000;
 
 export interface RateLimitOptions {
   /** חלון הזמן במילישניות (למשל 60_000 = דקה). */
@@ -32,8 +42,12 @@ export async function enforceRateLimit(
       : undefined;
 
     if (!data || now - data.windowStart >= opts.windowMs) {
-      // חלון חדש — אפס מונה.
-      tx.set(ref, { windowStart: now, count: 1 });
+      // חלון חדש — אפס מונה. expiresAt מאפשר ניקוי TTL אוטומטי (E-15).
+      tx.set(ref, {
+        windowStart: now,
+        count: 1,
+        expiresAt: Timestamp.fromMillis(now + opts.windowMs + TTL_GRACE_MS),
+      });
       return;
     }
     if (data.count >= opts.max) {

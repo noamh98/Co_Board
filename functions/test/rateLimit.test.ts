@@ -66,4 +66,14 @@ describe('enforceRateLimit (rateLimit.ts, fixed-window פר-uid)', () => {
       enforceRateLimit('u5', 'ai', { windowMs: 60_000, max: 1 }, db),
     ).resolves.toBeUndefined();
   });
+
+  it('E-15: מסמך חלון חדש מקבל expiresAt עתידי (ניקוי TTL)', async () => {
+    const before = Date.now();
+    await enforceRateLimit('u6', 'act', { windowMs: 60_000, max: 5 }, db);
+    const doc = await db.doc('rateLimits/u6__act').get();
+    const expiresAt = doc.get('expiresAt') as { toMillis(): number } | undefined;
+    expect(expiresAt).toBeDefined();
+    // לפחות windowMs + 24h חסד אחרי תחילת החלון.
+    expect(expiresAt!.toMillis()).toBeGreaterThanOrEqual(before + 60_000 + 24 * 60 * 60 * 1000);
+  });
 });
