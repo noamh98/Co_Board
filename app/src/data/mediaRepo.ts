@@ -1,11 +1,12 @@
-// data/mediaRepo.ts — אחסון תמונות אישיות ב-IndexedDB (offline-first, חלק 3).
-// שונה מ-symbolRepo: ממוקד על תמונות אישיות (לא ARASAAC); תומך blob מוצפן.
+// data/mediaRepo.ts — אחסון מדיה אישית (תמונות + הקלטות קול) ב-IndexedDB (offline-first, חלק 3).
+// שונה מ-symbolRepo: ממוקד על מדיה אישית (לא ARASAAC); תומך blob מוצפן.
+// E-03: הקלטות קול עוברות באותה צנרת הצפנה+סנכרון כמו תמונות (mimeType אודיו, source 'recording').
 // מחיקה = archived flag (לא הסרה) — אינווריאנט HANDOFF §Invariants.
 
 import { getDb, STORE_MEDIA } from './db';
 
-export type MediaMimeType = 'image/webp' | 'image/jpeg' | 'image/png';
-export type MediaSource = 'camera' | 'gallery' | 'url';
+export type MediaMimeType = 'image/webp' | 'image/jpeg' | 'image/png' | 'audio/webm';
+export type MediaSource = 'camera' | 'gallery' | 'url' | 'recording';
 
 export interface MediaEntry {
   id: string;

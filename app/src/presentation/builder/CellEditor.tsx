@@ -95,6 +95,8 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
   /** blob מעובד (WebP) לשמירה ב-mediaRepo — מאופס בכל בחירת תמונה חדשה. */
   const blobRef = useRef<Blob | null>(null);
   const mediaSourceRef = useRef<MediaEntrySource>('gallery');
+  /** E-03: blob ההקלטה האחרונה — נשמר גם ב-mediaRepo ומסונכרן מוצפן כמו תמונות. */
+  const recordingBlobRef = useRef<Blob | null>(null);
 
   const handleLabelChange = (val: string) => {
     setLabel(val);
@@ -174,6 +176,8 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
         const repo = createSymbolRepo();
         // A4: הקלטת קול נשמרת כ-audio/webm (היה image/webp שגוי) ומזוהה ב-audioId.
         await repo.save({ id, uri, mimeType: 'audio/webm', source: 'recording', createdAt: Date.now() });
+        // E-03: ה-blob נשמר גם לניתוב דרך צנרת המדיה המוצפנת-מסונכרנת ב-handleSave.
+        recordingBlobRef.current = blob;
         setAudioId(id);
       };
       mediaRecorderRef.current = mr;
@@ -234,39 +238,48 @@ export function CellEditor({ cell, placement, board, nikudService, onSave, onCan
       }
       onSave(newBoard);
 
-      // שמירת תמונה אישית ב-mediaRepo + סנכרון ברקע (לא חוסם UI).
-      if (blobRef.current && mediaSyncConfig) {
-        const blob = blobRef.current;
-        const source = mediaSourceRef.current;
+      // שמירת מדיה אישית (תמונה + הקלטה) ב-mediaRepo + סנכרון מוצפן ברקע (לא חוסם UI).
+      if (mediaSyncConfig) {
         const { profileId, syncPhotos, authUserId, useFirebase } = mediaSyncConfig;
-        void (async () => {
-          const mediaId = `media-${cellId}-${Date.now()}`;
-          const mimeType: MediaMimeType = blob.type.startsWith('image/') ? blob.type as MediaMimeType : 'image/webp';
-          const repo = createMediaRepo();
-          const entry = {
-            id: mediaId,
-            cellId,
-            profileId,
-            mimeType,
-            blob,
-            encrypted: false,
-            source,
-            createdAt: Date.now(),
-          };
-          await repo.saveMedia(entry);
+        const persistAndSync = (mediaId: string, blob: Blob, mimeType: MediaMimeType, source: MediaEntrySource) =>
+          void (async () => {
+            const repo = createMediaRepo();
+            const entry = {
+              id: mediaId,
+              cellId,
+              profileId,
+              mimeType,
+              blob,
+              encrypted: false,
+              source,
+              createdAt: Date.now(),
+            };
+            await repo.saveMedia(entry);
 
-          if (syncPhotos && authUserId) {
-            const storageProvider = useFirebase
-              ? new FirebaseStorageProvider()
-              : new LocalStubStorageProvider();
-            try {
-              await uploadMedia(authUserId, entry, storageProvider, repo);
-            } catch {
-              // העלאה נכשלה — הנתון המקומי שמור; יסונכרן בהזדמנות הבאה.
+            if (syncPhotos && authUserId) {
+              const storageProvider = useFirebase
+                ? new FirebaseStorageProvider()
+                : new LocalStubStorageProvider();
+              try {
+                await uploadMedia(authUserId, entry, storageProvider, repo);
+              } catch {
+                // העלאה נכשלה — הנתון המקומי שמור; יסונכרן בהזדמנות הבאה.
+              }
             }
-          }
-        })();
-        blobRef.current = null;
+          })();
+
+        if (blobRef.current) {
+          const blob = blobRef.current;
+          const mimeType: MediaMimeType = blob.type.startsWith('image/') ? blob.type as MediaMimeType : 'image/webp';
+          persistAndSync(`media-${cellId}-${Date.now()}`, blob, mimeType, mediaSourceRef.current);
+          blobRef.current = null;
+        }
+
+        // E-03: הקלטת קול — אותה צנרת הצפנה+סנכרון בדיוק כמו תמונות (הייתה plaintext מקומית בלבד).
+        if (recordingBlobRef.current) {
+          persistAndSync(`media-${cellId}-rec-${Date.now()}`, recordingBlobRef.current, 'audio/webm', 'recording');
+          recordingBlobRef.current = null;
+        }
       }
     } catch (err) {
       if (err instanceof ViolationError) {

@@ -81,6 +81,45 @@ describe('uploadMedia', () => {
   });
 });
 
+describe('E-03: הקלטות קול באותה צנרת הצפנה+סנכרון', () => {
+  it('מעלה הקלטת audio/webm מוצפנת ומעדכן syncedAt', async () => {
+    const repo = createMediaRepo();
+    const storage = new LocalStubStorageProvider();
+    const entry = makeEntry({
+      id: 'media-rec-1',
+      mimeType: 'audio/webm',
+      source: 'recording',
+      blob: new Blob(['voicedata'], { type: 'audio/webm' }),
+    });
+    await repo.saveMedia(entry);
+
+    await uploadMedia('uid-123', entry, storage, repo);
+
+    const uploaded = await storage.download('profiles/profile-a/media/media-rec-1');
+    expect(await uploaded.text()).toBe('ENC:voicedata'); // מוצפן, לא plaintext
+    const updated = await repo.getMedia('media-rec-1');
+    expect(updated?.syncedAt).toBeDefined();
+  });
+
+  it('מוריד ומפענח הקלטה עם mimeType אודיו', async () => {
+    const repo = createMediaRepo();
+    const storage = new LocalStubStorageProvider();
+    const entry = makeEntry({
+      id: 'media-rec-2',
+      mimeType: 'audio/webm',
+      source: 'recording',
+      blob: new Blob(['voicedata'], { type: 'audio/webm' }),
+    });
+    await repo.saveMedia(entry);
+    await uploadMedia('uid-123', entry, storage, repo);
+
+    const blob = await downloadMedia('uid-123', 'profile-a', 'media-rec-2', 'audio/webm', storage, repo);
+    expect(blob).not.toBeNull();
+    expect(blob!.type).toBe('audio/webm');
+    expect(await blob!.text()).toBe('voicedata');
+  });
+});
+
 describe('downloadMedia', () => {
   it('מוריד, מפענח ושומר blob ב-mediaRepo', async () => {
     const repo = createMediaRepo();
